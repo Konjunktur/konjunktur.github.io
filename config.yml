@@ -12,6 +12,14 @@ languages:
   de:
     languageName: "Deutsch"
     weight: 1
+    menu:
+      main:
+        - name: Konjunktur
+          url: /
+          weight: 1
+        - name: Spannungszahl
+          url: /spannungszahl/
+          weight: 2
     params:
       description: "Konjunktur-Dashboard mit aktuellen Wirtschaftsdaten für Deutschland."
       displayFullLangName: true
@@ -23,6 +31,14 @@ languages:
   en:
     languageName: "English"
     weight: 2
+    menu:
+      main:
+        - name: Economy
+          url: /en/
+          weight: 1
+        - name: Tension Index
+          url: /en/spannungszahl/
+          weight: 2
     params:
       description: "Economic Dashboard with current macroeconomic indicators for Germany."
       displayFullLangName: true
