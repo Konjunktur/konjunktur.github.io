@@ -398,7 +398,7 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     # 5. Spannungszahl und reales BIP (Dual-Achse)
     fig, ax1 = plt.subplots(figsize=(7.8, 5.6), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.11, right=0.87, top=0.68, bottom=0.25)
-    style_sz_ax(ax1, t.get("p5_t"), -12, 12, range(-12, 16, 4), t.get("x_mq"], title_y=1.28)
+    style_sz_ax(ax1, t.get("p5_t"), -12, 12, range(-12, 16, 4), t.get("x_mq"), title_y=1.28)
     ax1.set_ylabel(t.get("p5_yl"), fontsize=7.8, color="#475569")
     ax2 = ax1.twinx()
     ax2.set_ylim(-8000, 8000)
