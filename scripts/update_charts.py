@@ -46,7 +46,7 @@ def get_bbk(key, n=13, scale=1.0):
     flow, k = key.split(".", 1)
     url = f"https://bundesbank.de{flow}/{k}?format=csv&lang=de"
     try:
-        r = requests.get(url, timeout=8)
+        r = requests.get(url, timeout=10)
         df = pd.read_csv(io.StringIO(r.text), sep=";")
         tc = next(c for c in df.columns if "TIME_PERIOD" in c)
         vc = next(c for c in df.columns if "OBS_VALUE" in c)
@@ -61,10 +61,13 @@ def get_destatis(table):
         return pd.DataFrame()
     p = {"username": D_USER, "password": D_PASS, "name": table, "area": "all", "compress": "false", "format": "ffcsv", "language": "de"}
     try:
-        r = requests.get(G_URL, params=p, timeout=25)
-        if len(r.text) < 200 or "Fehler" in r.text[:200]:
+        r = requests.get(G_URL, params=p, timeout=30)
+        if len(r.text) < 200 or "Fehler" in r.text[:250]:
             return pd.DataFrame()
-        return pd.read_csv(io.StringIO(r.text), sep=";", decimal=",")
+        df = pd.read_csv(io.StringIO(r.text), sep=";", decimal=",")
+        meta_cols = [c for c in df.columns if "CODE" in c or "LABEL" in c]
+        df["_META"] = df[meta_cols].fillna("").astype(str).agg(" | ".join, axis=1)
+        return df
     except Exception:
         return pd.DataFrame()
 
@@ -74,25 +77,24 @@ def get_dynamic_bip_axes(df):
         qtrs = ("2023-Q2","2023-Q3","2023-Q4","2024-Q1","2024-Q2","2024-Q3","2024-Q4","2025-Q1","2025-Q2","2025-Q3","2025-Q4","2026-Q1","2026-Q2","2026-Q3")
         return yrs, qtrs
     zeiten = sorted(df["ZEIT"].astype(str).unique())
-    yrs = tuple(list(z for z in zeiten if len(z) == 4 and z.isdigit())[-5:])
-    qtrs = tuple(list(z for z in zeiten if "Q" in z)[-14:])
+    yrs = tuple([z for z in zeiten if len(z) == 4 and z.isdigit()][-5:])
+    qtrs = tuple([z for z in zeiten if "Q" in z][-14:])
     return yrs, qtrs
 
-def parse_bip(df, filters, yrs, qtrs):
+def parse_bip_series(df, must_contain, yrs, qtrs):
+    """Filtert die Destatis-ffcsv-Tabelle anhand beliebiger Code/Label-Merkmale und Veränderungsrate (%)."""
     if df.empty or "ZEIT" not in df.columns or "WERT" not in df.columns:
-        return ()
-    sub = df.copy()
-    for col, val in filters.items():
-        if col in sub.columns:
-            sub = sub[sub[col].astype(str).str.contains(val, na=False)]
-    if sub.empty:
-        return ()
+        return [np.nan] * (len(yrs) + 1 + len(qtrs))
+    sub = df[df["_META"].str.contains("Veränderung", case=False, na=False)].copy()
+    for term in must_contain:
+        sub = sub[sub["_META"].str.contains(term, case=False, regex=False, na=False)]
     sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
+    sub = sub.dropna(subset=["V"])
     m = dict(zip(sub["ZEIT"].astype(str), sub["V"]))
-    res = list(m.get(y, np.nan) for y in yrs) + list((np.nan,))
+    res = [m.get(y, np.nan) for y in yrs] + [np.nan]
     for q in qtrs:
         res.append(m.get(q, m.get(q.replace("-", ""), np.nan)))
-    return tuple(res)
+    return res
 
 def fmt_num(val, use_comma):
     s = f"{val:.1f}"
@@ -126,17 +128,20 @@ def mark_end(ax, x_vals, y_vals, col, use_comma, off=0.0):
     ax.plot(lx, ly, marker="o", markersize=4.5, color=col, zorder=5)
     ax.text(len(x_vals) - 0.65, ly + off, fmt_num(ly, use_comma), fontsize=8, fontweight="bold", color=col, va="center")
 
-def draw_p1(ax, t, d):
-    xi, xl_bip = d.get("xi"), d.get("xl_bip")
-    style_panel(ax, t.get("p1_t"), t.get("p1_s"), -10, 8, range(-10, 10, 2))
-    l1 = t.get("p1_l")
-    bars = ax.bar(xi, d.get("bip_r"), width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=list(l1).pop(0), zorder=2)
+def draw_bars_with_labels(ax, xi, vals, label, use_comma):
+    bars = ax.bar(xi, vals, width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=label, zorder=2)
     for b in bars:
         h = b.get_height()
         if not np.isnan(h):
             off = 0.25 if h >= 0 else -0.35
             va = "bottom" if h >= 0 else "top"
-            ax.text(b.get_x() + b.get_width() / 2, h + off, fmt_num(h, t.get("comma")), ha="center", va=va, fontsize=6.2, color="#1E3A8A", fontweight="bold", zorder=4)
+            ax.text(b.get_x() + b.get_width() / 2, h + off, fmt_num(h, use_comma), ha="center", va=va, fontsize=6.2, color="#1E3A8A", fontweight="bold", zorder=4)
+
+def draw_p1(ax, t, d):
+    xi, xl_bip = d.get("xi"), d.get("xl_bip")
+    style_panel(ax, t.get("p1_t"), t.get("p1_s"), -10, 8, range(-10, 10, 2))
+    l1 = t.get("p1_l")
+    draw_bars_with_labels(ax, xi, d.get("bip_r"), list(l1).pop(0), t.get("comma"))
     ax.plot(xi, d.get("pg"), color="#D97706", lw=1.9, marker="o", ms=2.5, label=list(l1).pop(1), zorder=3)
     ax.plot(xi, d.get("bau"), color="#64748B", lw=1.9, marker="o", ms=2.5, label=list(l1).pop(2), zorder=3)
     ax.plot(xi, d.get("hvg"), color="#059669", lw=1.9, marker="o", ms=2.5, label=list(l1).pop(3), zorder=3)
@@ -147,13 +152,7 @@ def draw_p2(ax, t, d):
     xi, xl_bip = d.get("xi"), d.get("xl_bip")
     style_panel(ax, t.get("p2_t"), t.get("p2_s"), -8, 12, range(-8, 14, 2))
     l2 = t.get("p2_l")
-    bars = ax.bar(xi, d.get("bip_n"), width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=list(l2).pop(0), zorder=2)
-    for b in bars:
-        h = b.get_height()
-        if not np.isnan(h):
-            off = 0.25 if h >= 0 else -0.35
-            va = "bottom" if h >= 0 else "top"
-            ax.text(b.get_x() + b.get_width() / 2, h + off, fmt_num(h, t.get("comma")), ha="center", va=va, fontsize=6.2, color="#1E3A8A", fontweight="bold", zorder=4)
+    draw_bars_with_labels(ax, xi, d.get("bip_n"), list(l2).pop(0), t.get("comma"))
     ax.plot(xi, d.get("kp"), color="#D97706", lw=1.7, label=list(l2).pop(1), zorder=3)
     ax.plot(xi, d.get("ks"), color="#64748B", lw=1.7, label=list(l2).pop(2), zorder=3)
     ax.plot(xi, d.get("aus"), color="#DC2626", lw=1.7, label=list(l2).pop(3), zorder=3)
@@ -169,8 +168,8 @@ def draw_p3(ax, t, d):
     l3 = t.get("p3_l")
     ax.plot(s_ai.index, s_ai.values, color="#1E3A8A", lw=2.1, marker="o", ms=3, label=list(l3).pop(0))
     ax.plot(s_ab.index, s_ab.values, color="#D97706", lw=2.1, marker="o", ms=3, label=list(l3).pop(1))
-    mark_end(ax, s_ai.index, s_ai.values, "#1E3A8A", t.get("comma"), off=-1.2)
-    mark_end(ax, s_ab.index, s_ab.values, "#D97706", t.get("comma"), off=1.2)
+    mark_end(ax, s_ai.index, s_ai.values, "#1E3A8A", t.get("comma"), off=-0.9)
+    mark_end(ax, s_ab.index, s_ab.values, "#D97706", t.get("comma"), off=0.9)
     ax.set_xlim(-0.5, len(s_ai) + 0.5); set_legend(ax, ncol=2)
 
 def draw_p4(ax, t, d):
@@ -218,7 +217,7 @@ def build_for_lang(lang, data):
     t = TEXTS.get(lang)
     plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
     fig, axes = plt.subplots(3, 2, figsize=(12.6, 17.8), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.06, right=0.95, top=0.92, bottom=0.06, hspace=0.55, wspace=0.20)
+    plt.subplots_adjust(left=0.06, right=0.95, top=0.90, bottom=0.06, hspace=0.62, wspace=0.20)
     ax1, ax2, ax3, ax4, ax5, ax6 = axes.flatten()
     draw_p1(ax1, t, data); draw_p2(ax2, t, data); draw_p3(ax3, t, data)
     draw_p4(ax4, t, data); draw_p5(ax5, t, data); draw_p6(ax6, t, data)
@@ -240,53 +239,28 @@ def main():
     xl_bip = yrs + ("",) + tuple(f"Q{q[-1]} {q[2:4]}" for q in qtrs)
     xi = np.arange(len(xl_bip))
 
-    bip_r = parse_bip(df1, {"WERT_VARIABLE": "BIP", "BEREINIGUNG": "KSB", "PREISBASIS": "PK"}, yrs, qtrs)
-    pg    = parse_bip(df1, {"WIRTSCHAFTSBEREICH": "B-E", "BEREINIGUNG": "KSB", "PREISBASIS": "PK"}, yrs, qtrs)
-    bau   = parse_bip(df1, {"WIRTSCHAFTSBEREICH": "F", "BEREINIGUNG": "KSB", "PREISBASIS": "PK"}, yrs, qtrs)
-    hvg   = parse_bip(df1, {"WIRTSCHAFTSBEREICH": "G-I", "BEREINIGUNG": "KSB", "PREISBASIS": "PK"}, yrs, qtrs)
-    if not bip_r or all(np.isnan(bip_r)):
-        bip_r = (3.9,1.8,-0.9,-0.5,0.2,np.nan,-0.8,-1.3,-1.0,-1.1,-0.2,-0.4,-0.2,0.1,0.3,0.3,0.6,0.4,0.5,0.6)
-        pg    = (4.5,0.8,-2.1,-3.1,-0.8,np.nan,-2.0,-3.2,-3.5,-3.8,-3.1,-2.9,-2.5,-1.5,-0.9,-0.2,0.4,0.2,0.3,0.5)
-        bau   = (-1.5,-3.2,-2.5,-3.8,-0.5,np.nan,-2.8,-2.4,-2.9,-3.5,-4.1,-3.9,-3.6,-2.1,-1.2,0.1,0.8,0.5,0.7,0.9)
-        hvg   = (4.8,3.8,-1.2,0.4,0.9,np.nan,-1.5,-1.8,-1.2,0.2,0.5,0.6,0.4,1.1,1.2,0.9,0.7,0.6,0.8,0.8)
+    bip_r = parse_bip_series(df1, ["Bruttoinlandsprodukt", "preisbereinigt", "kalender"], yrs, qtrs)
+    pg    = parse_bip_series(df1, ["Produzierendes Gewerbe ohne Baugewerbe", "preisbereinigt", "kalender"], yrs, qtrs)
+    bau   = parse_bip_series(df1, ["Baugewerbe", "preisbereinigt", "kalender"], yrs, qtrs)
+    hvg   = parse_bip_series(df1, ["Handel, Verkehr, Gastgewerbe", "preisbereinigt", "kalender"], yrs, qtrs)
 
     df2 = get_destatis("81000-0012")
-    bip_n = parse_bip(df2, {"VERWENDUNG": "BIP", "BEREINIGUNG": "KSB", "PREISBASIS": "JP"}, yrs, qtrs)
-    kp    = parse_bip(df2, {"VERWENDUNG": "KONSUM-PRIV", "BEREINIGUNG": "KSB", "PREISBASIS": "PK"}, yrs, qtrs)
-    ks    = parse_bip(df2, {"VERWENDUNG": "KONSUM-STAAT", "BEREINIGUNG": "KSB", "PREISBASIS": "PK"}, yrs, qtrs)
-    aus   = parse_bip(df2, {"VERWENDUNG": "INV-AUSR", "BEREINIGUNG": "KSB", "PREISBASIS": "PK"}, yrs, qtrs)
-    binv  = parse_bip(df2, {"VERWENDUNG": "INV-BAU", "BEREINIGUNG": "KSB", "PREISBASIS": "PK"}, yrs, qtrs)
-    exp   = parse_bip(df2, {"VERWENDUNG": "EXPORT", "BEREINIGUNG": "KSB", "PREISBASIS": "PK"}, yrs, qtrs)
-    imp   = parse_bip(df2, {"VERWENDUNG": "IMPORT", "BEREINIGUNG": "KSB", "PREISBASIS": "PK"}, yrs, qtrs)
-    if not bip_n or all(np.isnan(bip_n)):
-        bip_n = (6.8,8.3,5.8,2.6,3.3,np.nan,5.7,5.3,4.9,2.7,3.1,2.6,2.0,2.8,3.0,3.4,3.8,3.2,3.4,3.5)
-        kp    = (1.5,5.6,-0.4,0.3,1.5,np.nan,-0.8,-0.2,0.1,0.2,0.1,0.4,0.6,1.2,1.8,1.6,1.8,1.4,1.5,1.6)
-        ks    = (3.1,1.6,-0.1,2.5,1.1,np.nan,-0.5,0.4,1.0,2.1,2.6,2.8,2.5,1.4,1.1,0.6,1.3,1.1,1.2,1.3)
-        aus   = (3.5,4.0,3.0,-5.5,-1.2,np.nan,3.8,2.5,1.5,-4.8,-5.9,-6.1,-5.2,-3.1,-1.8,-0.4,0.3,0.1,0.4,0.6)
-        binv  = (-1.8,-1.8,-3.1,-3.5,-0.4,np.nan,-3.1,-3.4,-3.5,-3.2,-3.8,-3.6,-3.4,-1.8,-0.9,-0.1,0.5,0.3,0.4,0.5)
-        exp   = (9.7,3.3,-0.3,-1.1,0.8,np.nan,-0.5,-1.1,-0.8,-1.5,-0.9,-1.2,-0.8,0.2,0.7,1.0,1.6,1.1,1.3,1.4)
-        imp   = (8.9,6.7,-3.0,-0.2,3.8,np.nan,-3.2,-4.1,-3.2,-2.1,-0.8,0.5,1.6,3.1,3.9,4.3,4.0,3.2,3.5,3.6)
+    bip_n = parse_bip_series(df2, ["Bruttoinlandsprodukt", "jeweiligen Preisen"], yrs, qtrs)
+    kp    = parse_bip_series(df2, ["Private Konsumausgaben", "preisbereinigt"], yrs, qtrs)
+    ks    = parse_bip_series(df2, ["Konsumausgaben des Staates", "preisbereinigt"], yrs, qtrs)
+    aus   = parse_bip_series(df2, ["Ausrüstungen", "preisbereinigt"], yrs, qtrs)
+    binv  = parse_bip_series(df2, ["Bauten", "preisbereinigt"], yrs, qtrs)
+    exp   = parse_bip_series(df2, ["Exporte", "preisbereinigt"], yrs, qtrs)
+    imp   = parse_bip_series(df2, ["Importe", "preisbereinigt"], yrs, qtrs)
 
-    m13 = ("2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10")
     s_ai = get_bbk("BBDE1.M.DE.Y.BAA1.A2P000000.G.C.I21.A")
     s_ab = get_bbk("BBDE1.M.DE.Y.BAA1.F00000000.G.C.I21.A")
-    if s_ai.empty: s_ai = pd.Series((-0.5,10.5,11.4,3.7,2.1,1.5,0.8,1.2,1.9,0.5,-0.4,1.1,1.4), index=m13)
-    if s_ab.empty: s_ab = pd.Series((2.5,4.1,4.6,5.2,3.8,4.1,2.9,3.4,2.1,1.8,2.5,3.0,2.8), index=m13)
-
     s_pi = get_bbk("BBDE1.M.DE.Y.BPA1.A2P000000.G.C.I21.A")
     s_pb = get_bbk("BBDE1.M.DE.Y.BPA1.F00000000.G.C.I21.A")
     s_eh = get_bbk("BBDE1.M.DE.Y.BVA1.G47000000.G.C.I21.A")
-    if s_pi.empty: s_pi = pd.Series((0.6,1.0,1.4,-2.6,-1.1,-0.5,0.2,0.4,0.8,-0.3,-0.6,0.2,0.5), index=m13)
-    if s_pb.empty: s_pb = pd.Series((-0.5,-1.8,0.8,1.1,0.9,1.4,1.2,0.8,1.5,1.1,0.9,1.3,1.2), index=m13)
-    if s_eh.empty: s_eh = pd.Series((2.0,1.4,2.5,1.1,1.5,1.8,1.4,1.6,2.1,1.7,1.3,1.5,1.6), index=m13)
-
     s_lb = get_bbk("BBFBOPV.M.N.DE.W1.S1.S1.T.B.CA._Z._Z._Z.EUR._T._X.N.ALL", 13, 0.001)
-    if s_lb.empty: s_lb = pd.Series((15.3,10.1,10.5,14.2,16.8,18.1,17.4,16.9,18.5,15.2,14.8,16.1,15.7), index=m13)
-
     s_al = get_bbk("BBDE1.M.DE.S.ABA1.A00000000.U.A.A00.A")
     s_hv = get_bbk("BBDP1.M.DE.N.HVPI.C.A00000.I15.A")
-    if s_al.empty: s_al = pd.Series((6.2,6.1,6.2,6.6,6.5,6.4,6.3,6.2,6.2,6.3,6.4,6.3,6.2), index=m13)
-    if s_hv.empty: s_hv = pd.Series((2.3,2.6,2.0,2.1,2.0,2.1,2.2,2.1,2.0,1.9,2.0,2.1,2.0), index=m13)
 
     data = {
         "xi": xi, "xl_bip": xl_bip,
@@ -300,3 +274,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
