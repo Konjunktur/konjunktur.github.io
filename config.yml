@@ -1,4 +1,4 @@
-baseURL: "https://pascalmichaillat.org/hugo-website/" 
+baseURL: "https://github.io"
 title: Thorsten Hild
 theme: PaperMod
 
@@ -17,8 +17,8 @@ menu:
       weight: 1
 
 params:
-    description: "This website hosts Moritz-Maria von Igelfeld's research papers, books, course materials, data, curriculum vitae, and contact information."
-    author: Moritz-Maria von Igelfeld
+    description: "Konjunktur-Dashboard mit aktuellen Wirtschaftsdaten für Deutschland."
+    author: Thorsten Hild
     # googleAnalyticsID: G-XXXXX
     DateFormat: January 2006
     defaultTheme: light
@@ -42,50 +42,15 @@ params:
     math: true
     profileMode:
           enabled: true
-          title: Professor Dr von Igelfeld
-          subtitle: "I am a Professor in the Institute of Romance Philology at the University of Regensburg, Germany. My research focuses on Portuguese irregular verbs. I was a doctoral student of Professor Dr Dieter Vogelsang in Munich, and later a second assistant of Professor Walter Schoeffler-Henschell at the University of Wiesbaden."
+          title: Thorsten Hild
+          subtitle: "Volkswirt, Arbeitsschwerpunkte: Konjunktur, Arbeitsmarkt, Wirtschaftspolitik, Internationale Wirtschaftsprobleme und Beziehungen"
           imageUrl: picture.jpeg
           imageWidth: 160
           imageHeight: 160
           buttons:
-            - name: Papers
-              url: papers/
-            - name: Data
-              url: data/
-            - name: Books
-              url: books/
-            - name: Courses
-              url: courses/
-            - name: Tags
-              url: tags/
-            - name: Archive
-              url: archive/
-            - name: Blog
-              url: https://en.wikipedia.org/wiki/Moritz-Maria_von_Igelfeld_(character)
+            - name: Konjunktur-Dashboard
+              url: /dashboard/
 
-    socialIcons:
-        - name: CV
-          url: cv.pdf
-        - name: Email
-          url: mailto:user@gmail.com
-        - name: Zoom
-          url: https://www.zoom.us/my/user
-        - name: Location
-          url: location/
-        - name: Office Hours
-          url: officehours/
-        - name: Google Scholar
-          url: https://scholar.google.com/citations?user=user
-        - name: GitHub
-          url: https://github.com/user
-        - name: YouTube
-          url: https://www.youtube.com/@user
-        - name: Substack
-          url: https://user.substack.com
-        - name: Twitter
-          url: https://x.com/user
-        - name: Bluesky
-          url: https://bsky.app/profile/user.bsky.social
 
     assets:
         disableScrollBarStyle: true
@@ -93,7 +58,7 @@ params:
         hiddenInList: false
         hiddenInSingle: true
     label:
-      text: Moritz-Maria von Igelfeld
+      text: Thorsten Hild
       icon: favicon.ico
       iconHeight: 18
 
