@@ -152,7 +152,7 @@ def draw_p2(ax, t, d):
     set_legend(ax, ncol=3)
 
 def draw_p3(ax, t, d):
-    style_panel(ax, t.get("p3_t"), t.get("p3_s"), -5, 15, range(-5, 20, 5))
+    style_panel(ax, t.get("p3_t"), t.get("p3_s"), -15, 15, range(-15, 20, 5))
     s_ai, s_ab = d.get("s_ai"), d.get("s_ab")
     l3 = t.get("p3_l")
     ax.plot(s_ai.index, s_ai.values, color="#1E3A8A", lw=2.1, marker="o", ms=3, label=list(l3).pop(0))
