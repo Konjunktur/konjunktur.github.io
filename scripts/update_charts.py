@@ -185,12 +185,12 @@ def draw_p6(ax, t, d):
     style_panel(ax, t.get("p6_t"), t.get("p6_s"), 0, 8, range(0, 10, 2), z=False)
     s_al, s_hv = d.get("s_al"), d.get("s_hv")
     l6 = t.get("p6_l")
-    ax.plot(s_al.index, s_al.values, color="#1E3A8A", lw=2.1, marker="o", ms=3, label=list(l6).pop(0))
+    ax.plot(s_al.index, s_al.values, color="#0284C7", lw=2.1, marker="o", ms=3, label=list(l6).pop(0))
     ax.axhline(3.0, color="#0284C7", ls="--", lw=1.4, label=list(l6).pop(1))
-    ax.plot(s_hv.index, s_hv.values, color="#475569", lw=2.1, marker="o", ms=3, label=list(l6).pop(2))
+    ax.plot(s_hv.index, s_hv.values, color="#D97706", lw=2.1, marker="o", ms=3, label=list(l6).pop(2))
     ax.axhline(2.0, color="#D97706", ls="--", lw=1.4, label=list(l6).pop(3))
-    mark_end(ax, s_al.index, s_al.values, "#1E3A8A", t.get("comma"))
-    mark_end(ax, s_hv.index, s_hv.values, "#475569", t.get("comma"))
+    mark_end(ax, s_al.index, s_al.values, "#0284C7", t.get("comma"))
+    mark_end(ax, s_hv.index, s_hv.values, "#D97706", t.get("comma"))
     ax.set_xlim(-0.5, len(s_al) + 0.5); set_legend(ax, ncol=2)
 
 def save_single(draw_fn, t, data, base_name):
