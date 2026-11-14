@@ -11,9 +11,9 @@ G_URL = "https://destatis.de"
 
 TEXTS = {
     "de": {
-        "p1_t": "Bruttoinlandsprodukt: Entstehung", "p1_s": "Veränderung zum Vorjahr in % (preisbereinigt, Originalwerte)",
+        "p1_t": "Bruttoinlandsprodukt: Entstehung", "p1_s": "Veränderung zum Vorjahr in % (preisbereinigt, Ursprungswerte)",
         "p1_l": ("Reales BIP", "Prod. Gewerbe (o. Bau)", "Baugewerbe", "Handel, Verkehr, Gastgewerbe"),
-        "p2_t": "Bruttoinlandsprodukt: Verwendung", "p2_s": "Veränderung zum Vorjahr in % (Originalwerte)",
+        "p2_t": "Bruttoinlandsprodukt: Verwendung", "p2_s": "Veränderung zum Vorjahr in % (Ursprungswerte)",
         "p2_l": ("Nominales BIP", "Privater Konsum", "Staatskonsum", "Ausrüstungen", "Bauinvestitionen", "Exporte", "Importe"),
         "p3_t": "Auftragseingänge", "p3_s": "Volumenindex, Veränderung zum Vorjahr in %",
         "p3_l": ("Auftragseingang Industrie", "Auftragseingang Bauwirtschaft"),
@@ -22,7 +22,9 @@ TEXTS = {
         "p5_t": "Leistungsbilanzsaldo", "p5_s": "Monatlicher Saldo in Mrd. Euro", "p5_l": "Leistungsbilanzsaldo",
         "p6_t": "Arbeitslosigkeit und Inflation", "p6_s": "Quote bzw. Veränderung zum Vorjahr in %",
         "p6_l": ("Arbeitslosenquote", "Vollbeschäftigung (3%)", "Inflation (HVPI)", "EZB-Inflationsziel (2%)"),
-        "src": "Quellen: Statistisches Bundesamt (BIP: Originalwerte), Deutsche Bundesbank | Veränderung zum Vorjahr in % | Stand: ",
+        "src_all": "Quellen: Statistisches Bundesamt, Deutsche Bundesbank | Stand: ",
+        "src_destatis": "Quelle: Statistisches Bundesamt | Stand: ",
+        "src_bbk": "Quelle: Deutsche Bundesbank | Stand: ",
         "date_fmt": "%d.%m.%Y", "comma": True, "sfx": ""
     },
     "en": {
@@ -37,7 +39,9 @@ TEXTS = {
         "p5_t": "Current Account Balance", "p5_s": "Monthly balance in billion euros", "p5_l": "Current account balance",
         "p6_t": "Unemployment and Inflation", "p6_s": "Rate / change on previous year in %",
         "p6_l": ("Unemployment rate", "Full employment (3%)", "Inflation (HICP)", "ECB inflation target (2%)"),
-        "src": "Sources: Federal Statistical Office (GDP: unadjusted data), Deutsche Bundesbank | Change on previous year in % | As of: ",
+        "src_all": "Sources: Federal Statistical Office, Deutsche Bundesbank | As of: ",
+        "src_destatis": "Source: Federal Statistical Office | As of: ",
+        "src_bbk": "Source: Deutsche Bundesbank | As of: ",
         "date_fmt": "%Y-%m-%d", "comma": False, "sfx": "_en"
     }
 }
@@ -201,17 +205,17 @@ def draw_p6(ax, t, d):
                     bbox=dict(boxstyle="round,pad=0.12", facecolor="#F8FAFC", edgecolor="none", alpha=0.85), zorder=6)
     ax.set_xlim(-0.5, max(len(s_al), 1) - 0.3); set_legend(ax, ncol=2)
 
-def save_single(draw_fn, t, data, base_name):
+def save_single(draw_fn, t, data, base_name, src_key):
     fig, ax = plt.subplots(figsize=(7.2, 5.2), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.09, right=0.95, top=0.73, bottom=0.17)
     draw_fn(ax, t, data)
     now = datetime.now()
-    fig.text(0.09, 0.02, f"{t['src']}{now.strftime(t['date_fmt'])}", fontsize=6.5, color="#64748B")
-    plt.savefig(f"static/dashboard/{base_name}{t['sfx']}.png", dpi=300)
+    fig.text(0.09, 0.02, f"{t.get(src_key)}{now.strftime(t.get('date_fmt'))}", fontsize=6.5, color="#64748B")
+    plt.savefig(f"static/dashboard/{base_name}{t.get('sfx')}.png", dpi=300)
     plt.close()
 
 def build_for_lang(lang, data):
-    t = TEXTS[lang]
+    t = TEXTS.get(lang)
     plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
     fig, axes = plt.subplots(3, 2, figsize=(12.6, 17.8), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.06, right=0.95, top=0.90, bottom=0.06, hspace=0.62, wspace=0.20)
@@ -219,16 +223,16 @@ def build_for_lang(lang, data):
     draw_p1(ax1, t, data); draw_p2(ax2, t, data); draw_p3(ax3, t, data)
     draw_p4(ax4, t, data); draw_p5(ax5, t, data); draw_p6(ax6, t, data)
     now = datetime.now()
-    fig.text(0.06, 0.015, f"{t['src']}{now.strftime(t['date_fmt'])}", fontsize=8, color="#64748B")
-    plt.savefig(f"static/dashboard/dashboard{t['sfx']}.png", dpi=300)
+    fig.text(0.06, 0.015, f"{t.get('src_all')}{now.strftime(t.get('date_fmt'))}", fontsize=8, color="#64748B")
+    plt.savefig(f"static/dashboard/dashboard{t.get('sfx')}.png", dpi=300)
     plt.close()
 
-    save_single(draw_p1, t, data, "01_bip_entstehung")
-    save_single(draw_p2, t, data, "02_bip_verwendung")
-    save_single(draw_p3, t, data, "03_auftragseingaenge")
-    save_single(draw_p4, t, data, "04_produktion_einzelhandel")
-    save_single(draw_p5, t, data, "05_leistungsbilanz")
-    save_single(draw_p6, t, data, "06_arbeitslosigkeit_inflation")
+    save_single(draw_p1, t, data, "01_bip_entstehung", "src_destatis")
+    save_single(draw_p2, t, data, "02_bip_verwendung", "src_destatis")
+    save_single(draw_p3, t, data, "03_auftragseingaenge", "src_bbk")
+    save_single(draw_p4, t, data, "04_produktion_einzelhandel", "src_bbk")
+    save_single(draw_p5, t, data, "05_leistungsbilanz", "src_bbk")
+    save_single(draw_p6, t, data, "06_arbeitslosigkeit_inflation", "src_bbk")
 
 def main():
     df_y1 = get_destatis("81000-0001")
