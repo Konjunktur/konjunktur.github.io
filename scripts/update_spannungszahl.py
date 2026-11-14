@@ -88,23 +88,36 @@ def load_bbk_labor_market():
     sep = ";" if first_line.count(";") >= first_line.count(",") else ","
     df = pd.read_csv(io.StringIO(r.text), sep=sep, low_memory=False)
     time_col = next(iter(df.columns))
-    df = df.loc[df[time_col].astype(str).str.match(r"^(19\d{2}|20\d{2})-\d{2}")]
-    yms = df[time_col].astype(str).str.slice(0, 7).values
+    is_date = df[time_col].astype(str).str.match(r"^(19\d{2}|20\d{2})-\d{2}")
+    meta_df = df.loc[~is_date]
+    data_df = df.loc[is_date]
+    yms = data_df[time_col].astype(str).str.slice(0, 7).values
 
-    def pick_col(inc_any, exc_any=("Quote", "%", "Männer", "Frauen", "Ausländer", "SGB", "Zugang", "Abgang", "Anzeige")):
-        for col in df.columns[1:]:
-            cl = str(col).lower()
+    col_meta = {}
+    for col in df.columns[1:]:
+        if str(col).endswith("_FLAGS"):
+            continue
+        desc = " | ".join(str(x).strip() for x in meta_df[col].dropna().tolist()[:8])
+        col_meta[col] = f"{col} | {desc}"
+
+    print(f"[BBK INFO] Aktive Datenspalten: {len(col_meta)}")
+    for k_m, v_m in list(col_meta.items())[:12]:
+        print(f"  -> {v_m[:110]}")
+
+    def pick_col(inc_any, exc_any=("Quote", "%", "Männer", "Frauen", "Ausländer", "SGB", "Zugang", "Abgang", "Anzeige", "Index")):
+        for col, full_txt in col_meta.items():
+            cl = full_txt.lower()
             if any(w.lower() in cl for w in inc_any) and not any(ex.lower() in cl for ex in exc_any):
-                vals = pd.to_numeric(df[col].astype(str).str.replace(",", "."), errors="coerce")
+                vals = pd.to_numeric(data_df[col].astype(str).str.replace(",", "."), errors="coerce")
                 valid = vals.notna()
                 if valid.sum() >= 36:
                     nums = vals.loc[valid].values
                     scale = 0.001 if np.nanmedian(nums) > 20000 else 1.0
                     s = pd.Series(nums * scale, index=yms[valid]).groupby(level=0).last().sort_index()
-                    print(f"[BBK MATCH] {inc_any} -> '{str(col)[:65]}' ({len(s)} Monate, {s.index[-1]}={s.values[-1]:.1f})")
+                    print(f"[BBK MATCH] {inc_any} -> '{full_txt[:85]}' ({len(s)} Monate, {s.index[-1]}={s.values[-1]:.1f})")
                     return s
-        print(f"[BBK MISS] Keine Spalte für {inc_any}. Beispielspalten: {[str(c)[:55] for c in df.columns[1:12]]}")
         return pd.Series(dtype=float)
+
 
     s_alo = pick_col(("Arbeitslose",))
     s_ste = pick_col(("Offene Stellen", "Gemeldete Arbeitsstellen", "Arbeitsstellen"))
