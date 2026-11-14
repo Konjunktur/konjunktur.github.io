@@ -100,8 +100,8 @@ def fmt_num(val, use_comma):
 
 def style_panel(ax, title, sub, ymin, ymax, yticks, z=True):
     ax.set_facecolor("#F8FAFC")
-    ax.text(0.0, 1.25, title, transform=ax.transAxes, fontsize=11.5, fontweight="bold", color="#0F172A")
-    ax.text(0.0, 1.19, sub, transform=ax.transAxes, fontsize=8.2, color="#64748B")
+    ax.text(0.0, 1.33, title, transform=ax.transAxes, fontsize=11.5, fontweight="bold", color="#0F172A")
+    ax.text(0.0, 1.26, sub, transform=ax.transAxes, fontsize=8.2, color="#64748B")
     ax.set_ylim(ymin, ymax)
     ax.set_yticks(yticks)
     ax.tick_params(axis="y", colors="#475569", labelsize=8.5, length=0)
