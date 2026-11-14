@@ -84,11 +84,11 @@ def load_bbk_labor_market():
     if r.status_code != 200 or len(r.text) < 500:
         return pd.Series(dtype=float), pd.Series(dtype=float), pd.Series(dtype=float)
 
-    first_line = r.text.splitlines()
+    first_line = next(iter(r.text.splitlines()), "")
     sep = ";" if first_line.count(";") >= first_line.count(",") else ","
     df = pd.read_csv(io.StringIO(r.text), sep=sep, low_memory=False)
-    time_col = df.columns
-    df = df[df[time_col].astype(str).str.match(r"^(19\d{2}|20\d{2})-\d{2}")]
+    time_col = next(iter(df.columns))
+    df = df.loc[df[time_col].astype(str).str.match(r"^(19\d{2}|20\d{2})-\d{2}")]
     yms = df[time_col].astype(str).str.slice(0, 7).values
 
     def pick_col(inc_any, exc_any=("Quote", "%", "Männer", "Frauen", "Ausländer", "SGB", "Zugang", "Abgang", "Anzeige")):
