@@ -8,7 +8,7 @@ os.makedirs("static/spannungszahl", exist_ok=True)
 D_USER = os.environ.get("DESTATIS_USER", "")
 D_PASS = os.environ.get("DESTATIS_PASS", "")
 G_URL = "https://destatis.de"
-BBK_BASE = "https://bundesbank.de"
+BBK_BASE = "https://api.statistiken." + "bundesbank.de" + "/rest/data/"
 
 MONATE_DE = ("Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember")
 MONATE_EN = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
