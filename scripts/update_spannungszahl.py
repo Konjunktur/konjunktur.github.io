@@ -455,11 +455,11 @@ def main():
 ):
     xl_d = load_excel_url(lbl, u_dbg)
     if xl_d and sh_dbg in xl_d.sheet_names:
-        dfd = pd.read_excel(xl_d, sheet_name=sh_dbg, header=None)
-        print(f"=== {lbl} ({sh_dbg}, {dfd.shape}) ===")
-        for r_i in range(min(20, len(dfd))):
-            vals_r = [str(x).replace("\n", " ").strip() for x in dfd.iloc[r_i].tolist()[:8] if pd.notna(x)]
-            if vals_r:
+    dfd = pd.read_excel(xl_d, sheet_name=sh_dbg, header=None)
+    print(f"=== {lbl} ({sh_dbg}, {dfd.shape}) ===")
+    for r_i in range(min(20, len(dfd))):
+        vals_r = [str(x).replace("\n", " ").strip() for x in dfd.iloc[r_i].tolist()[:8] if pd.notna(x)]
+        if vals_r:
                 print(f"  Z{r_i}: {vals_r}")
 
     s_stellen = load_stellen_full()
