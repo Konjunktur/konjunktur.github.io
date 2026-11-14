@@ -8,68 +8,94 @@ pagination:
   pagerSize: 20
 
 taxonomies:
-    tag: tags
+  tag: tags
 
-menu:
-  main:
-    - name: Dashboard
-      url: /dashboard/
-      weight: 1
+defaultContentLanguage: de
+
+languages:
+  de:
+    languageName: "Deutsch"
+    weight: 1
+    menu:
+      main:
+        - name: Dashboard
+          url: /dashboard/
+          weight: 1
+    params:
+      description: "Konjunktur-Dashboard mit aktuellen Wirtschaftsdaten für Deutschland."
+      profileMode:
+        enabled: true
+        title: Thorsten Hild
+        subtitle: "Volkswirt, Arbeitsschwerpunkte: Konjunktur, Arbeitsmarkt, Wirtschaftspolitik, Internationale Wirtschaftsprobleme"
+        imageUrl: picture.jpeg
+        imageWidth: 160
+        imageHeight: 160
+        buttons:
+          - name: Konjunktur-Dashboard
+            url: /dashboard/
+
+  en:
+    languageName: "English"
+    weight: 2
+    menu:
+      main:
+        - name: Dashboard
+          url: /en/dashboard/
+          weight: 1
+    params:
+      description: "Economic Dashboard with current macroeconomic indicators for Germany."
+      profileMode:
+        enabled: true
+        title: Thorsten Hild
+        subtitle: "Economist, Focus Areas: Business Cycles, Labor Market, Economic Policy, International Economic Issues"
+        imageUrl: picture.jpeg
+        imageWidth: 160
+        imageHeight: 160
+        buttons:
+          - name: Economic Dashboard
+            url: /en/dashboard/
 
 params:
-    description: "Konjunktur-Dashboard mit aktuellen Wirtschaftsdaten für Deutschland."
-    author: Thorsten Hild
-    # googleAnalyticsID: G-XXXXX
-    DateFormat: January 2006
-    defaultTheme: light
-    hideFooter: false
-    disableThemeToggle: true
-    ShowShareButtons: false
-    ShowReadingTime: false
-    disableSpecial1stPost: true
-    disableAnchoredHeadings: true
-    ShowPostNavLinks: false
-    ShowBreadCrumbs: false
-    ShowCodeCopyButtons: true
-    ShowAllPagesInArchive: false
-    MainSections: [books, courses, papers, data]
-    ShowToc: false
-    disableScrollToTop: true
-    TocOpen: true
-    ShowWordCount: false
-    UseHugoToc: true
-    comments: false
-    math: true
-    profileMode:
-          enabled: true
-          title: Thorsten Hild
-          subtitle: "Volkswirt, Arbeitsschwerpunkte: Konjunktur, Arbeitsmarkt, Wirtschaftspolitik, Internationale Wirtschaftsprobleme und Beziehungen"
-          imageUrl: picture.jpeg
-          imageWidth: 160
-          imageHeight: 160
-          buttons:
-            - name: Konjunktur-Dashboard
-              url: /dashboard/
+  author: Thorsten Hild
+  DateFormat: January 2006
+  defaultTheme: light
+  hideFooter: false
+  disableThemeToggle: true
+  ShowShareButtons: false
+  ShowReadingTime: false
+  disableSpecial1stPost: true
+  disableAnchoredHeadings: true
+  ShowPostNavLinks: false
+  ShowBreadCrumbs: false
+  ShowCodeCopyButtons: true
+  ShowAllPagesInArchive: false
+  MainSections: [books, courses, papers, data]
+  ShowToc: false
+  disableScrollToTop: true
+  TocOpen: true
+  ShowWordCount: false
+  UseHugoToc: true
+  comments: false
+  math: true
 
-
-    assets:
-        disableScrollBarStyle: true
-    cover:
-        hiddenInList: false
-        hiddenInSingle: true
-    label:
-      text: Thorsten Hild
-      icon: favicon.ico
-      iconHeight: 18
+  assets:
+    disableScrollBarStyle: true
+  cover:
+    hiddenInList: false
+    hiddenInSingle: true
+  label:
+    text: Thorsten Hild
+    icon: favicon.ico
+    iconHeight: 18
 
 markup:
-    goldmark:
-        renderer:
-            unsafe: true
-    highlight:
-        guessSyntax: true
-        style: autumn 
-    tableOfContents:
-        endLevel: 2
-        ordered: false
-        startLevel: 2
+  goldmark:
+    renderer:
+      unsafe: true
+  highlight:
+    guessSyntax: true
+    style: autumn
+  tableOfContents:
+    endLevel: 2
+    ordered: false
+    startLevel: 2
