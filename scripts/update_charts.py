@@ -296,9 +296,24 @@ def main():
     if s_lb.empty: s_lb = pd.Series((15.3,10.1,10.5,14.2,16.8,18.1,17.4,16.9,18.5,15.2,14.8,16.1,15.7), index=m13)
     
     s_al = get_bbk("BBDE1.M.DE.S.ABA1.A00000000.U.A.A00.A", 13)
-    s_hv = get_destatis("61121-0002", ["Veränderung zum Vorjahresmonat"], ["Jahresdurchschnitt"]).tail(13)
-    if s_al.empty: s_al = pd.Series((6.2,6.1,6.2,6.6,6.5,6.4,6.3,6.2,6.2,6.3,6.4,6.3,6.2), index=m13)
-    if s_hv.empty: s_hv = pd.Series((2.3,2.6,2.0,2.1,2.0,2.1,2.2,2.1,2.0,1.9,2.0,2.1,2.8), index=m13)
+    if s_al.empty:
+        s_al = pd.Series((6.2,6.1,6.2,6.6,6.5,6.4,6.3,6.2,6.2,6.3,6.4,6.3,6.2), index=m13)
+    m_cur = list(s_al.index)
+
+    df_hv = get_destatis("61121-0002")
+    hv_vals = parse_destatis_series(df_hv, ["Veränderung zum Vorjahresmonat"], ["Jahresdurchschnitt"], m_cur)
+    if all(np.isnan(v) for v in hv_vals):
+        # Fallback für Monatsformat mit deutschem Monatsnamen im Zeilen-Text
+        m_names_de = ("Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember")
+        hv_vals = []
+        for ym in m_cur:
+            mn = m_names_de[int(ym[5:7]) - 1]
+            v_m = parse_destatis_series(df_hv, ["Veränderung zum Vorjahresmonat", mn], ["Jahresdurchschnitt"], [ym[:4]])
+            hv_vals.append(next(iter(v_m), np.nan))
+    s_hv = pd.Series(hv_vals, index=m_cur).dropna()
+    if s_hv.empty:
+        s_hv = pd.Series((2.3,2.6,2.0,2.1,2.0,2.1,2.2,2.1,2.0,1.9,2.0,2.1,2.8), index=m_cur)
+
     
     data = {
         "xi": xi, "xl_bip": xl_bip,
