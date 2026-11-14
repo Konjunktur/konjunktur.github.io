@@ -130,7 +130,13 @@ def draw_p1(ax, t, d):
     xi, xl_bip = d.get("xi"), d.get("xl_bip")
     style_panel(ax, t.get("p1_t"), t.get("p1_s"), -10, 8, range(-10, 10, 2))
     l1 = t.get("p1_l")
-    ax.bar(xi, d.get("bip_r"), width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=list(l1).pop(0), zorder=2)
+    bars = ax.bar(xi, d.get("bip_r"), width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=list(l1).pop(0), zorder=2)
+    for b in bars:
+        h = b.get_height()
+        if not np.isnan(h):
+            off = 0.25 if h >= 0 else -0.35
+            va = "bottom" if h >= 0 else "top"
+            ax.text(b.get_x() + b.get_width() / 2, h + off, fmt_num(h, t.get("comma")), ha="center", va=va, fontsize=6.2, color="#1E3A8A", fontweight="bold", zorder=4)
     ax.plot(xi, d.get("pg"), color="#D97706", lw=1.9, marker="o", ms=2.5, label=list(l1).pop(1), zorder=3)
     ax.plot(xi, d.get("bau"), color="#64748B", lw=1.9, marker="o", ms=2.5, label=list(l1).pop(2), zorder=3)
     ax.plot(xi, d.get("hvg"), color="#059669", lw=1.9, marker="o", ms=2.5, label=list(l1).pop(3), zorder=3)
@@ -141,7 +147,13 @@ def draw_p2(ax, t, d):
     xi, xl_bip = d.get("xi"), d.get("xl_bip")
     style_panel(ax, t.get("p2_t"), t.get("p2_s"), -8, 12, range(-8, 14, 2))
     l2 = t.get("p2_l")
-    ax.bar(xi, d.get("bip_n"), width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=list(l2).pop(0), zorder=2)
+    bars = ax.bar(xi, d.get("bip_n"), width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=list(l2).pop(0), zorder=2)
+    for b in bars:
+        h = b.get_height()
+        if not np.isnan(h):
+            off = 0.25 if h >= 0 else -0.35
+            va = "bottom" if h >= 0 else "top"
+            ax.text(b.get_x() + b.get_width() / 2, h + off, fmt_num(h, t.get("comma")), ha="center", va=va, fontsize=6.2, color="#1E3A8A", fontweight="bold", zorder=4)
     ax.plot(xi, d.get("kp"), color="#D97706", lw=1.7, label=list(l2).pop(1), zorder=3)
     ax.plot(xi, d.get("ks"), color="#64748B", lw=1.7, label=list(l2).pop(2), zorder=3)
     ax.plot(xi, d.get("aus"), color="#DC2626", lw=1.7, label=list(l2).pop(3), zorder=3)
