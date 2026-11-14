@@ -139,7 +139,7 @@ def get_destatis_bip_q():
     except Exception:
         return pd.Series(dtype=float)
 
-def style_sz_ax(fig, ax, title, ymin, ymax, yticks, xlabel_text, xlabel_pad=22):
+def style_sz_ax(fig, ax, title, ymin, ymax, yticks, xlabel_text, xlabel_pad=14):
     fig.suptitle(title, x=0.09, y=0.96, ha="left", fontsize=12.5, fontweight="bold", color="#0F172A")
     ax.set_facecolor("#F8FAFC")
     ax.set_ylim(ymin, ymax)
