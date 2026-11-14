@@ -1,19 +1,14 @@
-import os, io, re, time, requests
+import os, io, re, glob, requests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 
 os.makedirs("static/spannungszahl", exist_ok=True)
+os.makedirs("data/ba", exist_ok=True)
 D_USER = os.environ.get("DESTATIS_USER", "")
 D_PASS = os.environ.get("DESTATIS_PASS", "")
 G_URL = "https://destatis.de"
-
-BA_HOST = "https://statistik." + "arbeitsagentur.de"
-BA_PATH = "/" + "Statistikdaten" + "/" + "Detail" + "/"
-URL_STELLEN_AKT = BA_HOST + BA_PATH + "Aktuell/iiia4/gemeldete-arbeitsstellen/gemeldete-arbeitsstellen-d-0-xlsx.xlsx?__blob=publicationFile&v=1"
-URL_ALO_AKT     = BA_HOST + BA_PATH + "Aktuell/iiia4/zr-alo-bl/zr-alo-bl-dwolr-0-xlsx.xlsx?__blob=publicationFile&v=1"
-URL_KUG_AKT     = BA_HOST + BA_PATH + "Aktuell/iiia7/kurzarbeit-zr2/kurzarbeit-zr2-dwolkraa-0-xlsm.xlsm?__blob=publicationFile&v=1"
 
 MONATE_DE = ("Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember")
 MONATE_EN = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
@@ -81,28 +76,31 @@ def fmt_num(val, use_comma, dec=1):
     s = f"{val:.{dec}f}"
     return s.replace(".", ",") if use_comma else s
 
-def load_excel_url(label, url):
-    hdrs = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Referer": BA_HOST + "/",
-        "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,*/*",
-        "Accept-Language": "de-DE,de;q=0.9"
-    }
-    for attempt in range(2):
-        time.sleep(3.0 if attempt == 0 else 8.0)
-        try:
-            r = requests.get(url, headers=hdrs, timeout=35, allow_redirects=True)
-            if r.status_code == 200 and r.content[:2] == b"PK":
-                xl = pd.ExcelFile(io.BytesIO(r.content), engine="openpyxl")
-                print(f"[{label} OK] Blätter: {xl.sheet_names}")
-                return xl
-            print(f"[{label} WARN] Versuch {attempt+1}: HTTP {r.status_code}, Bytes={len(r.content)}")
-            if r.status_code != 429:
-                return None
-        except Exception as e:
-            print(f"[{label} ERR] {e}")
-    return None
+def find_local_workbooks(pattern_part):
+    found = []
+    for path in sorted(glob.glob("data/ba/*.xls*")):
+        if pattern_part.lower() in os.path.basename(path).lower():
+            try:
+                xl = pd.ExcelFile(path, engine="openpyxl")
+                print(f"[LOCAL OK] {path} | Blätter: {xl.sheet_names}")
+                found.append((os.path.basename(path), xl))
+            except Exception as e:
+                print(f"[LOCAL ERR] {path}: {e}")
+    return found
 
+def read_cache_csv(path):
+    if os.path.exists(path):
+        try:
+            df = pd.read_csv(path)
+            return pd.Series(df.get("val").astype(float).values, index=df.get("ym").astype(str).values).sort_index()
+        except Exception:
+            pass
+    return pd.Series(dtype=float)
+
+def write_cache_csv(path, s):
+    if len(s) > 0:
+        s = s.sort_index()
+        pd.DataFrame({"ym": s.index.astype(str), "val": s.values}).to_csv(path, index=False)
 
 def parse_cell_ym(val):
     if pd.isna(val):
@@ -127,13 +125,12 @@ def extract_ba_universal(label, xl, sheet_prefers, row_includes, row_excludes=()
     m_map = {m.lower(): i + 1 for i, m in enumerate(MONATE_DE)}
 
     for sh in ordered:
-        if sh in seen or "inhalt" in sh.lower() or "info" in sh.lower() or "impressum" in sh.lower():
+        if sh in seen or any(x in sh.lower() for x in ("inhalt", "info", "impressum", "prüfung", "hinweis", "deckblatt")):
             continue
         seen.add(sh)
-        df = xl.parse(sh, header=None)
+        df = pd.read_excel(xl, sheet_name=sh, header=None)
         n_rows, n_cols = df.shape
 
-        # Fall A: Monate nebeneinander in einer Kopfzeile
         for r_idx in range(min(25, n_rows)):
             ym_cols = {}
             for c_idx, cell in enumerate(df.iloc[r_idx].tolist()):
@@ -153,10 +150,9 @@ def extract_ba_universal(label, xl, sheet_prefers, row_includes, row_excludes=()
                                 out[ym] = float(v) * scale
                         if len(out) >= 6:
                             s = pd.Series(out).sort_index()
-                            print(f"[{label}] Blatt '{sh}' (Spaltenformat, Zeile '{row_txt[:45]}'): {len(s)} Monate")
+                            print(f"[{label}] Blatt '{sh}' (Spaltenformat): {len(s)} Monate ({s.index[-1]}={s.values[-1]:.1f})")
                             return s
 
-        # Fall B: Monate untereinander in Spalte A oder B
         cur_year = None
         ym_rows = {}
         for r_idx in range(n_rows):
@@ -174,8 +170,9 @@ def extract_ba_universal(label, xl, sheet_prefers, row_includes, row_excludes=()
                 ym_rows[r_idx] = ym
 
         if len(ym_rows) >= 12:
+            hdr_df = df.iloc[:min(25, n_rows), :].ffill(axis=1)
             for c_idx in range(1, n_cols):
-                hdr_txt = " | ".join(str(df.iloc[r, c_idx]).strip() for r in range(min(25, n_rows)) if pd.notna(df.iloc[r, c_idx]))
+                hdr_txt = " | ".join(str(hdr_df.iloc[r, c_idx]).replace("\n", " ").strip() for r in range(min(25, n_rows)) if pd.notna(hdr_df.iloc[r, c_idx]))
                 if all(inc.lower() in hdr_txt.lower() for inc in row_includes) and not any(ex.lower() in hdr_txt.lower() for ex in row_excludes):
                     out = {}
                     for r_idx, ym in ym_rows.items():
@@ -184,56 +181,25 @@ def extract_ba_universal(label, xl, sheet_prefers, row_includes, row_excludes=()
                             out[ym] = float(v) * scale
                     if len(out) >= 12:
                         s = pd.Series(out).sort_index()
-                        print(f"[{label}] Blatt '{sh}' (Zeilenformat, Spalte {c_idx} '{hdr_txt[:45]}'): {len(s)} Monate")
+                        print(f"[{label}] Blatt '{sh}' (Zeilenformat, Spalte {c_idx}): {len(s)} Monate ({s.index[-1]}={s.values[-1]:.1f})")
                         return s
-
-    print(f"[{label} WARN] Keine passende Reihe gefunden für {row_includes}")
     return pd.Series(dtype=float)
 
-def load_stellen_full():
-    cache_file = "static/spannungszahl/stellen_cache.csv"
-    cached = {}
-    if os.path.exists(cache_file):
-        try:
-            cdf = pd.read_csv(cache_file)
-            cached = dict(zip(cdf.get("ym").astype(str), cdf.get("val").astype(float)))
-        except Exception:
-            cached = {}
-
-    combined = pd.Series(cached, dtype=float)
-    xl_akt = load_excel_url("STELLEN_AKT", URL_STELLEN_AKT)
-    s_akt = extract_ba_universal("STELLEN_AKT", xl_akt, ["1.1", "Bestand"], ["Insgesamt"], ["sozialversicherungspflichtige"])
-    if not s_akt.empty:
-        combined = s_akt.combine_first(combined)
-
-    combined = combined.sort_index()
-    if len(combined) > 0:
-        pd.DataFrame({"ym": combined.index.astype(str), "val": combined.values}).to_csv(cache_file, index=False)
-    return combined
-
-def load_ukraine_series(target_months):
+def extract_ukraine_from_workbooks():
     cache_file = "static/spannungszahl/ukraine_cache.csv"
-    cached = {}
-    if os.path.exists(cache_file):
-        try:
-            cdf = pd.read_csv(cache_file)
-            cached = dict(zip(cdf.get("ym").astype(str), cdf.get("val").astype(float)))
-        except Exception:
-            cached = {}
+    cached = read_cache_csv(cache_file)
+    vals = dict(zip(cached.index.astype(str), cached.values))
 
-    for ym in target_months:
-        if ym < "2022-01" or ym in cached:
+    for fname, xl in find_local_workbooks("nat-ins"):
+        m_file = re.search(r"(20\d{2})(\d{2})", fname)
+        ym = f"{m_file.group(1)}-{m_file.group(2)}" if m_file else None
+        if not ym:
             continue
-        ym_compact = ym.replace("-", "")
-        u = BA_HOST + BA_PATH + f"{ym_compact}/iiia4/nat-ins/nat-ins-dl-0-{ym_compact}-xlsx.xlsx?__blob=publicationFile&v=1"
-        xl = load_excel_url(f"UKR_{ym}", u)
-        if xl is None:
-            continue
-        found = False
         for sh in xl.sheet_names:
-            if any(k in sh.lower() for k in ("inhalt", "info", "impressum")):
+            if any(k in sh.lower() for k in ("inhalt", "info", "impressum", "hinweis", "deckblatt")):
                 continue
-            df = xl.parse(sh, header=None)
+            df = pd.read_excel(xl, sheet_name=sh, header=None)
+            found = False
             for r_idx in range(len(df)):
                 row_vals = df.iloc[r_idx].tolist()
                 row_txt = " | ".join(str(x).strip() for x in row_vals[:4] if pd.notna(x))
@@ -241,7 +207,7 @@ def load_ukraine_series(target_months):
                     for cell in row_vals[1:8]:
                         v = pd.to_numeric(str(cell).replace(" ", "").replace(".", "").replace(",", "."), errors="coerce")
                         if not np.isnan(v) and v > 1000:
-                            cached[ym] = float(v) * 0.001
+                            vals[ym] = float(v) * 0.001
                             found = True
                             break
                 if found:
@@ -249,10 +215,50 @@ def load_ukraine_series(target_months):
             if found:
                 break
 
-    if cached:
-        keys_s = sorted(cached.keys())
-        pd.DataFrame({"ym": keys_s, "val": [cached.get(k) for k in keys_s]}).to_csv(cache_file, index=False)
-    return pd.Series(cached).sort_index()
+    out_s = pd.Series(vals, dtype=float).sort_index()
+    write_cache_csv(cache_file, out_s)
+    return out_s
+
+def get_destatis_13211():
+    if not D_USER or not D_PASS:
+        return pd.Series(dtype=float), pd.Series(dtype=float)
+    p = {"username": D_USER, "password": D_PASS, "name": "13211-0001", "area": "all", "compress": "false", "format": "ffcsv", "language": "de"}
+    try:
+        r = requests.get(G_URL, params=p, timeout=35)
+        lines = [ln for ln in r.text.splitlines() if ln.count(";") >= 4]
+        if len(lines) < 10:
+            return pd.Series(dtype=float), pd.Series(dtype=float)
+        df = pd.read_csv(io.StringIO("\n".join(lines)), sep=";", decimal=",", on_bad_lines="skip")
+        text_cols = [c for c in df.columns if c not in ("ZEIT", "WERT")]
+        df["_ROW"] = df.loc[:, text_cols].fillna("").astype(str).agg(" | ".join, axis=1)
+        m_map = {m.lower(): i + 1 for i, m in enumerate(MONATE_DE)}
+
+        def parse_13211(inc, exc):
+            sub = df.copy()
+            for t_inc in inc:
+                sub = sub[sub.get("_ROW").str.contains(t_inc, case=False, na=False)]
+            for t_exc in exc:
+                sub = sub[~sub.get("_ROW").str.contains(t_exc, case=False, na=False)]
+            sub["V"] = pd.to_numeric(sub.get("WERT").astype(str).str.replace(",", "."), errors="coerce")
+            sub = sub.dropna(subset=("V",))
+            out = {}
+            for _, row in sub.iterrows():
+                z = str(row.get("ZEIT")).strip()
+                rt = str(row.get("_ROW")).lower()
+                if re.fullmatch(r"20\d{2}", z):
+                    for m_name, m_idx in m_map.items():
+                        if m_name in rt:
+                            out[f"{z}-{m_idx:02d}"] = float(row.get("V")) * 0.001
+                            break
+            return pd.Series(out).sort_index()
+
+        s_alo = parse_13211(["Arbeitslose"], ["Quote", "saison", "kalender", "X-13"])
+        s_ste = parse_13211(["Gemeldete Arbeitsstellen"], ["saison", "kalender", "X-13"])
+        print(f"[GENESIS 13211] Alo={len(s_alo)} Monate, Stellen={len(s_ste)} Monate")
+        return s_ste, s_alo
+    except Exception as e:
+        print(f"[GENESIS 13211 INFO] {e}")
+        return pd.Series(dtype=float), pd.Series(dtype=float)
 
 def get_destatis_bip_q():
     if not D_USER or not D_PASS:
@@ -326,6 +332,8 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
     now_str = datetime.now().strftime(t.get("date_fmt"))
     months_all = [ym for ym in sz_einf.index if ym >= "2019-01"]
+    if len(months_all) < 2:
+        months_all = list(sz_einf.index)
     x_all = np.arange(len(months_all))
     y_einf = [float(sz_einf.loc[ym]) for ym in months_all]
     y_erw = [float(sz_erw.loc[ym]) for ym in months_all]
@@ -448,31 +456,44 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     save_fig(fig, t.get("src_all"), "05_spannungszahl_bip")
 
 def main():
-    for lbl, u_dbg, sh_dbg in (("DBG_STELLEN", URL_STELLEN_AKT, "1_2"), ("DBG_ALO", URL_ALO_AKT, "1.1"), ("DBG_KUG", URL_KUG_AKT, "Daten1")):
-        xl_d = load_excel_url(lbl, u_dbg)
-        if xl_d and sh_dbg in xl_d.sheet_names:
-            dfd = pd.read_excel(xl_d, sheet_name=sh_dbg, header=None)
-            print(f"=== {lbl} ({sh_dbg}, {dfd.shape}) ===")
-            for r_i in range(min(20, len(dfd))):
-                vals_r = [str(x).replace("\n", " ").strip() for x in dfd.iloc[r_i].tolist()[:8] if pd.notna(x)]
-                if vals_r:
-                    print(f"  Z{r_i}: {vals_r}")
+    s_ste_gen, s_alo_gen = get_destatis_13211()
 
-    s_stellen = load_stellen_full()
-    xl_u = load_excel_url("ALO", URL_ALO_AKT)
-    xl_k = load_excel_url("KUG", URL_KUG_AKT)
+    s_stellen = read_cache_csv("static/spannungszahl/stellen_cache.csv")
+    if not s_ste_gen.empty:
+        s_stellen = s_ste_gen.combine_first(s_stellen)
+    for fname, xl in find_local_workbooks("arbeitsstellen"):
+        s_loc = extract_ba_universal(fname, xl, ["1_1", "1.1"], ["Insgesamt"], ["sozialversicherungspflichtige"])
+        if not s_loc.empty:
+            s_stellen = s_loc.combine_first(s_stellen)
+    s_stellen = s_stellen.sort_index()
+    write_cache_csv("static/spannungszahl/stellen_cache.csv", s_stellen)
 
-    s_alo = extract_ba_universal("ALO", xl_u, ["Deutschland", "Arbeitslose", "Zeitreihe"], ["Deutschland"], ["Ukraine"])
-    if s_alo.empty:
-        s_alo = extract_ba_universal("ALO_ALT", xl_u, ["Deutschland", "Zeitreihe"], ["Insgesamt"], ["Ukraine"])
-    s_kug = extract_ba_universal("KUG", xl_k, ["Deutschland", "Kurzarbeit", "Zeitreihe"], ["Deutschland"], ())
-    if s_kug.empty:
-        s_kug = extract_ba_universal("KUG_ALT", xl_k, ["Zeitreihe", "Deutschland"], ["Kurzarbeiter"], ())
+    s_alo = read_cache_csv("static/spannungszahl/alo_cache.csv")
+    if not s_alo_gen.empty:
+        s_alo = s_alo_gen.combine_first(s_alo)
+    for fname, xl in find_local_workbooks("zr-alo"):
+        u_loc = extract_ba_universal(fname, xl, ["1.1", "1_1"], ["Deutschland"], ["Quote", "%"])
+        if u_loc.empty:
+            u_loc = extract_ba_universal(fname, xl, ["1.1", "1_1"], ["Insgesamt"], ["Quote", "%"])
+        if not u_loc.empty:
+            s_alo = u_loc.combine_first(s_alo)
+    s_alo = s_alo.sort_index()
+    write_cache_csv("static/spannungszahl/alo_cache.csv", s_alo)
+
+    s_kug = read_cache_csv("static/spannungszahl/kug_cache.csv")
+    for fname, xl in find_local_workbooks("kurzarbeit"):
+        k_loc = extract_ba_universal(fname, xl, ["Daten2", "Ab2007", "Daten1"], ["Deutschland"], ["Quote", "%"])
+        if k_loc.empty:
+            k_loc = extract_ba_universal(fname, xl, ["Daten2", "Ab2007", "Daten1"], ["Kurzarbeiter"], ["Quote", "%"])
+        if not k_loc.empty:
+            s_kug = k_loc.combine_first(s_kug)
+    s_kug = s_kug.sort_index()
+    write_cache_csv("static/spannungszahl/kug_cache.csv", s_kug)
 
     common = s_stellen.index.intersection(s_alo.index)
     print(f"[MERGE] Gemeinsame Monate Stellen & Alo: {len(common)}")
-    if len(common) >= 24:
-        s_ukr = load_ukraine_series(common)
+    if len(common) >= 13:
+        s_ukr = extract_ukraine_from_workbooks()
         s_ukr_aligned = s_ukr.reindex(common).fillna(0.0)
         s_alo_ber = s_alo.loc[common] - s_ukr_aligned
         s_kug_aligned = s_kug.reindex(common).fillna(0.0)
@@ -480,7 +501,7 @@ def main():
         d_erw = s_stellen.loc[common] - (s_alo_ber + s_kug_aligned)
         sz_einf = (d_einf - d_einf.shift(12)).dropna()
         sz_erw = (d_erw - d_erw.shift(12)).dropna()
-        print(f"[RESULT] Letzte Einfache SZ ({sz_einf.index[-1]}): {sz_einf.values[-1]:.1f} | Erweiterte SZ: {sz_erw.values[-1]:.1f}")
+        print(f"[RESULT] Monate SZ: {len(sz_einf)} | Letzter Wert ({sz_einf.index[-1]}): {sz_einf.values[-1]:.1f}")
     else:
         idx = pd.period_range("2018-01", "2026-10", freq="M").astype(str)
         d_einf = pd.Series(np.linspace(-1500, -2100, len(idx)), index=idx)
