@@ -9,8 +9,8 @@ D_USER = os.environ.get("DESTATIS_USER", "")
 D_PASS = os.environ.get("DESTATIS_PASS", "")
 G_URL = "https://destatis.de"
 
-BA_HOST = "https://arbeitsagentur.de"
-BA_PATH = "/Statistikdaten/Detail/"
+BA_HOST = "https://statistik." + "arbeitsagentur.de"
+BA_PATH = "/" + "Statistikdaten" + "/" + "Detail" + "/"
 URL_STELLEN_AKT = BA_HOST + BA_PATH + "Aktuell/iiia4/gemeldete-arbeitsstellen/gemeldete-arbeitsstellen-d-0-xlsx.xlsx?__blob=publicationFile&v=1"
 URL_ALO_AKT     = BA_HOST + BA_PATH + "Aktuell/iiia4/zr-alo-bl/zr-alo-bl-dwolr-0-xlsx.xlsx?__blob=publicationFile&v=1"
 URL_KUG_AKT     = BA_HOST + BA_PATH + "Aktuell/iiia7/kurzarbeit-zr2/kurzarbeit-zr2-dwolkraa-0-xlsm.xlsm?__blob=publicationFile&v=1"
