@@ -314,4 +314,4 @@ for ax_item, pfad in einzel_grafiken:
 plt.close()
 
 if __name__ == "__main__":
-main()
+    main()
