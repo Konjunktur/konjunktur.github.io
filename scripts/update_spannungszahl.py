@@ -77,8 +77,8 @@ def fmt_num(val, use_comma, dec=1):
     return s.replace(".", ",") if use_comma else s
 
 def load_bbk_labor_market():
-    """Lädt monatliche Ursprungswerte für Arbeitslose, Gemeldete Stellen und Kurzarbeiter direkt aus der Bundesbank-API."""
-    url = f"{BBK_BASE}BBDE1/M.DE.N.?format=csv&lang=de"
+    """Lädt monatliche Ursprungswerte für Arbeitslose, Gemeldete Stellen und Kurzarbeiter direkt aus BBK01/US."""
+    url = f"{BBK_BASE}BBK01/US?format=csv&lang=de"
     r = requests.get(url, timeout=45)
     print(f"[BBK] HTTP {r.status_code}, Bytes={len(r.text)}")
     if r.status_code != 200 or len(r.text) < 500:
@@ -104,7 +104,7 @@ def load_bbk_labor_market():
     for k_m, v_m in list(col_meta.items())[:12]:
         print(f"  -> {v_m[:110]}")
 
-    def pick_col(inc_any, exc_any=("Quote", "%", "Männer", "Frauen", "Ausländer", "SGB", "Zugang", "Abgang", "Anzeige", "Index")):
+    def pick_col(inc_any, exc_any=("Quote", "%", "saisonbereinigt", "kalenderbereinigt", "Männer", "Frauen", "Ausländer", "Zugang", "Abgang", "Anzeige", "Index")):
         for col, full_txt in col_meta.items():
             cl = full_txt.lower()
             if any(w.lower() in cl for w in inc_any) and not any(ex.lower() in cl for ex in exc_any):
