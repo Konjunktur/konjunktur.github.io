@@ -448,19 +448,15 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     save_fig(fig, t.get("src_all"), "05_spannungszahl_bip")
 
 def main():
-    for lbl, u_dbg, sh_dbg in (
-    ("DBG_STELLEN", URL_STELLEN_AKT, "1_2"),
-    ("DBG_ALO", URL_ALO_AKT, "1.1"),
-    ("DBG_KUG", URL_KUG_AKT, "Daten1"),
-):
-    xl_d = load_excel_url(lbl, u_dbg)
-    if xl_d and sh_dbg in xl_d.sheet_names:
-    dfd = pd.read_excel(xl_d, sheet_name=sh_dbg, header=None)
-    print(f"=== {lbl} ({sh_dbg}, {dfd.shape}) ===")
-    for r_i in range(min(20, len(dfd))):
-        vals_r = [str(x).replace("\n", " ").strip() for x in dfd.iloc[r_i].tolist()[:8] if pd.notna(x)]
-        if vals_r:
-                print(f"  Z{r_i}: {vals_r}")
+    for lbl, u_dbg, sh_dbg in (("DBG_STELLEN", URL_STELLEN_AKT, "1_2"), ("DBG_ALO", URL_ALO_AKT, "1.1"), ("DBG_KUG", URL_KUG_AKT, "Daten1")):
+        xl_d = load_excel_url(lbl, u_dbg)
+        if xl_d and sh_dbg in xl_d.sheet_names:
+            dfd = pd.read_excel(xl_d, sheet_name=sh_dbg, header=None)
+            print(f"=== {lbl} ({sh_dbg}, {dfd.shape}) ===")
+            for r_i in range(min(20, len(dfd))):
+                vals_r = [str(x).replace("\n", " ").strip() for x in dfd.iloc[r_i].tolist()[:8] if pd.notna(x)]
+                if vals_r:
+                    print(f"  Z{r_i}: {vals_r}")
 
     s_stellen = load_stellen_full()
     xl_u = load_excel_url("ALO", URL_ALO_AKT)
