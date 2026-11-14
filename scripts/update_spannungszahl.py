@@ -19,8 +19,6 @@ TEXTS = {
         "p1_t": "Spannungszahl",
         "p1_l": ("Einfache Spannungszahl (Ursprungswerte)",
                  "Linie unveränderter wirtschaftlicher Aktivität (ausgehend vom Vorjahresmonat)"),
-        "p1_peak": "Oberer\nWendepunkt\nder Konjunktur,\nFebruar 2022",
-        "p1_trough": "Unterer\nWendepunkt\nder Konjunktur,\nMai 2025",
         "p2_t": "Spannungszahl",
         "p2_l1": "Einfache Spannungszahl (Ursprungswerte)",
         "p2_l_vj": "Linie unveränderter wirtschaftlicher Aktivität (ausgehend vom Vorjahresmonat)",
@@ -47,8 +45,6 @@ TEXTS = {
         "p1_t": "Economic Tension Number",
         "p1_l": ("Simple Economic Tension Number (unadjusted data)",
                  "Line of unchanged economic activity (starting from previous year's month)"),
-        "p1_peak": "Upper turning point\nof business cycle,\nFebruary 2022",
-        "p1_trough": "Lower turning point\nof business cycle,\nMay 2025",
         "p2_t": "Economic Tension Number",
         "p2_l1": "Simple Economic Tension Number (unadjusted data)",
         "p2_l_vj": "Line of unchanged economic activity (starting from previous year's month)",
@@ -81,12 +77,6 @@ def load_bbk_labor_market():
     df_url = "https://api.statistiken." + "bundesbank.de" + "/rest/dataflow/BBK"
     r_df = requests.get(df_url, timeout=30)
     flows = re.findall(r'id="(BB[A-Z0-9_]+)"[^>]*>.*?<common:Name xml:lang="de">([^<]+)</common:Name>', r_df.text, flags=re.S)
-    print(f"[BBK FLOWS] Gefunden: {len(flows)}")
-    for fid, fname in flows:
-        if any(w in fname.lower() for w in ("arbeitslos", "stellen", "kurzarbeit", "arbeitsmarkt", "beschäftig")):
-            print(f"  -> {fid}: {fname}")
-
-    # Zusätzlich bekannte Arbeitsmarkt-Datenflüsse testen
     cand_flows = [fid for fid, fn in flows if any(w in fn.lower() for w in ("arbeitslos", "stellen", "kurzarbeit", "arbeitsmarkt"))]
     for extra in ("BBDL1", "BBDP1", "BBDE1"):
         if extra not in cand_flows:
@@ -139,13 +129,6 @@ def load_bbk_labor_market():
 
     return s_ste, s_alo, s_kug
 
-
-
-    s_alo = pick_col(("Arbeitslose",))
-    s_ste = pick_col(("Offene Stellen", "Gemeldete Arbeitsstellen", "Arbeitsstellen"))
-    s_kug = pick_col(("Kurzarbeit",))
-    return s_ste, s_alo, s_kug
-
 def get_destatis_bip_q():
     if not D_USER or not D_PASS:
         return pd.Series(dtype=float)
@@ -180,7 +163,7 @@ def style_sz_ax(ax, title, ymin, ymax, yticks, xlabel_text, title_y=1.22):
     for s in ("top", "right", "left"):
         ax.spines[s].set_visible(False)
     ax.spines["bottom"].set_color("#94A3B8")
-    ax.set_xlabel(xlabel_text, fontsize=8, color="#475569", labelpad=22)
+    ax.set_xlabel(xlabel_text, fontsize=8, color="#475569", labelpad=28)
 
 def draw_year_groups(ax, months, m_names, step=3):
     ticks, labels = [], []
@@ -196,7 +179,7 @@ def draw_year_groups(ax, months, m_names, step=3):
         idxs = [i for i, ym in enumerate(months) if ym.startswith(y)]
         if idxs:
             mid = (min(idxs) + max(idxs)) / 2.0
-            ax.text(mid, -0.24 if step > 1 else -0.27, y, transform=ax.get_xaxis_transform(), ha="center", fontsize=8, color="#475569")
+            ax.text(mid, -0.24 if step > 1 else -0.33, y, transform=ax.get_xaxis_transform(), ha="center", fontsize=8, color="#475569")
 
 def line_unv(diff_series, anchor_ym, months):
     if anchor_ym not in diff_series.index:
@@ -222,7 +205,7 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
         months_all = list(sz_einf.index)
     x_all = np.arange(len(months_all))
     y_einf = [float(sz_einf.loc[ym]) for ym in months_all]
-    y_erw = [float(sz_erw.loc[ym]) for ym in months_all]
+    y_erw = [float(sz_erw.loc[ym]) if ym in sz_erw.index else np.nan for ym in months_all]
     vj_anchor = months_all[max(0, len(months_all) - 13)]
 
     def save_fig(fig, src_text, fname):
@@ -234,22 +217,40 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     # 1. Einfache Spannungszahl (Gesamt)
     fig, ax = plt.subplots(figsize=(7.6, 5.4), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.10, right=0.95, top=0.72, bottom=0.25)
-    ymin_1 = min(-900, int(np.floor((min(y_einf) - 100) / 300.0) * 300))
-    ymax_1 = max(900, int(np.ceil((max(y_einf) + 100) / 300.0) * 300))
+    ymin_1 = min(-600, int(np.floor((min(y_einf) - 180) / 300.0) * 300))
+    ymax_1 = max(600, int(np.ceil((max(y_einf) + 220) / 300.0) * 300))
     style_sz_ax(ax, t["p1_t"], ymin_1, ymax_1, range(ymin_1, ymax_1 + 300, 300), t["x_m"])
     l1_a, l1_b = t["p1_l"]
     ax.plot(x_all, y_einf, color="#D97706", lw=2.2, label=l1_a, zorder=3)
+
     lu1 = line_unv(d_einf, vj_anchor, months_all)
     if not lu1.empty:
-        ax.plot([months_all.index(k) for k in lu1.index], lu1.values, color="#D97706", ls=":", lw=1.8, label=l1_b, zorder=4)
-    if "2022-02" in months_all:
-        ix = months_all.index("2022-02")
-        ax.annotate(t["p1_peak"], xy=(ix, y_einf[ix]), xytext=(ix, 120), ha="center", fontsize=7.2, color="#D97706",
-                    arrowprops=dict(arrowstyle="->", color="#D97706", lw=1.2))
-    if "2025-05" in months_all:
-        ix = months_all.index("2025-05")
-        ax.annotate(t["p1_trough"], xy=(ix, y_einf[ix]), xytext=(ix, 360), ha="center", fontsize=7.2, color="#D97706",
-                    arrowprops=dict(arrowstyle="->", color="#D97706", lw=1.2))
+        lu1_x = [months_all.index(vj_anchor)] + [months_all.index(k) for k in lu1.index if k != vj_anchor]
+        lu1_y = [y_einf[months_all.index(vj_anchor)]] + [lu1.loc[k] for k in lu1.index if k != vj_anchor]
+        ax.plot(lu1_x, lu1_y, color="#D97706", ls=":", lw=1.8, label=l1_b, zorder=4)
+
+    # Dynamische Wendepunkte: zuletzt höchster und niedrigster Wert im Beobachtungszeitraum
+    y_arr = np.array(y_einf)
+    idx_max = int(np.where(y_arr == np.nanmax(y_arr))[-1])
+    idx_min = int(np.where(y_arr == np.nanmin(y_arr))[-1])
+    ym_max, ym_min = months_all[idx_max], months_all[idx_min]
+
+    if lang == "de":
+        lbl_max = f"Oberer Wendepunkt\nder Konjunktur,\n{t['m'][int(ym_max[5:7]) - 1]} {ym_max[:4]}"
+        lbl_min = f"Unterer Wendepunkt\nder Konjunktur,\n{t['m'][int(ym_min[5:7]) - 1]} {ym_min[:4]}"
+    else:
+        lbl_max = f"Upper turning point\nof business cycle,\n{t['m'][int(ym_max[5:7]) - 1]} {ym_max[:4]}"
+        lbl_min = f"Lower turning point\nof business cycle,\n{t['m'][int(ym_min[5:7]) - 1]} {ym_min[:4]}"
+
+    ax.annotate(lbl_max, xy=(idx_max, y_einf[idx_max]),
+                xytext=(idx_max, min(ymax_1 - 80, y_einf[idx_max] + (ymax_1 - ymin_1) * 0.16)),
+                ha="center", va="bottom", fontsize=7.2, color="#D97706",
+                arrowprops=dict(arrowstyle="->", color="#D97706", lw=1.2))
+    ax.annotate(lbl_min, xy=(idx_min, y_einf[idx_min]),
+                xytext=(idx_min, max(ymin_1 + 80, y_einf[idx_min] - (ymax_1 - ymin_1) * 0.18)),
+                ha="center", va="top", fontsize=7.2, color="#D97706",
+                arrowprops=dict(arrowstyle="->", color="#D97706", lw=1.2))
+
     draw_year_groups(ax, months_all, t["m"], step=3)
     ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.3)
     save_fig(fig, t["src_ba"], "01_einfache_spannungszahl")
@@ -259,11 +260,11 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     first_z = next(iter(months_z))
     xz = np.arange(len(months_z))
     yz_einf = [float(sz_einf.loc[ym]) for ym in months_z]
-    fig, ax = plt.subplots(figsize=(7.6, 6.0), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.10, right=0.95, top=0.56, bottom=0.25)
+    fig, ax = plt.subplots(figsize=(7.6, 6.4), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.10, right=0.95, top=0.50, bottom=0.26)
     ymin_z = int(np.floor((min(yz_einf) - 120) / 100.0) * 100)
     ymax_z = max(100, int(np.ceil((max(yz_einf) + 120) / 100.0) * 100))
-    style_sz_ax(ax, t["p2_t"], ymin_z, ymax_z, range(ymin_z, ymax_z + 100, 100), t["x_m"], title_y=1.52)
+    style_sz_ax(ax, t["p2_t"], ymin_z, ymax_z, range(ymin_z, ymax_z + 100, 100), t["x_m"], title_y=1.68)
     ax.plot(xz, yz_einf, color="#D97706", lw=2.3, label=t["p2_l1"], zorder=4)
     lu_vj = line_unv(d_einf, first_z, months_z)
     if not lu_vj.empty:
@@ -288,32 +289,40 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     style_sz_ax(ax, t["p3_t"], -8000, 4000, range(-8000, 6000, 2000), t["x_m"])
     l3_a, l3_b = t["p3_l"]
     ax.plot(x_all, y_erw, color="#059669", lw=2.2, label=l3_a, zorder=3)
-    lu3 = line_unv(d_erw, vj_anchor, months_all)
-    if not lu3.empty:
-        ax.plot([months_all.index(k) for k in lu3.index], lu3.values, color="#059669", ls=":", lw=1.8, label=l3_b, zorder=4)
+    months_erw_valid = [ym for ym in months_all if ym in sz_erw.index]
+    if len(months_erw_valid) >= 13:
+        erw_anchor = months_erw_valid[-13]
+        lu3 = line_unv(d_erw, erw_anchor, months_erw_valid)
+        if not lu3.empty:
+            lu3_x = [months_all.index(erw_anchor)] + [months_all.index(k) for k in lu3.index if k != erw_anchor]
+            lu3_y = [float(sz_erw.loc[erw_anchor])] + [lu3.loc[k] for k in lu3.index if k != erw_anchor]
+            ax.plot(lu3_x, lu3_y, color="#059669", ls=":", lw=1.8, label=l3_b, zorder=4)
     draw_year_groups(ax, months_all, t["m"], step=3)
     ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.3)
     save_fig(fig, t["src_ba_kug"], "03_erweiterte_spannungszahl")
 
-    # 4. Erweiterte Spannungszahl Zoom (13 Monate)
-    yz_erw = [float(sz_erw.loc[ym]) for ym in months_z]
-    fig, ax = plt.subplots(figsize=(7.6, 5.4), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.10, right=0.95, top=0.72, bottom=0.25)
+    # 4. Erweiterte Spannungszahl Zoom (letzte 13 verfügbare Kurzarbeits-Monate)
+    months_z4 = months_erw_valid[-13:] if len(months_erw_valid) >= 13 else months_z
+    first_z4 = next(iter(months_z4))
+    xz4 = np.arange(len(months_z4))
+    yz_erw = [float(sz_erw.loc[ym]) for ym in months_z4]
+    fig, ax = plt.subplots(figsize=(7.6, 5.6), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.10, right=0.95, top=0.72, bottom=0.26)
     ymin_4 = min(-400, int(np.floor((min(yz_erw) - 100) / 100.0) * 100))
     ymax_4 = max(400, int(np.ceil((max(yz_erw) + 100) / 100.0) * 100))
     style_sz_ax(ax, t["p4_t"], ymin_4, ymax_4, range(ymin_4, ymax_4 + 100, 100), t["x_m"])
-    ax.plot(xz, yz_erw, color="#059669", lw=2.2, label=l3_a, zorder=4)
-    lu4 = line_unv(d_erw, first_z, months_z)
+    ax.plot(xz4, yz_erw, color="#059669", lw=2.2, label=l3_a, zorder=4)
+    lu4 = line_unv(d_erw, first_z4, months_z4)
     if not lu4.empty:
-        ax.plot(xz, [lu4.loc[ym] for ym in months_z], color="#059669", ls=":", lw=1.8, label=l3_b, zorder=3)
-    draw_year_groups(ax, months_z, t["m"], step=1)
+        ax.plot(xz4, [lu4.loc[ym] for ym in months_z4], color="#059669", ls=":", lw=1.8, label=l3_b, zorder=3)
+    draw_year_groups(ax, months_z4, t["m"], step=1)
     ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.3)
     save_fig(fig, t["src_ba_kug"], "04_erweiterte_spannungszahl_zoom")
 
     # 5. Spannungszahl und reales BIP (Dual-Achse)
-    fig, ax1 = plt.subplots(figsize=(7.8, 5.6), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.11, right=0.87, top=0.68, bottom=0.25)
-    style_sz_ax(ax1, t["p5_t"], -12, 12, range(-12, 16, 4), t["x_mq"], title_y=1.28)
+    fig, ax1 = plt.subplots(figsize=(7.8, 5.8), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.11, right=0.87, top=0.65, bottom=0.25)
+    style_sz_ax(ax1, t["p5_t"], -12, 12, range(-12, 16, 4), t["x_mq"], title_y=1.34)
     ax1.set_ylabel(t["p5_yl"], fontsize=7.8, color="#475569")
     ax2 = ax1.twinx()
     ax2.set_ylim(-8000, 8000)
@@ -341,7 +350,7 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     draw_year_groups(ax1, months_all, t["m"], step=4)
     lines = p_bip + p_einf + p_erw
     ax1.legend(lines, [l.get_label() for l in lines], loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.1)
-    save_fig(fig, t.get("src_all"), "05_spannungszahl_bip")
+    save_fig(fig, t["src_all"], "05_spannungszahl_bip")
 
 def main():
     s_stellen, s_alo, s_kug = load_bbk_labor_market()
@@ -349,12 +358,13 @@ def main():
     print(f"[BBK MERGE] Gemeinsame Monate: {len(common)}")
 
     if len(common) >= 24:
-        s_kug_aligned = s_kug.reindex(common).fillna(0.0)
         d_einf = s_stellen.loc[common] - s_alo.loc[common]
-        d_erw = s_stellen.loc[common] - (s_alo.loc[common] + s_kug_aligned)
         sz_einf = (d_einf - d_einf.shift(12)).dropna()
+
+        common_erw = common.intersection(s_kug.index)
+        d_erw = s_stellen.loc[common_erw] - (s_alo.loc[common_erw] + s_kug.loc[common_erw])
         sz_erw = (d_erw - d_erw.shift(12)).dropna()
-        print(f"[RESULT] Monate SZ: {len(sz_einf)} | Letzter Wert ({sz_einf.index[-1]}): {sz_einf.values[-1]:.1f}")
+        print(f"[RESULT] Einfache SZ bis {sz_einf.index[-1]} ({sz_einf.values[-1]:.1f}) | Erweiterte SZ bis {sz_erw.index[-1]} ({sz_erw.values[-1]:.1f})")
     else:
         idx = pd.period_range("2018-01", "2026-10", freq="M").astype(str)
         d_einf = pd.Series(np.linspace(-1500, -2100, len(idx)), index=idx)
