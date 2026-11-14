@@ -456,6 +456,16 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     save_fig(fig, t.get("src_all"), "05_spannungszahl_bip")
 
 def main():
+        for fn, sh in (("gemeldete-arbeitsstellen", "1_2"), ("zr-alo-bl", "1.1"), ("kurzarbeit-zr2", "Daten1")):
+        for _, xl_d in find_local_workbooks(fn):
+            if sh in xl_d.sheet_names:
+                dfd = pd.read_excel(xl_d, sheet_name=sh, header=None)
+                print(f"=== {fn} / {sh} ({dfd.shape}) ===")
+                for r_i in range(min(18, len(dfd))):
+                    pv = [str(x).replace("\n", " ").strip() for x in dfd.iloc[r_i].tolist()[:8] if pd.notna(x)]
+                    if pv:
+                        print(f"  Z{r_i}: {pv}")
+
     s_ste_gen, s_alo_gen = get_destatis_13211()
 
     s_stellen = read_cache_csv("static/spannungszahl/stellen_cache.csv")
