@@ -177,15 +177,15 @@ def draw_p3(ax, t, d):
     ax.set_xlim(-0.5, max(len(s_ai), 1) + 0.5); set_legend(ax, ncol=2)
 
 def draw_p4(ax, t, d):
-    style_panel(ax, t["p4_t"], t["p4_s"], -8, 8, range(-8, 10, 2))
+    style_panel(ax, t["p4_t"], t["p4_s"], -6, 6, range(-6, 8, 2))
     s_pi, s_pb, s_eh = d["s_pi"], d["s_pb"], d["s_eh"]
     l4 = t["p4_l"]
-    ax.plot(s_pi.index, s_pi.values, color="#1E3A8A", lw=2.1, marker="o", ms=3, label=l4[0])
-    ax.plot(s_pb.index, s_pb.values, color="#D97706", lw=2.1, marker="o", ms=3, label=l4[1])
-    ax.plot(s_eh.index, s_eh.values, color="#059669", lw=2.1, marker="o", ms=3, label=l4[2])
+    ax.plot(s_pi.index, s_pi.values, color="#1E3A8A", lw=2.1, marker="o", ms=3, label=l4)
+    ax.plot(s_pb.index, s_pb.values, color="#D97706", lw=2.1, marker="o", ms=3, label=l4)
+    ax.plot(s_eh.index, s_eh.values, color="#059669", lw=2.1, marker="o", ms=3, label=l4)
     mark_end(ax, s_pi.index, s_pi.values, "#1E3A8A", t["comma"])
-    mark_end(ax, s_pb.index, s_pb.values, "#D97706", t["comma"], off=0.45)
-    mark_end(ax, s_eh.index, s_eh.values, "#059669", t["comma"], off=-0.45)
+    mark_end(ax, s_pb.index, s_pb.values, "#D97706", t["comma"], off=0.35)
+    mark_end(ax, s_eh.index, s_eh.values, "#059669", t["comma"], off=-0.35)
     ax.set_xlim(-0.5, max(len(s_pi), 1) + 0.5); set_legend(ax, ncol=3)
 
 def draw_p5(ax, t, d):
