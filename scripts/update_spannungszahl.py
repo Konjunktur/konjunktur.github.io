@@ -306,7 +306,7 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     draw_year_groups(ax1, months_all, t["m"], step=4)
     lines = p_bip + p_einf + p_erw
     ax1.legend(lines, [l.get_label() for l in lines], loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.1)
-    save_fig(fig, t["src_all"), "05_spannungszahl_bip")
+    save_fig(fig, t.get("src_all"), "05_spannungszahl_bip")
 
 def main():
     s_stellen, s_alo, s_kug = load_bbk_labor_market()
