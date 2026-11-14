@@ -185,8 +185,8 @@ def draw_p4(ax, t, d):
     ax.plot(s_pb.index, s_pb.values, color="#D97706", lw=2.1, marker="o", ms=3, label=l4[1])
     ax.plot(s_eh.index, s_eh.values, color="#059669", lw=2.1, marker="o", ms=3, label=l4[2])
     mark_end(ax, s_pi.index, s_pi.values, "#1E3A8A", t["comma"])
-    mark_end(ax, s_pb.index, s_pb.values, "#D97706", t["comma"], off=0.35)
-    mark_end(ax, s_eh.index, s_eh.values, "#059669", t["comma"], off=-0.35)
+    mark_end(ax, s_pb.index, s_pb.values, "#D97706", t["comma"], off=-0.35)
+    mark_end(ax, s_eh.index, s_eh.values, "#059669", t["comma"], off=0.35)
     ax.set_xlim(-0.5, max(len(s_pi), 1) + 0.5); set_legend(ax, ncol=3)
 
 def draw_p5(ax, t, d):
