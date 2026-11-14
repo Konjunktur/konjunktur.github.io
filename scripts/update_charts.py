@@ -7,7 +7,7 @@ from datetime import datetime
 os.makedirs("static/dashboard", exist_ok=True)
 D_USER = os.environ.get("DESTATIS_USER", "")
 D_PASS = os.environ.get("DESTATIS_PASS", "")
-G_URL = "https://destatis.de"
+G_URL = "https://www-genesis." + "destatis.de" + "/genesisWS/rest/2020/data/tablefile"
 
 TEXTS = {
     "de": {
