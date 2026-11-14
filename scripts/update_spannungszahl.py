@@ -219,8 +219,8 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
         ax.plot(lu1_x, lu1_y, color="#D97706", ls="--", lw=1.9, label=l1_b, zorder=4)
 
     y_arr = np.array(y_einf, dtype=float)
-    idx_max = int(np.where(np.isclose(y_arr, np.nanmax(y_arr)))[-1])
-    idx_min = int(np.where(np.isclose(y_arr, np.nanmin(y_arr)))[-1])
+    idx_max = int(np.flatnonzero(np.isclose(y_arr, np.nanmax(y_arr))).max())
+    idx_min = int(np.flatnonzero(np.isclose(y_arr, np.nanmin(y_arr))).max())
     ym_max, ym_min = months_all[idx_max], months_all[idx_min]
 
     if lang == "de":
