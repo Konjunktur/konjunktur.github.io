@@ -242,21 +242,24 @@ def main():
     xl_bip = yrs + ("",) + tuple(f"Q{q[-1]} {q[2:4]}" for q in qtrs)
     xi = np.arange(len(xl_bip))
 
-    def get_bip_combo(df_y, df_q, inc, exc):
-        return parse_destatis_series(df_y, inc, exc, yrs) + [np.nan] + parse_destatis_series(df_q, inc, exc, qtrs)
+       def get_bip_combo(df_y, df_q, inc, exc):
+        vy = parse_destatis_series(df_y, inc + ["Vorjahr"], exc + ["kalender", "saison", "X-13", "Vorquartal"], yrs)
+        vq = parse_destatis_series(df_q, inc + ["Ursprungswerte", "Vorjahr"], exc + ["kalender", "saison", "X-13", "Vorquartal"], qtrs)
+        return vy + [np.nan] + vq
 
-    bip_r = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "kalender"], ["Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst"])
-    pg    = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "kalender", "Produzierendes Gewerbe ohne Baugewerbe"], [])
-    bau   = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "kalender", "Baugewerbe"], ["ohne Baugewerbe"])
-    hvg   = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "kalender", "Handel, Verkehr, Gastgewerbe"], [])
+    bip_r = get_bip_combo(df_y1, df_q1, ["preisbereinigt"], ["Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst"])
+    pg    = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Produzierendes Gewerbe ohne Baugewerbe"], [])
+    bau   = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Baugewerbe"], ["ohne Baugewerbe"])
+    hvg   = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Handel, Verkehr, Gastgewerbe"], [])
 
-    bip_n = get_bip_combo(df_y2, df_q2, ["%", "jeweiligen Preisen"], ["Konsum", "Investition", "Ausrüstung", "Bauten", "Export", "Import", "Inland"])
-    kp    = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Private Konsumausgaben"], [])
-    ks    = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Konsumausgaben des Staates"], [])
-    aus   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Ausrüstungen"], [])
-    binv  = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Bauten"], [])
-    exp   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Exporte"], [])
-    imp   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Importe"], [])
+    bip_n = get_bip_combo(df_y2, df_q2, ["jeweiligen Preisen"], ["Konsum", "Investition", "Ausrüstung", "Bauten", "Export", "Import", "Inland"])
+    kp    = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Private Konsumausgaben"], [])
+    ks    = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Konsumausgaben des Staates"], [])
+    aus   = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ausrüstungen"], [])
+    binv  = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Bauten"], [])
+    exp   = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Exporte"], [])
+    imp   = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Importe"], [])
+
 
     if all(np.isnan(bip_r)):
             bip_r = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt"], ["kalender", "Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst"])
