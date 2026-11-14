@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-os.makedirs("output", exist_ok=True)
+os.makedirs("static/dashboard", exist_ok=True)
 D_USER = os.environ.get("DESTATIS_USER", "")
 D_PASS = os.environ.get("DESTATIS_PASS", "")
 G_URL = "https://destatis.de"
@@ -23,7 +23,7 @@ TEXTS = {
         "p6_t": "Arbeitslosigkeit und Inflation", "p6_s": "Quote bzw. Veränderung zum Vorjahr in %",
         "p6_l": ("Arbeitslosenquote", "Vollbeschäftigung (3%)", "Inflation (HVPI)", "EZB-Inflationsziel (2%)"),
         "src": "Quellen: Statistisches Bundesamt (BIP), Deutsche Bundesbank | Kalenderbereinigt, Veränderung zum Vorjahr in % | Stand: ",
-        "date_fmt": "%d.%m.%Y", "comma": True, "file": "output/dashboard.png"
+        "date_fmt": "%d.%m.%Y", "comma": True, "sfx": ""
     },
     "en": {
         "p1_t": "Gross Domestic Product: Production", "p1_s": "Change on previous year in % (price & calendar adjusted)",
@@ -38,7 +38,7 @@ TEXTS = {
         "p6_t": "Unemployment and Inflation", "p6_s": "Rate / change on previous year in %",
         "p6_l": ("Unemployment rate", "Full employment (3%)", "Inflation (HICP)", "ECB inflation target (2%)"),
         "src": "Sources: Federal Statistical Office (GDP), Deutsche Bundesbank | Calendar-adjusted, change on previous year in % | As of: ",
-        "date_fmt": "%Y-%m-%d", "comma": False, "file": "output/dashboard_en.png"
+        "date_fmt": "%Y-%m-%d", "comma": False, "sfx": "_en"
     }
 }
 
@@ -126,78 +126,101 @@ def mark_end(ax, x_vals, y_vals, col, use_comma, off=0.0):
     ax.plot(lx, ly, marker="o", markersize=4.5, color=col, zorder=5)
     ax.text(len(x_vals) - 0.65, ly + off, fmt_num(ly, use_comma), fontsize=8, fontweight="bold", color=col, va="center")
 
+def draw_p1(ax, t, d):
+    xi, xl_bip = d.get("xi"), d.get("xl_bip")
+    style_panel(ax, t.get("p1_t"), t.get("p1_s"), -10, 8, range(-10, 10, 2))
+    l1 = t.get("p1_l")
+    ax.bar(xi, d.get("bip_r"), width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=list(l1).pop(0), zorder=2)
+    ax.plot(xi, d.get("pg"), color="#D97706", lw=1.9, marker="o", ms=2.5, label=list(l1).pop(1), zorder=3)
+    ax.plot(xi, d.get("bau"), color="#64748B", lw=1.9, marker="o", ms=2.5, label=list(l1).pop(2), zorder=3)
+    ax.plot(xi, d.get("hvg"), color="#059669", lw=1.9, marker="o", ms=2.5, label=list(l1).pop(3), zorder=3)
+    ax.set_xticks(xi); ax.set_xticklabels(xl_bip); ax.set_xlim(-0.7, len(xi)-0.2)
+    set_legend(ax, ncol=2)
+
+def draw_p2(ax, t, d):
+    xi, xl_bip = d.get("xi"), d.get("xl_bip")
+    style_panel(ax, t.get("p2_t"), t.get("p2_s"), -8, 12, range(-8, 14, 2))
+    l2 = t.get("p2_l")
+    ax.bar(xi, d.get("bip_n"), width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=list(l2).pop(0), zorder=2)
+    ax.plot(xi, d.get("kp"), color="#D97706", lw=1.7, label=list(l2).pop(1), zorder=3)
+    ax.plot(xi, d.get("ks"), color="#64748B", lw=1.7, label=list(l2).pop(2), zorder=3)
+    ax.plot(xi, d.get("aus"), color="#DC2626", lw=1.7, label=list(l2).pop(3), zorder=3)
+    ax.plot(xi, d.get("binv"), color="#0284C7", lw=1.7, label=list(l2).pop(4), zorder=3)
+    ax.plot(xi, d.get("exp"), color="#059669", lw=1.7, label=list(l2).pop(5), zorder=3)
+    ax.plot(xi, d.get("imp"), color="#1E293B", lw=1.7, label=list(l2).pop(6), zorder=3)
+    ax.set_xticks(xi); ax.set_xticklabels(xl_bip); ax.set_xlim(-0.7, len(xi)-0.2)
+    set_legend(ax, ncol=3)
+
+def draw_p3(ax, t, d):
+    style_panel(ax, t.get("p3_t"), t.get("p3_s"), -15, 25, range(-15, 30, 5))
+    s_ai, s_ab = d.get("s_ai"), d.get("s_ab")
+    l3 = t.get("p3_l")
+    ax.plot(s_ai.index, s_ai.values, color="#1E3A8A", lw=2.1, marker="o", ms=3, label=list(l3).pop(0))
+    ax.plot(s_ab.index, s_ab.values, color="#D97706", lw=2.1, marker="o", ms=3, label=list(l3).pop(1))
+    mark_end(ax, s_ai.index, s_ai.values, "#1E3A8A", t.get("comma"), off=-1.2)
+    mark_end(ax, s_ab.index, s_ab.values, "#D97706", t.get("comma"), off=1.2)
+    ax.set_xlim(-0.5, len(s_ai) + 0.5); set_legend(ax, ncol=2)
+
+def draw_p4(ax, t, d):
+    style_panel(ax, t.get("p4_t"), t.get("p4_s"), -8, 8, range(-8, 10, 2))
+    s_pi, s_pb, s_eh = d.get("s_pi"), d.get("s_pb"), d.get("s_eh")
+    l4 = t.get("p4_l")
+    ax.plot(s_pi.index, s_pi.values, color="#1E3A8A", lw=2.1, marker="o", ms=3, label=list(l4).pop(0))
+    ax.plot(s_pb.index, s_pb.values, color="#D97706", lw=2.1, marker="o", ms=3, label=list(l4).pop(1))
+    ax.plot(s_eh.index, s_eh.values, color="#059669", lw=2.1, marker="o", ms=3, label=list(l4).pop(2))
+    mark_end(ax, s_pi.index, s_pi.values, "#1E3A8A", t.get("comma"))
+    mark_end(ax, s_pb.index, s_pb.values, "#D97706", t.get("comma"), off=0.45)
+    mark_end(ax, s_eh.index, s_eh.values, "#059669", t.get("comma"), off=-0.45)
+    ax.set_xlim(-0.5, len(s_pi) + 0.5); set_legend(ax, ncol=3)
+
+def draw_p5(ax, t, d):
+    style_panel(ax, t.get("p5_t"), t.get("p5_s"), 0, 35, range(0, 40, 5), z=False)
+    s_lb = d.get("s_lb")
+    bars = ax.bar(s_lb.index, s_lb.values, width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=t.get("p5_l"), zorder=2)
+    for b in bars:
+        ax.text(b.get_x()+b.get_width()/2, b.get_height()+0.6, fmt_num(b.get_height(), t.get("comma")), ha="center", fontsize=7.5, color="#1E3A8A", fontweight="bold")
+    set_legend(ax, ncol=1)
+
+def draw_p6(ax, t, d):
+    style_panel(ax, t.get("p6_t"), t.get("p6_s"), 0, 8, range(0, 10, 2), z=False)
+    s_al, s_hv = d.get("s_al"), d.get("s_hv")
+    l6 = t.get("p6_l")
+    ax.plot(s_al.index, s_al.values, color="#1E3A8A", lw=2.1, marker="o", ms=3, label=list(l6).pop(0))
+    ax.axhline(3.0, color="#0284C7", ls="--", lw=1.4, label=list(l6).pop(1))
+    ax.plot(s_hv.index, s_hv.values, color="#475569", lw=2.1, marker="o", ms=3, label=list(l6).pop(2))
+    ax.axhline(2.0, color="#D97706", ls="--", lw=1.4, label=list(l6).pop(3))
+    mark_end(ax, s_al.index, s_al.values, "#1E3A8A", t.get("comma"))
+    mark_end(ax, s_hv.index, s_hv.values, "#475569", t.get("comma"))
+    ax.set_xlim(-0.5, len(s_al) + 0.5); set_legend(ax, ncol=2)
+
+def save_single(draw_fn, t, data, base_name):
+    fig, ax = plt.subplots(figsize=(7.2, 5.2), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.09, right=0.95, top=0.77, bottom=0.17)
+    draw_fn(ax, t, data)
+    now = datetime.now()
+    fig.text(0.09, 0.02, f"{t.get('src')}{now.strftime(t.get('date_fmt'))}", fontsize=6.5, color="#64748B")
+    plt.savefig(f"static/dashboard/{base_name}{t.get('sfx')}.png", dpi=300)
+    plt.close()
+
 def build_for_lang(lang, data):
     t = TEXTS.get(lang)
     plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
     fig, axes = plt.subplots(3, 2, figsize=(12.6, 17.8), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.06, right=0.95, top=0.92, bottom=0.06, hspace=0.55, wspace=0.20)
     ax1, ax2, ax3, ax4, ax5, ax6 = axes.flatten()
-
-    xi, xl_bip = data.get("xi"), data.get("xl_bip")
-
-    style_panel(ax1, t.get("p1_t"), t.get("p1_s"), -10, 8, range(-10, 10, 2))
-    l1 = t.get("p1_l")
-    ax1.bar(xi, data.get("bip_r"), width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=list(l1).pop(0), zorder=2)
-    ax1.plot(xi, data.get("pg"), color="#D97706", lw=1.9, marker="o", ms=2.5, label=list(l1).pop(1), zorder=3)
-    ax1.plot(xi, data.get("bau"), color="#64748B", lw=1.9, marker="o", ms=2.5, label=list(l1).pop(2), zorder=3)
-    ax1.plot(xi, data.get("hvg"), color="#059669", lw=1.9, marker="o", ms=2.5, label=list(l1).pop(3), zorder=3)
-    ax1.set_xticks(xi); ax1.set_xticklabels(xl_bip); ax1.set_xlim(-0.7, len(xi)-0.2)
-    set_legend(ax1, ncol=2)
-
-    style_panel(ax2, t.get("p2_t"), t.get("p2_s"), -8, 12, range(-8, 14, 2))
-    l2 = t.get("p2_l")
-    ax2.bar(xi, data.get("bip_n"), width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=list(l2).pop(0), zorder=2)
-    ax2.plot(xi, data.get("kp"), color="#D97706", lw=1.7, label=list(l2).pop(1), zorder=3)
-    ax2.plot(xi, data.get("ks"), color="#64748B", lw=1.7, label=list(l2).pop(2), zorder=3)
-    ax2.plot(xi, data.get("aus"), color="#DC2626", lw=1.7, label=list(l2).pop(3), zorder=3)
-    ax2.plot(xi, data.get("binv"), color="#0284C7", lw=1.7, label=list(l2).pop(4), zorder=3)
-    ax2.plot(xi, data.get("exp"), color="#059669", lw=1.7, label=list(l2).pop(5), zorder=3)
-    ax2.plot(xi, data.get("imp"), color="#1E293B", lw=1.7, label=list(l2).pop(6), zorder=3)
-    ax2.set_xticks(xi); ax2.set_xticklabels(xl_bip); ax2.set_xlim(-0.7, len(xi)-0.2)
-    set_legend(ax2, ncol=3)
-
-    style_panel(ax3, t.get("p3_t"), t.get("p3_s"), -15, 25, range(-15, 30, 5))
-    s_ai, s_ab = data.get("s_ai"), data.get("s_ab")
-    l3 = t.get("p3_l")
-    ax3.plot(s_ai.index, s_ai.values, color="#1E3A8A", lw=2.1, marker="o", ms=3, label=list(l3).pop(0))
-    ax3.plot(s_ab.index, s_ab.values, color="#D97706", lw=2.1, marker="o", ms=3, label=list(l3).pop(1))
-    mark_end(ax3, s_ai.index, s_ai.values, "#1E3A8A", t.get("comma"), off=-1.2)
-    mark_end(ax3, s_ab.index, s_ab.values, "#D97706", t.get("comma"), off=1.2)
-    ax3.set_xlim(-0.5, len(s_ai) + 0.5); set_legend(ax3, ncol=2)
-
-    style_panel(ax4, t.get("p4_t"), t.get("p4_s"), -8, 8, range(-8, 10, 2))
-    s_pi, s_pb, s_eh = data.get("s_pi"), data.get("s_pb"), data.get("s_eh")
-    l4 = t.get("p4_l")
-    ax4.plot(s_pi.index, s_pi.values, color="#1E3A8A", lw=2.1, marker="o", ms=3, label=list(l4).pop(0))
-    ax4.plot(s_pb.index, s_pb.values, color="#D97706", lw=2.1, marker="o", ms=3, label=list(l4).pop(1))
-    ax4.plot(s_eh.index, s_eh.values, color="#059669", lw=2.1, marker="o", ms=3, label=list(l4).pop(2))
-    mark_end(ax4, s_pi.index, s_pi.values, "#1E3A8A", t.get("comma"))
-    mark_end(ax4, s_pb.index, s_pb.values, "#D97706", t.get("comma"), off=0.45)
-    mark_end(ax4, s_eh.index, s_eh.values, "#059669", t.get("comma"), off=-0.45)
-    ax4.set_xlim(-0.5, len(s_pi) + 0.5); set_legend(ax4, ncol=3)
-
-    style_panel(ax5, t.get("p5_t"), t.get("p5_s"), 0, 35, range(0, 40, 5), z=False)
-    s_lb = data.get("s_lb")
-    bars = ax5.bar(s_lb.index, s_lb.values, width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=t.get("p5_l"), zorder=2)
-    for b in bars:
-        ax5.text(b.get_x()+b.get_width()/2, b.get_height()+0.6, fmt_num(b.get_height(), t.get("comma")), ha="center", fontsize=7.5, color="#1E3A8A", fontweight="bold")
-    set_legend(ax5, ncol=1)
-
-    style_panel(ax6, t.get("p6_t"), t.get("p6_s"), 0, 8, range(0, 10, 2), z=False)
-    s_al, s_hv = data.get("s_al"), data.get("s_hv")
-    l6 = t.get("p6_l")
-    ax6.plot(s_al.index, s_al.values, color="#1E3A8A", lw=2.1, marker="o", ms=3, label=list(l6).pop(0))
-    ax6.axhline(3.0, color="#0284C7", ls="--", lw=1.4, label=list(l6).pop(1))
-    ax6.plot(s_hv.index, s_hv.values, color="#475569", lw=2.1, marker="o", ms=3, label=list(l6).pop(2))
-    ax6.axhline(2.0, color="#D97706", ls="--", lw=1.4, label=list(l6).pop(3))
-    mark_end(ax6, s_al.index, s_al.values, "#1E3A8A", t.get("comma"))
-    mark_end(ax6, s_hv.index, s_hv.values, "#475569", t.get("comma"))
-    ax6.set_xlim(-0.5, len(s_al) + 0.5); set_legend(ax6, ncol=2)
-
+    draw_p1(ax1, t, data); draw_p2(ax2, t, data); draw_p3(ax3, t, data)
+    draw_p4(ax4, t, data); draw_p5(ax5, t, data); draw_p6(ax6, t, data)
     now = datetime.now()
     fig.text(0.06, 0.015, f"{t.get('src')}{now.strftime(t.get('date_fmt'))}", fontsize=8, color="#64748B")
-    plt.savefig(t.get("file"), dpi=300)
+    plt.savefig(f"static/dashboard/dashboard{t.get('sfx')}.png", dpi=300)
     plt.close()
+
+    save_single(draw_p1, t, data, "01_bip_entstehung")
+    save_single(draw_p2, t, data, "02_bip_verwendung")
+    save_single(draw_p3, t, data, "03_auftragseingaenge")
+    save_single(draw_p4, t, data, "04_produktion_einzelhandel")
+    save_single(draw_p5, t, data, "05_leistungsbilanz")
+    save_single(draw_p6, t, data, "06_arbeitslosigkeit_inflation")
 
 def main():
     df1 = get_destatis("81000-0011")
