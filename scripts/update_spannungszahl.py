@@ -201,15 +201,6 @@ def load_stellen_full():
             cached = {}
 
     combined = pd.Series(cached, dtype=float)
-    for y in range(2018, datetime.now().year + 1):
-        if f"{y}-12" in cached:
-            continue
-        u = BA_HOST + BA_PATH + f"{y}12/iiia4/gemeldete-arbeitsstellen/gemeldete-arbeitsstellen-d-0-xlsx.xlsx?__blob=publicationFile&v=1"
-        xl = load_excel_url(f"STELLEN_{y}", u)
-        s = extract_ba_universal(f"STELLEN_{y}", xl, ["1.1", "Bestand"], ["Insgesamt"], ["sozialversicherungspflichtige"])
-        if not s.empty:
-            combined = s.combine_first(combined)
-
     xl_akt = load_excel_url("STELLEN_AKT", URL_STELLEN_AKT)
     s_akt = extract_ba_universal("STELLEN_AKT", xl_akt, ["1.1", "Bestand"], ["Insgesamt"], ["sozialversicherungspflichtige"])
     if not s_akt.empty:
