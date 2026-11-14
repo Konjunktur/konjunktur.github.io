@@ -48,39 +48,31 @@ def get_bbk(key, n=13, scale=1.0):
     try:
         r = requests.get(url, timeout=15)
         if r.status_code != 200 or ";" not in r.text:
-            print(f"[BBK WARN] {key}: HTTP {r.status_code}")
             return pd.Series(dtype=float)
         df = pd.read_csv(io.StringIO(r.text), sep=";", on_bad_lines="skip")
         tc = next(c for c in df.columns if "TIME_PERIOD" in c)
         vc = next(c for c in df.columns if "OBS_VALUE" in c)
-        df = df.dropna(subset=[tc, vc]).tail(n)
-        vals = pd.to_numeric(df[vc].astype(str).str.replace(",", "."), errors="coerce") * scale
-        df = df.assign(V=vals).dropna(subset=["V"])
-        s = pd.Series(df["V"].values, index=df[tc].astype(str).values)
-        print(f"[BBK OK] {key}: letzter Wert {s.index[-1]} = {s.values[-1]:.2f}")
-        return s
-    except Exception as e:
-        print(f"[BBK ERR] {key}: {e}")
+        df = df.dropna(subset=(tc, vc)).tail(n)
+        vals = pd.to_numeric(df.get(vc).astype(str).str.replace(",", "."), errors="coerce") * scale
+        df = df.assign(V=vals).dropna(subset=("V",))
+        return pd.Series(df.get("V").values, index=df.get(tc).astype(str).values)
+    except Exception:
         return pd.Series(dtype=float)
 
 def get_destatis(table):
     if not D_USER or not D_PASS:
-        print(f"[DESTATIS WARN] Keine Zugangsdaten für {table}")
         return pd.DataFrame()
     p = {"username": D_USER, "password": D_PASS, "name": table, "area": "all", "compress": "false", "format": "ffcsv", "language": "de"}
     try:
         r = requests.get(G_URL, params=p, timeout=35)
         lines = [ln for ln in r.text.splitlines() if ln.count(";") >= 4]
         if len(lines) < 5:
-            print(f"[DESTATIS WARN] {table}: {r.text[:150]}")
             return pd.DataFrame()
         df = pd.read_csv(io.StringIO("\n".join(lines)), sep=";", decimal=",", on_bad_lines="skip")
         text_cols = [c for c in df.columns if c not in ("ZEIT", "WERT")]
-        df["_ROW"] = df[text_cols].fillna("").astype(str).agg(" | ".join, axis=1)
-        print(f"[DESTATIS OK] {table}: {len(df)} Zeilen geladen")
+        df["_ROW"] = df.loc[:, text_cols].fillna("").astype(str).agg(" | ".join, axis=1)
         return df
-    except Exception as e:
-        print(f"[DESTATIS ERR] {table}: {e}")
+    except Exception:
         return pd.DataFrame()
 
 def parse_destatis_series(df, include_terms, exclude_terms, target_times):
@@ -88,17 +80,13 @@ def parse_destatis_series(df, include_terms, exclude_terms, target_times):
         return [np.nan] * len(target_times)
     sub = df.copy()
     for term in include_terms:
-        sub = sub[sub["_ROW"].str.contains(term, case=False, regex=False, na=False)]
+        sub = sub[sub.get("_ROW").str.contains(term, case=False, regex=False, na=False)]
     for term in exclude_terms:
-        sub = sub[~sub["_ROW"].str.contains(term, case=False, regex=False, na=False)]
-    sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
-    sub = sub.dropna(subset=["V"])
-    m = dict(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"]))
-    out = []
-    for t in target_times:
-        val = m.get(t, m.get(t.replace("-", ""), m.get(t.replace("-Q", "Q"), np.nan)))
-        out.append(val)
-    return out
+        sub = sub[~sub.get("_ROW").str.contains(term, case=False, regex=False, na=False)]
+    sub["V"] = pd.to_numeric(sub.get("WERT").astype(str).str.replace(",", "."), errors="coerce")
+    sub = sub.dropna(subset=("V",))
+    m = dict(zip(sub.get("ZEIT").astype(str).str.strip(), sub.get("V")))
+    return [m.get(t, m.get(t.replace("-", ""), m.get(t.replace("-Q", "Q"), np.nan))) for t in target_times]
 
 def fmt_num(val, use_comma):
     s = f"{val:.1f}"
@@ -119,8 +107,8 @@ def style_panel(ax, title, sub, ymin, ymax, yticks, z=True):
         ax.axhline(0, color="#64748B", linewidth=1.1, zorder=1)
     ax.set_axisbelow(True)
     for s in ("top", "right", "left"):
-        ax.spines[s].set_visible(False)
-    ax.spines["bottom"].set_color("#94A3B8")
+        ax.spines.get(s).set_visible(False)
+    ax.spines.get("bottom").set_color("#94A3B8")
     ax.text(1.0, -0.22, "T.H.", transform=ax.transAxes, ha="right", fontsize=7.5, color="#94A3B8")
 
 def set_legend(ax, ncol=2):
@@ -129,8 +117,8 @@ def set_legend(ax, ncol=2):
 def mark_end(ax, x_vals, y_vals, col, use_comma, off=0.0):
     if len(x_vals) == 0 or len(y_vals) == 0:
         return
-    lx = list(x_vals)[-1]
-    ly = float(list(y_vals)[-1])
+    lx = list(x_vals).pop()
+    ly = float(list(y_vals).pop())
     ax.plot(lx, ly, marker="o", markersize=4.5, color=col, zorder=5)
     ax.text(len(x_vals) - 0.65, ly + off, fmt_num(ly, use_comma), fontsize=8, fontweight="bold", color=col, va="center")
 
@@ -181,9 +169,9 @@ def draw_p4(ax, t, d):
     style_panel(ax, t["p4_t"], t["p4_s"], -6, 6, range(-6, 8, 2))
     s_pi, s_pb, s_eh = d["s_pi"], d["s_pb"], d["s_eh"]
     l4 = t["p4_l"]
-    ax.plot(s_pi.index, s_pi.values, color="#1E3A8A", lw=2.1, marker="o", ms=3, label=l4)
-    ax.plot(s_pb.index, s_pb.values, color="#D97706", lw=2.1, marker="o", ms=3, label=l4)
-    ax.plot(s_eh.index, s_eh.values, color="#059669", lw=2.1, marker="o", ms=3, label=l4)
+    ax.plot(s_pi.index, s_pi.values, color="#1E3A8A", lw=2.1, marker="o", ms=3, label=l4[0])
+    ax.plot(s_pb.index, s_pb.values, color="#D97706", lw=2.1, marker="o", ms=3, label=l4[1])
+    ax.plot(s_eh.index, s_eh.values, color="#059669", lw=2.1, marker="o", ms=3, label=l4[2])
     mark_end(ax, s_pi.index, s_pi.values, "#1E3A8A", t["comma"], off=0.0)
     mark_end(ax, s_pb.index, s_pb.values, "#D97706", t["comma"], off=0.0)
     mark_end(ax, s_eh.index, s_eh.values, "#059669", t["comma"], off=0.35)
@@ -194,7 +182,7 @@ def draw_p5(ax, t, d):
     s_lb = d["s_lb"]
     bars = ax.bar(s_lb.index, s_lb.values, width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=t["p5_l"], zorder=2)
     for b in bars:
-        ax.text(b.get_x()+b.get_width()/2, b.get_height()+0.6, fmt_num(b.get_height(), t["comma"]), ha="center", fontsize=7.5, color="#1E3A8A", fontweight="bold")
+        ax.text(b.get_x()+b.get_width()/2, b.get_height()+0.45, fmt_num(b.get_height(), t["comma"]), ha="center", fontsize=7.5, color="#1E3A8A", fontweight="bold")
     set_legend(ax, ncol=1)
 
 def draw_p6(ax, t, d):
@@ -255,9 +243,7 @@ def main():
     xi = np.arange(len(xl_bip))
 
     def get_bip_combo(df_y, df_q, inc, exc):
-        vy = parse_destatis_series(df_y, inc, exc, yrs)
-        vq = parse_destatis_series(df_q, inc, exc, qtrs)
-        return vy + [np.nan] + vq
+        return parse_destatis_series(df_y, inc, exc, yrs) + [np.nan] + parse_destatis_series(df_q, inc, exc, qtrs)
 
     bip_r = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "kalender"], ["Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst"])
     pg    = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "kalender", "Produzierendes Gewerbe ohne Baugewerbe"], [])
@@ -271,9 +257,6 @@ def main():
     binv  = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Bauten"], [])
     exp   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Exporte"], [])
     imp   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Importe"], [])
-
-    print("BIP Real Live:", bip_r)
-    print("BIP Nominal Live:", bip_n)
 
     if all(np.isnan(bip_r)):
         bip_r = [3.9,1.8,-0.9,-0.5,0.2,np.nan,-0.8,-1.3,-1.0,-1.1,-0.2,-0.4,-0.2,0.1,0.3,0.3,0.6,0.4,0.5,0.3]
@@ -303,19 +286,17 @@ def main():
     if s_pb.empty: s_pb = pd.Series((-0.5,-1.8,0.8,1.1,0.9,1.4,1.2,0.8,1.5,1.1,0.9,1.3,1.2), index=m13)
     if s_eh.empty: s_eh = pd.Series((2.0,1.4,2.5,1.1,1.5,1.8,1.4,1.6,2.1,1.7,1.3,1.5,1.6), index=m13)
 
-    s_lb = get_bbk("BBFBOPV.M.N.DE.W1.S1.S1.T.B.CA._Z._Z._Z.EUR._T._X.N.ALL", 13, 0.001)
-    if s_lb.empty: s_lb = pd.Series((15.3,10.1,10.5,14.2,16.8,18.1,17.4,16.9,18.5,15.2,14.8,16.1,15.7), index=m13)
 def save_single(draw_fn, t, data, base_name):
     fig, ax = plt.subplots(figsize=(7.2, 5.2), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.09, right=0.95, top=0.73, bottom=0.17)
     draw_fn(ax, t, data)
     now = datetime.now()
-    fig.text(0.09, 0.02, f"{t['src']}{now.strftime(t['date_fmt'])}", fontsize=6.5, color="#64748B")
-    plt.savefig(f"static/dashboard/{base_name}{t['sfx']}.png", dpi=300)
+    fig.text(0.09, 0.02, f"{t.get('src')}{now.strftime(t.get('date_fmt'))}", fontsize=6.5, color="#64748B")
+    plt.savefig(f"static/dashboard/{base_name}{t.get('sfx')}.png", dpi=300)
     plt.close()
 
 def build_for_lang(lang, data):
-    t = TEXTS[lang]
+    t = TEXTS.get(lang)
     plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
     fig, axes = plt.subplots(3, 2, figsize=(12.6, 17.8), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.06, right=0.95, top=0.90, bottom=0.06, hspace=0.62, wspace=0.20)
@@ -323,8 +304,8 @@ def build_for_lang(lang, data):
     draw_p1(ax1, t, data); draw_p2(ax2, t, data); draw_p3(ax3, t, data)
     draw_p4(ax4, t, data); draw_p5(ax5, t, data); draw_p6(ax6, t, data)
     now = datetime.now()
-    fig.text(0.06, 0.015, f"{t['src']}{now.strftime(t['date_fmt'])}", fontsize=8, color="#64748B")
-    plt.savefig(f"static/dashboard/dashboard{t['sfx']}.png", dpi=300)
+    fig.text(0.06, 0.015, f"{t.get('src')}{now.strftime(t.get('date_fmt'))}", fontsize=8, color="#64748B")
+    plt.savefig(f"static/dashboard/dashboard{t.get('sfx')}.png", dpi=300)
     plt.close()
 
     save_single(draw_p1, t, data, "01_bip_entstehung")
@@ -340,16 +321,23 @@ def main():
     df_y2 = get_destatis("81000-0002")
     df_q2 = get_destatis("81000-0012")
 
-    yrs = tuple(sorted([z for z in df_y1["ZEIT"].astype(str).unique() if len(z) == 4 and z.isdigit()])[-5:]) if not df_y1.empty else ("2021", "2022", "2023", "2024", "2025")
-    qtrs = tuple(sorted([z for z in df_q1["ZEIT"].astype(str).unique() if "Q" in z])[-14:]) if not df_q1.empty else ("2023-Q2","2023-Q3","2023-Q4","2024-Q1","2024-Q2","2024-Q3","2024-Q4","2025-Q1","2025-Q2","2025-Q3","2025-Q4","2026-Q1","2026-Q2","2026-Q3")
+    if not df_y1.empty:
+        y_list = sorted([z for z in df_y1.get("ZEIT").astype(str).unique() if len(z) == 4 and z.isdigit()])
+        yrs = tuple(y_list[-5:])
+    else:
+        yrs = ("2021", "2022", "2023", "2024", "2025")
+
+    if not df_q1.empty:
+        q_list = sorted([z for z in df_q1.get("ZEIT").astype(str).unique() if "Q" in z])
+        qtrs = tuple(q_list[-14:])
+    else:
+        qtrs = ("2023-Q2","2023-Q3","2023-Q4","2024-Q1","2024-Q2","2024-Q3","2024-Q4","2025-Q1","2025-Q2","2025-Q3","2025-Q4","2026-Q1","2026-Q2","2026-Q3")
 
     xl_bip = yrs + ("",) + tuple(f"Q{q[-1]} {q[2:4]}" for q in qtrs)
     xi = np.arange(len(xl_bip))
 
     def get_bip_combo(df_y, df_q, inc, exc):
-        vy = parse_destatis_series(df_y, inc, exc, yrs)
-        vq = parse_destatis_series(df_q, inc, exc, qtrs)
-        return vy + [np.nan] + vq
+        return parse_destatis_series(df_y, inc, exc, yrs) + [np.nan] + parse_destatis_series(df_q, inc, exc, qtrs)
 
     bip_r = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "kalender"], ["Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst"])
     pg    = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "kalender", "Produzierendes Gewerbe ohne Baugewerbe"], [])
@@ -363,9 +351,6 @@ def main():
     binv  = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Bauten"], [])
     exp   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Exporte"], [])
     imp   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Importe"], [])
-
-    print("BIP Real Live:", bip_r)
-    print("BIP Nominal Live:", bip_n)
 
     if all(np.isnan(bip_r)):
         bip_r = [3.9,1.8,-0.9,-0.5,0.2,np.nan,-0.8,-1.3,-1.0,-1.1,-0.2,-0.4,-0.2,0.1,0.3,0.3,0.6,0.4,0.5,0.3]
@@ -415,4 +400,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
