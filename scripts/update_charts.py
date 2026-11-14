@@ -11,9 +11,9 @@ G_URL = "https://destatis.de"
 
 TEXTS = {
     "de": {
-        "p1_t": "Bruttoinlandsprodukt: Entstehung", "p1_s": "Veränderung zum Vorjahr in % (preis- & kalenderbereinigt)",
+        "p1_t": "Bruttoinlandsprodukt: Entstehung", "p1_s": "Veränderung zum Vorjahr in % (preisbereinigt, Originalwerte)",
         "p1_l": ("Reales BIP", "Prod. Gewerbe (o. Bau)", "Baugewerbe", "Handel, Verkehr, Gastgewerbe"),
-        "p2_t": "Bruttoinlandsprodukt: Verwendung", "p2_s": "Veränderung zum Vorjahr in %",
+        "p2_t": "Bruttoinlandsprodukt: Verwendung", "p2_s": "Veränderung zum Vorjahr in % (Originalwerte)",
         "p2_l": ("Nominales BIP", "Privater Konsum", "Staatskonsum", "Ausrüstungen", "Bauinvestitionen", "Exporte", "Importe"),
         "p3_t": "Auftragseingänge", "p3_s": "Volumenindex, Veränderung zum Vorjahr in %",
         "p3_l": ("Auftragseingang Industrie", "Auftragseingang Bauwirtschaft"),
@@ -22,13 +22,13 @@ TEXTS = {
         "p5_t": "Leistungsbilanzsaldo", "p5_s": "Monatlicher Saldo in Mrd. Euro", "p5_l": "Leistungsbilanzsaldo",
         "p6_t": "Arbeitslosigkeit und Inflation", "p6_s": "Quote bzw. Veränderung zum Vorjahr in %",
         "p6_l": ("Arbeitslosenquote", "Vollbeschäftigung (3%)", "Inflation (HVPI)", "EZB-Inflationsziel (2%)"),
-        "src": "Quellen: Statistisches Bundesamt (BIP), Deutsche Bundesbank | Kalenderbereinigt, Veränderung zum Vorjahr in % | Stand: ",
+        "src": "Quellen: Statistisches Bundesamt (BIP: Originalwerte), Deutsche Bundesbank | Veränderung zum Vorjahr in % | Stand: ",
         "date_fmt": "%d.%m.%Y", "comma": True, "sfx": ""
     },
     "en": {
-        "p1_t": "Gross Domestic Product: Production", "p1_s": "Change on previous year in % (price & calendar adjusted)",
+        "p1_t": "Gross Domestic Product: Production", "p1_s": "Change on previous year in % (price-adjusted, unadjusted data)",
         "p1_l": ("Real GDP", "Manufacturing (excl. construction)", "Construction", "Trade, transport, hospitality"),
-        "p2_t": "Gross Domestic Product: Expenditure", "p2_s": "Change on previous year in %",
+        "p2_t": "Gross Domestic Product: Expenditure", "p2_s": "Change on previous year in % (unadjusted data)",
         "p2_l": ("Nominal GDP", "Private consumption", "Government consumption", "Machinery & equipment", "Construction investment", "Exports", "Imports"),
         "p3_t": "New Orders", "p3_s": "Volume index, change on previous year in %",
         "p3_l": ("New orders: Manufacturing", "New orders: Construction"),
@@ -37,7 +37,7 @@ TEXTS = {
         "p5_t": "Current Account Balance", "p5_s": "Monthly balance in billion euros", "p5_l": "Current account balance",
         "p6_t": "Unemployment and Inflation", "p6_s": "Rate / change on previous year in %",
         "p6_l": ("Unemployment rate", "Full employment (3%)", "Inflation (HICP)", "ECB inflation target (2%)"),
-        "src": "Sources: Federal Statistical Office (GDP), Deutsche Bundesbank | Calendar-adjusted, change on previous year in % | As of: ",
+        "src": "Sources: Federal Statistical Office (GDP: unadjusted data), Deutsche Bundesbank | Change on previous year in % | As of: ",
         "date_fmt": "%Y-%m-%d", "comma": False, "sfx": "_en"
     }
 }
@@ -259,19 +259,18 @@ def main():
     imp   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Importe"], [])
 
     if all(np.isnan(bip_r)):
-        bip_r = [3.9,1.8,-0.9,-0.5,0.2,np.nan,-0.8,-1.3,-1.0,-1.1,-0.2,-0.4,-0.2,0.1,0.3,0.3,0.6,0.4,0.5,0.3]
-        pg    = [4.5,0.8,-2.1,-3.1,-0.8,np.nan,-2.0,-3.2,-3.5,-3.8,-3.1,-2.9,-2.5,-1.5,-0.9,-0.2,0.4,0.2,0.3,np.nan]
-        bau   = [-1.5,-3.2,-2.5,-3.8,-0.5,np.nan,-2.8,-2.4,-2.9,-3.5,-4.1,-3.9,-3.6,-2.1,-1.2,0.1,0.8,0.5,0.7,np.nan]
-        hvg   = [4.8,3.8,-1.2,0.4,0.9,np.nan,-1.5,-1.8,-1.2,0.2,0.5,0.6,0.4,1.1,1.2,0.9,0.7,0.6,0.8,np.nan]
+            bip_r = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt"], ["kalender", "Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst"])
+    pg    = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "Produzierendes Gewerbe ohne Baugewerbe"], ["kalender"])
+    bau   = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "Baugewerbe"], ["kalender", "ohne Baugewerbe"])
+    hvg   = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "Handel, Verkehr, Gastgewerbe"], ["kalender"])
 
-    if all(np.isnan(bip_n)):
-        bip_n = [6.8,8.3,5.8,2.6,3.3,np.nan,5.7,5.3,4.9,2.7,3.1,2.6,2.0,2.8,3.0,3.4,3.8,3.2,3.4,2.8]
-        kp    = [1.5,5.6,-0.4,0.3,1.5,np.nan,-0.8,-0.2,0.1,0.2,0.1,0.4,0.6,1.2,1.8,1.6,1.8,1.4,1.5,np.nan]
-        ks    = [3.1,1.6,-0.1,2.5,1.1,np.nan,-0.5,0.4,1.0,2.1,2.6,2.8,2.5,1.4,1.1,0.6,1.3,1.1,1.2,np.nan]
-        aus   = [3.5,4.0,3.0,-5.5,-1.2,np.nan,3.8,2.5,1.5,-4.8,-5.9,-6.1,-5.2,-3.1,-1.8,-0.4,0.3,0.1,0.4,np.nan]
-        binv  = [-1.8,-1.8,-3.1,-3.5,-0.4,np.nan,-3.1,-3.4,-3.5,-3.2,-3.8,-3.6,-3.4,-1.8,-0.9,-0.1,0.5,0.3,0.4,np.nan]
-        exp   = [9.7,3.3,-0.3,-1.1,0.8,np.nan,-0.5,-1.1,-0.8,-1.5,-0.9,-1.2,-0.8,0.2,0.7,1.0,1.6,1.1,1.3,np.nan]
-        imp   = [8.9,6.7,-3.0,-0.2,3.8,np.nan,-3.2,-4.1,-3.2,-2.1,-0.8,0.5,1.6,3.1,3.9,4.3,4.0,3.2,3.5,np.nan]
+    bip_n = get_bip_combo(df_y2, df_q2, ["%", "jeweiligen Preisen"], ["kalender", "Konsum", "Investition", "Ausrüstung", "Bauten", "Export", "Import", "Inland"])
+    kp    = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Private Konsumausgaben"], ["kalender"])
+    ks    = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Konsumausgaben des Staates"], ["kalender"])
+    aus   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Ausrüstungen"], ["kalender"])
+    binv  = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Bauten"], ["kalender"])
+    exp   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Exporte"], ["kalender"])
+    imp   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Importe"], ["kalender"])
 
     m13 = ("2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10")
     s_ai = get_bbk("BBDE1.M.DE.Y.BAA1.A2P000000.G.C.I21.A", 13)
