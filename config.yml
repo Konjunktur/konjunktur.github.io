@@ -24,7 +24,7 @@ languages:
     params:
       description: "Konjunktur-Dashboard mit aktuellen Wirtschaftsdaten für Deutschland."
       profileMode:
-        enabled: true
+        enabled: false
         title: Thorsten Hild
         subtitle: "Volkswirt, Arbeitsschwerpunkte: Konjunktur, Arbeitsmarkt, Wirtschaftspolitik, Internationale Wirtschaftsprobleme"
         imageUrl: picture.jpeg
@@ -45,7 +45,7 @@ languages:
     params:
       description: "Economic Dashboard with current macroeconomic indicators for Germany."
       profileMode:
-        enabled: true
+        enabled: false
         title: Thorsten Hild
         subtitle: "Economist, Focus Areas: Business Cycles, Labor Market, Economic Policy, International Economic Issues"
         imageUrl: picture.jpeg
