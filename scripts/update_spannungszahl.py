@@ -83,21 +83,26 @@ def fmt_num(val, use_comma, dec=1):
 
 def load_excel_url(label, url):
     hdrs = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Referer": BA_HOST + "/",
-        "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,*/*"
+        "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,*/*",
+        "Accept-Language": "de-DE,de;q=0.9"
     }
-    try:
-        r = requests.get(url, headers=hdrs, timeout=35, allow_redirects=True)
-        if r.status_code == 200 and r.content[:2] == b"PK":
-            xl = pd.ExcelFile(io.BytesIO(r.content), engine="openpyxl")
-            print(f"[{label} OK] Blätter: {xl.sheet_names}")
-            return xl
-        print(f"[{label} WARN] HTTP {r.status_code}, Bytes={len(r.content)}")
-        return None
-    except Exception as e:
-        print(f"[{label} ERR] {e}")
-        return None
+    for attempt in range(2):
+        time.sleep(3.0 if attempt == 0 else 8.0)
+        try:
+            r = requests.get(url, headers=hdrs, timeout=35, allow_redirects=True)
+            if r.status_code == 200 and r.content[:2] == b"PK":
+                xl = pd.ExcelFile(io.BytesIO(r.content), engine="openpyxl")
+                print(f"[{label} OK] Blätter: {xl.sheet_names}")
+                return xl
+            print(f"[{label} WARN] Versuch {attempt+1}: HTTP {r.status_code}, Bytes={len(r.content)}")
+            if r.status_code != 429:
+                return None
+        except Exception as e:
+            print(f"[{label} ERR] {e}")
+    return None
+
 
 def parse_cell_ym(val):
     if pd.isna(val):
@@ -186,18 +191,34 @@ def extract_ba_universal(label, xl, sheet_prefers, row_includes, row_excludes=()
     return pd.Series(dtype=float)
 
 def load_stellen_full():
-    combined = pd.Series(dtype=float)
+    cache_file = "static/spannungszahl/stellen_cache.csv"
+    cached = {}
+    if os.path.exists(cache_file):
+        try:
+            cdf = pd.read_csv(cache_file)
+            cached = dict(zip(cdf.get("ym").astype(str), cdf.get("val").astype(float)))
+        except Exception:
+            cached = {}
+
+    combined = pd.Series(cached, dtype=float)
     for y in range(2018, datetime.now().year + 1):
+        if f"{y}-12" in cached:
+            continue
         u = BA_HOST + BA_PATH + f"{y}12/iiia4/gemeldete-arbeitsstellen/gemeldete-arbeitsstellen-d-0-xlsx.xlsx?__blob=publicationFile&v=1"
         xl = load_excel_url(f"STELLEN_{y}", u)
         s = extract_ba_universal(f"STELLEN_{y}", xl, ["1.1", "Bestand"], ["Insgesamt"], ["sozialversicherungspflichtige"])
         if not s.empty:
             combined = s.combine_first(combined)
+
     xl_akt = load_excel_url("STELLEN_AKT", URL_STELLEN_AKT)
     s_akt = extract_ba_universal("STELLEN_AKT", xl_akt, ["1.1", "Bestand"], ["Insgesamt"], ["sozialversicherungspflichtige"])
     if not s_akt.empty:
         combined = s_akt.combine_first(combined)
-    return combined.sort_index()
+
+    combined = combined.sort_index()
+    if len(combined) > 0:
+        pd.DataFrame({"ym": combined.index.astype(str), "val": combined.values}).to_csv(cache_file, index=False)
+    return combined
 
 def load_ukraine_series(target_months):
     cache_file = "static/spannungszahl/ukraine_cache.csv"
