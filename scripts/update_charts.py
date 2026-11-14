@@ -243,9 +243,9 @@ def main():
     xi = np.arange(len(xl_bip))
 
     def get_bip_combo(df_y, df_q, inc, exc):
-    vy = parse_destatis_series(df_y, inc + ["Vorjahr"], exc + ["kalender", "saison", "X-13", "Vorquartal"], yrs)
-    vq = parse_destatis_series(df_q, inc + ["Ursprungswerte", "Vorjahr"], exc + ["kalender", "saison", "X-13", "Vorquartal"], qtrs)
-    return vy + [np.nan] + vq
+        vy = parse_destatis_series(df_y, inc + ["Vorjahr"], exc + ["kalender", "saison", "X-13", "Vorquartal"], yrs)
+        vq = parse_destatis_series(df_q, inc + ["Ursprungswerte", "Vorjahr"], exc + ["kalender", "saison", "X-13", "Vorquartal"], qtrs)
+        return vy + [np.nan] + vq
 
 bip_r = get_bip_combo(df_y1, df_q1, ["preisbereinigt"], ["Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst"])
 pg    = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Produzierendes Gewerbe ohne Baugewerbe"], [])
