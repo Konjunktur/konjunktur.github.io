@@ -77,46 +77,68 @@ def fmt_num(val, use_comma, dec=1):
     return s.replace(".", ",") if use_comma else s
 
 def load_bbk_labor_market():
-    """Lädt monatliche Ursprungswerte für Arbeitslose, Gemeldete Stellen und Kurzarbeiter direkt aus BBK01/US."""
-    url = f"{BBK_BASE}BBK01/US?format=csv&lang=de"
-    r = requests.get(url, timeout=45)
-    print(f"[BBK] HTTP {r.status_code}, Bytes={len(r.text)}")
-    if r.status_code != 200 or len(r.text) < 500:
-        return pd.Series(dtype=float), pd.Series(dtype=float), pd.Series(dtype=float)
+    """Findet automatisch alle Arbeitsmarkt-Datenflüsse der Bundesbank (Arbeitslose, Stellen, Kurzarbeit)."""
+    df_url = "https://api.statistiken." + "bundesbank.de" + "/rest/dataflow/BBK"
+    r_df = requests.get(df_url, timeout=30)
+    flows = re.findall(r'id="(BB[A-Z0-9_]+)"[^>]*>.*?<common:Name xml:lang="de">([^<]+)</common:Name>', r_df.text, flags=re.S)
+    print(f"[BBK FLOWS] Gefunden: {len(flows)}")
+    for fid, fname in flows:
+        if any(w in fname.lower() for w in ("arbeitslos", "stellen", "kurzarbeit", "arbeitsmarkt", "beschäftig")):
+            print(f"  -> {fid}: {fname}")
 
-    first_line = next(iter(r.text.splitlines()), "")
-    sep = ";" if first_line.count(";") >= first_line.count(",") else ","
-    df = pd.read_csv(io.StringIO(r.text), sep=sep, low_memory=False)
-    time_col = next(iter(df.columns))
-    is_date = df[time_col].astype(str).str.match(r"^(19\d{2}|20\d{2})-\d{2}")
-    meta_df = df.loc[~is_date]
-    data_df = df.loc[is_date]
-    yms = data_df[time_col].astype(str).str.slice(0, 7).values
+    # Zusätzlich bekannte Arbeitsmarkt-Datenflüsse testen
+    cand_flows = [fid for fid, fn in flows if any(w in fn.lower() for w in ("arbeitslos", "stellen", "kurzarbeit", "arbeitsmarkt"))]
+    for extra in ("BBDL1", "BBDP1", "BBDE1"):
+        if extra not in cand_flows:
+            cand_flows.append(extra)
 
-    col_meta = {}
-    for col in df.columns[1:]:
-        if str(col).endswith("_FLAGS"):
+    s_alo = pd.Series(dtype=float)
+    s_ste = pd.Series(dtype=float)
+    s_kug = pd.Series(dtype=float)
+
+    for fl in cand_flows[:6]:
+        u = f"{BBK_BASE}{fl}/M.DE.N.?format=csv&lang=de"
+        r = requests.get(u, timeout=30)
+        if r.status_code != 200 or len(r.text) < 500:
+            u = f"{BBK_BASE}{fl}/M.?format=csv&lang=de"
+            r = requests.get(u, timeout=30)
+        if r.status_code != 200 or len(r.text) < 500:
             continue
-        desc = " | ".join(str(x).strip() for x in meta_df[col].dropna().tolist()[:8])
-        col_meta[col] = f"{col} | {desc}"
+        first_line = next(iter(r.text.splitlines()), "")
+        sep = ";" if first_line.count(";") >= first_line.count(",") else ","
+        df = pd.read_csv(io.StringIO(r.text), sep=sep, low_memory=False)
+        time_col = next(iter(df.columns))
+        is_date = df[time_col].astype(str).str.match(r"^(19\d{2}|20\d{2})-\d{2}")
+        meta_df = df.loc[~is_date]
+        data_df = df.loc[is_date]
+        yms = data_df[time_col].astype(str).str.slice(0, 7).values
 
-    print(f"[BBK INFO] Aktive Datenspalten: {len(col_meta)}")
-    for k_m, v_m in list(col_meta.items())[:12]:
-        print(f"  -> {v_m[:110]}")
+        for col in df.columns[1:]:
+            if str(col).endswith("_FLAGS"):
+                continue
+            desc = " | ".join(str(x).strip() for x in meta_df[col].dropna().tolist()[:8])
+            cl = f"{col} | {desc}".lower()
+            if any(ex in cl for ex in ("quote", "%", "saisonbereinigt", "kalenderbereinigt", "männer", "frauen", "ausländer", "zugang", "abgang", "anzeige", "index")):
+                continue
+            vals = pd.to_numeric(data_df[col].astype(str).str.replace(",", "."), errors="coerce")
+            valid = vals.notna()
+            if valid.sum() < 36:
+                continue
+            nums = vals.loc[valid].values
+            scale = 0.001 if np.nanmedian(nums) > 20000 else 1.0
+            ser = pd.Series(nums * scale, index=yms[valid]).groupby(level=0).last().sort_index()
+            if s_alo.empty and "arbeitslose" in cl:
+                s_alo = ser
+                print(f"[BBK ALO OK] {fl}/{col}: {desc[:70]} ({ser.index[-1]}={ser.values[-1]:.1f})")
+            elif s_ste.empty and ("offene stellen" in cl or "gemeldete arbeitsstellen" in cl or "arbeitsstellen" in cl):
+                s_ste = ser
+                print(f"[BBK STE OK] {fl}/{col}: {desc[:70]} ({ser.index[-1]}={ser.values[-1]:.1f})")
+            elif s_kug.empty and "kurzarbeit" in cl:
+                s_kug = ser
+                print(f"[BBK KUG OK] {fl}/{col}: {desc[:70]} ({ser.index[-1]}={ser.values[-1]:.1f})")
 
-    def pick_col(inc_any, exc_any=("Quote", "%", "saisonbereinigt", "kalenderbereinigt", "Männer", "Frauen", "Ausländer", "Zugang", "Abgang", "Anzeige", "Index")):
-        for col, full_txt in col_meta.items():
-            cl = full_txt.lower()
-            if any(w.lower() in cl for w in inc_any) and not any(ex.lower() in cl for ex in exc_any):
-                vals = pd.to_numeric(data_df[col].astype(str).str.replace(",", "."), errors="coerce")
-                valid = vals.notna()
-                if valid.sum() >= 36:
-                    nums = vals.loc[valid].values
-                    scale = 0.001 if np.nanmedian(nums) > 20000 else 1.0
-                    s = pd.Series(nums * scale, index=yms[valid]).groupby(level=0).last().sort_index()
-                    print(f"[BBK MATCH] {inc_any} -> '{full_txt[:85]}' ({len(s)} Monate, {s.index[-1]}={s.values[-1]:.1f})")
-                    return s
-        return pd.Series(dtype=float)
+    return s_ste, s_alo, s_kug
+
 
 
     s_alo = pick_col(("Arbeitslose",))
