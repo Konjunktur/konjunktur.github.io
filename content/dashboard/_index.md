@@ -12,7 +12,7 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 ![Bruttoinlandsprodukt: Entstehung](/dashboard/01_bip_entstehung.png)
 
 - [In Vollbild anzeigen](/dashboard/01_bip_entstehung.png)
-- *Erläuterung* - Veränderung des preisbereinigten Bruttoinlandsprodukts sowie ausgewählter Wirtschaftsbereiche gegenüber dem Vorjahr in Prozent (Originalwerte).
+- *Erläuterung* - Veränderung des preisbereinigten Bruttoinlandsprodukts sowie ausgewählter Entstehungskomponenten gegenüber dem Vorjahr in Prozent (Originalwerte).
 - *Quelle* - Statistisches Bundesamt (GENESIS-Tabelle 81000-0011).
 
 ## Bruttoinlandsprodukt: Verwendung
