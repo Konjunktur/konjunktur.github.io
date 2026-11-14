@@ -242,7 +242,7 @@ def main():
     xl_bip = yrs + ("",) + tuple(f"Q{q[-1]} {q[2:4]}" for q in qtrs)
     xi = np.arange(len(xl_bip))
 
-       def get_bip_combo(df_y, df_q, inc, exc):
+        def get_bip_combo(df_y, df_q, inc, exc):
         vy = parse_destatis_series(df_y, inc + ["Vorjahr"], exc + ["kalender", "saison", "X-13", "Vorquartal"], yrs)
         vq = parse_destatis_series(df_q, inc + ["Ursprungswerte", "Vorjahr"], exc + ["kalender", "saison", "X-13", "Vorquartal"], qtrs)
         return vy + [np.nan] + vq
@@ -260,108 +260,14 @@ def main():
     exp   = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Exporte"], [])
     imp   = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Importe"], [])
 
-
     if all(np.isnan(bip_r)):
-            bip_r = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt"], ["kalender", "Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst"])
-    pg    = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "Produzierendes Gewerbe ohne Baugewerbe"], ["kalender"])
-    bau   = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "Baugewerbe"], ["kalender", "ohne Baugewerbe"])
-    hvg   = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "Handel, Verkehr, Gastgewerbe"], ["kalender"])
-
-    bip_n = get_bip_combo(df_y2, df_q2, ["%", "jeweiligen Preisen"], ["kalender", "Konsum", "Investition", "Ausrüstung", "Bauten", "Export", "Import", "Inland"])
-    kp    = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Private Konsumausgaben"], ["kalender"])
-    ks    = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Konsumausgaben des Staates"], ["kalender"])
-    aus   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Ausrüstungen"], ["kalender"])
-    binv  = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Bauten"], ["kalender"])
-    exp   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Exporte"], ["kalender"])
-    imp   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Importe"], ["kalender"])
-
-    m13 = ("2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10")
-    s_ai = get_bbk("BBDE1.M.DE.Y.BAA1.A2P000000.G.C.I21.A", 13)
-    s_ab = get_bbk("BBDE1.M.DE.Y.BAA1.F00000000.G.C.I21.A", 13)
-    if s_ai.empty: s_ai = pd.Series((-0.5,10.5,11.4,3.7,2.1,1.5,0.8,1.2,1.9,0.5,-0.4,1.1,1.4), index=m13)
-    if s_ab.empty: s_ab = pd.Series((2.5,4.1,4.6,5.2,3.8,4.1,2.9,3.4,2.1,1.8,2.5,3.0,2.8), index=m13)
-
-    s_pi = get_bbk("BBDE1.M.DE.Y.BPA1.A2P000000.G.C.I21.A", 13)
-    s_pb = get_bbk("BBDE1.M.DE.Y.BPA1.F00000000.G.C.I21.A", 13)
-    s_eh = get_bbk("BBDE1.M.DE.Y.BVA1.G47000000.G.C.I21.A", 13)
-    if s_pi.empty: s_pi = pd.Series((0.6,1.0,1.4,-2.6,-1.1,-0.5,0.2,0.4,0.8,-0.3,-0.6,0.2,0.5), index=m13)
-    if s_pb.empty: s_pb = pd.Series((-0.5,-1.8,0.8,1.1,0.9,1.4,1.2,0.8,1.5,1.1,0.9,1.3,1.2), index=m13)
-    if s_eh.empty: s_eh = pd.Series((2.0,1.4,2.5,1.1,1.5,1.8,1.4,1.6,2.1,1.7,1.3,1.5,1.6), index=m13)
-
-def save_single(draw_fn, t, data, base_name):
-    fig, ax = plt.subplots(figsize=(7.2, 5.2), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.95, top=0.73, bottom=0.17)
-    draw_fn(ax, t, data)
-    now = datetime.now()
-    fig.text(0.09, 0.02, f"{t.get('src')}{now.strftime(t.get('date_fmt'))}", fontsize=6.5, color="#64748B")
-    plt.savefig(f"static/dashboard/{base_name}{t.get('sfx')}.png", dpi=300)
-    plt.close()
-
-def build_for_lang(lang, data):
-    t = TEXTS.get(lang)
-    plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
-    fig, axes = plt.subplots(3, 2, figsize=(12.6, 17.8), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.06, right=0.95, top=0.90, bottom=0.06, hspace=0.62, wspace=0.20)
-    ax1, ax2, ax3, ax4, ax5, ax6 = axes.flatten()
-    draw_p1(ax1, t, data); draw_p2(ax2, t, data); draw_p3(ax3, t, data)
-    draw_p4(ax4, t, data); draw_p5(ax5, t, data); draw_p6(ax6, t, data)
-    now = datetime.now()
-    fig.text(0.06, 0.015, f"{t.get('src')}{now.strftime(t.get('date_fmt'))}", fontsize=8, color="#64748B")
-    plt.savefig(f"static/dashboard/dashboard{t.get('sfx')}.png", dpi=300)
-    plt.close()
-
-    save_single(draw_p1, t, data, "01_bip_entstehung")
-    save_single(draw_p2, t, data, "02_bip_verwendung")
-    save_single(draw_p3, t, data, "03_auftragseingaenge")
-    save_single(draw_p4, t, data, "04_produktion_einzelhandel")
-    save_single(draw_p5, t, data, "05_leistungsbilanz")
-    save_single(draw_p6, t, data, "06_arbeitslosigkeit_inflation")
-
-def main():
-    df_y1 = get_destatis("81000-0001")
-    df_q1 = get_destatis("81000-0011")
-    df_y2 = get_destatis("81000-0002")
-    df_q2 = get_destatis("81000-0012")
-
-    if not df_y1.empty:
-        y_list = sorted([z for z in df_y1.get("ZEIT").astype(str).unique() if len(z) == 4 and z.isdigit()])
-        yrs = tuple(y_list[-5:])
-    else:
-        yrs = ("2021", "2022", "2023", "2024", "2025")
-
-    if not df_q1.empty:
-        q_list = sorted([z for z in df_q1.get("ZEIT").astype(str).unique() if "Q" in z])
-        qtrs = tuple(q_list[-14:])
-    else:
-        qtrs = ("2023-Q2","2023-Q3","2023-Q4","2024-Q1","2024-Q2","2024-Q3","2024-Q4","2025-Q1","2025-Q2","2025-Q3","2025-Q4","2026-Q1","2026-Q2","2026-Q3")
-
-    xl_bip = yrs + ("",) + tuple(f"Q{q[-1]} {q[2:4]}" for q in qtrs)
-    xi = np.arange(len(xl_bip))
-
-    def get_bip_combo(df_y, df_q, inc, exc):
-        return parse_destatis_series(df_y, inc, exc, yrs) + [np.nan] + parse_destatis_series(df_q, inc, exc, qtrs)
-
-    bip_r = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "kalender"], ["Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst"])
-    pg    = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "kalender", "Produzierendes Gewerbe ohne Baugewerbe"], [])
-    bau   = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "kalender", "Baugewerbe"], ["ohne Baugewerbe"])
-    hvg   = get_bip_combo(df_y1, df_q1, ["%", "preisbereinigt", "kalender", "Handel, Verkehr, Gastgewerbe"], [])
-
-    bip_n = get_bip_combo(df_y2, df_q2, ["%", "jeweiligen Preisen"], ["Konsum", "Investition", "Ausrüstung", "Bauten", "Export", "Import", "Inland"])
-    kp    = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Private Konsumausgaben"], [])
-    ks    = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Konsumausgaben des Staates"], [])
-    aus   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Ausrüstungen"], [])
-    binv  = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Bauten"], [])
-    exp   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Exporte"], [])
-    imp   = get_bip_combo(df_y2, df_q2, ["%", "preisbereinigt", "Importe"], [])
-
-    if all(np.isnan(bip_r)):
-        bip_r = [3.9,1.8,-0.9,-0.5,0.2,np.nan,-0.8,-1.3,-1.0,-1.1,-0.2,-0.4,-0.2,0.1,0.3,0.3,0.6,0.4,0.5,0.3]
-        pg    = [4.5,0.8,-2.1,-3.1,-0.8,np.nan,-2.0,-3.2,-3.5,-3.8,-3.1,-2.9,-2.5,-1.5,-0.9,-0.2,0.4,0.2,0.3,np.nan]
-        bau   = [-1.5,-3.2,-2.5,-3.8,-0.5,np.nan,-2.8,-2.4,-2.9,-3.5,-4.1,-3.9,-3.6,-2.1,-1.2,0.1,0.8,0.5,0.7,np.nan]
-        hvg   = [4.8,3.8,-1.2,0.4,0.9,np.nan,-1.5,-1.8,-1.2,0.2,0.5,0.6,0.4,1.1,1.2,0.9,0.7,0.6,0.8,np.nan]
+        bip_r = [3.9,1.8,-0.9,-0.5,0.2,np.nan,-0.8,-1.3,-1.0,-1.1,-0.2,-0.4,-0.2,0.1,0.0,0.3,0.5,0.8,1.0,1.3]
+        pg    = [4.5,0.8,-2.1,-3.1,-0.8,np.nan,-2.0,-3.2,-3.5,-3.8,-3.1,-2.9,-2.5,-1.5,-0.9,-0.2,0.4,0.6,0.8,np.nan]
+        bau   = [-1.5,-3.2,-2.5,-3.8,-0.5,np.nan,-2.8,-2.4,-2.9,-3.5,-4.1,-3.9,-3.6,-2.1,-1.2,0.1,0.8,0.9,1.1,np.nan]
+        hvg   = [4.8,3.8,-1.2,0.4,0.9,np.nan,-1.5,-1.8,-1.2,0.2,0.5,0.6,0.4,1.1,1.2,0.9,0.7,1.0,1.2,np.nan]
 
     if all(np.isnan(bip_n)):
-        bip_n = [6.8,8.3,5.8,2.6,3.3,np.nan,5.7,5.3,4.9,2.7,3.1,2.6,2.0,2.8,3.0,3.4,3.8,3.2,3.4,2.8]
+        bip_n = [6.8,8.3,5.8,2.6,3.3,np.nan,5.7,5.3,4.9,2.7,3.1,2.6,2.0,2.8,3.0,3.4,3.7,3.5,3.9,4.6]
         kp    = [1.5,5.6,-0.4,0.3,1.5,np.nan,-0.8,-0.2,0.1,0.2,0.1,0.4,0.6,1.2,1.8,1.6,1.8,1.4,1.5,np.nan]
         ks    = [3.1,1.6,-0.1,2.5,1.1,np.nan,-0.5,0.4,1.0,2.1,2.6,2.8,2.5,1.4,1.1,0.6,1.3,1.1,1.2,np.nan]
         aus   = [3.5,4.0,3.0,-5.5,-1.2,np.nan,3.8,2.5,1.5,-4.8,-5.9,-6.1,-5.2,-3.1,-1.8,-0.4,0.3,0.1,0.4,np.nan]
@@ -402,3 +308,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+   
