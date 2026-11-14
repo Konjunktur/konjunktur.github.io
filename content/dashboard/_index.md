@@ -1,4 +1,3 @@
-```markdown
 ---
 title: "Konjunktur-Dashboard Deutschland"
 description: "Aktuelle Indikatoren zur wirtschaftlichen Entwicklung in Deutschland."
