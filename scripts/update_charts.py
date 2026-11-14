@@ -195,7 +195,7 @@ def draw_p6(ax, t, d):
 
 def save_single(draw_fn, t, data, base_name):
     fig, ax = plt.subplots(figsize=(7.2, 5.2), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.95, top=0.77, bottom=0.17)
+    plt.subplots_adjust(left=0.09, right=0.95, top=0.73, bottom=0.17)
     draw_fn(ax, t, data)
     now = datetime.now()
     fig.text(0.09, 0.02, f"{t.get('src')}{now.strftime(t.get('date_fmt'))}", fontsize=6.5, color="#64748B")
