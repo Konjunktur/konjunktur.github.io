@@ -12,45 +12,45 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 ![Bruttoinlandsprodukt: Entstehung](/dashboard/01_bip_entstehung.png)
 
 - [In Vollbild anzeigen](/dashboard/01_bip_entstehung.png)
-- *Construction* - Veränderung des preisbereinigten Bruttoinlandsprodukts sowie ausgewählter Wirtschaftsbereiche gegenüber dem Vorjahr in Prozent (Originalwerte).
-- *Source* - Statistisches Bundesamt (GENESIS-Tabelle 81000-0011).
+- *Methodik* - Veränderung des preisbereinigten Bruttoinlandsprodukts sowie ausgewählter Wirtschaftsbereiche gegenüber dem Vorjahr in Prozent (Originalwerte).
+- *Quelle* - Statistisches Bundesamt (GENESIS-Tabelle 81000-0011).
 
 ## Bruttoinlandsprodukt: Verwendung
 
 ![Bruttoinlandsprodukt: Verwendung](/dashboard/02_bip_verwendung.png)
 
 - [In Vollbild anzeigen](/dashboard/02_bip_verwendung.png)
-- *Construction* - Veränderung des nominalen BIP sowie preisbereinigter Verwendungskomponenten gegenüber dem Vorjahr in Prozent (Originalwerte).
-- *Source* - Statistisches Bundesamt (GENESIS-Tabelle 81000-0012).
+- *Methodik* - Veränderung des nominalen BIP sowie preisbereinigter Verwendungskomponenten gegenüber dem Vorjahr in Prozent (Originalwerte).
+- *Quelle* - Statistisches Bundesamt (GENESIS-Tabelle 81000-0012).
 
 ## Auftragseingänge
 
 ![Auftragseingänge](/dashboard/03_auftragseingaenge.png)
 
 - [In Vollbild anzeigen](/dashboard/03_auftragseingaenge.png)
-- *Construction* - Volumenindex der Auftragseingänge in der Industrie und im Bauhauptgewerbe, Veränderung gegenüber dem Vorjahr in Prozent.
-- *Source* - Deutsche Bundesbank.
+- *Methodik* - Volumenindex der Auftragseingänge in der Industrie und im Bauhauptgewerbe, Veränderung gegenüber dem Vorjahr in Prozent.
+- *Quelle* - Deutsche Bundesbank.
 
 ## Produktion & Einzelhandelsumsätze
 
 ![Produktion & Einzelhandelsumsätze](/dashboard/04_produktion_einzelhandel.png)
 
 - [In Vollbild anzeigen](/dashboard/04_produktion_einzelhandel.png)
-- *Construction* - Preis- und kalenderbereinigte Veränderung gegenüber dem Vorjahr in Prozent.
-- *Source* - Deutsche Bundesbank.
+- *Methodik* - Preis- und kalenderbereinigte Veränderung gegenüber dem Vorjahr in Prozent.
+- *Quelle* - Deutsche Bundesbank.
 
 ## Leistungsbilanzsaldo
 
 ![Leistungsbilanzsaldo](/dashboard/05_leistungsbilanz.png)
 
 - [In Vollbild anzeigen](/dashboard/05_leistungsbilanz.png)
-- *Construction* - Monatlicher Leistungsbilanzsaldo Deutschlands in Milliarden Euro (Originalwerte).
-- *Source* - Deutsche Bundesbank.
+- *Methodik* - Monatlicher Leistungsbilanzsaldo Deutschlands in Milliarden Euro (Originalwerte).
+- *Quelle* - Deutsche Bundesbank.
 
 ## Arbeitslosigkeit und Inflation
 
 ![Arbeitslosigkeit und Inflation](/dashboard/06_arbeitslosigkeit_inflation.png)
 
 - [In Vollbild anzeigen](/dashboard/06_arbeitslosigkeit_inflation.png)
-- *Construction* - Arbeitslosenquote sowie Veränderung des Harmonisierten Verbraucherpreisindex (HVPI) gegenüber dem Vorjahr in Prozent (Originalwerte).
-- *Source* - Deutsche Bundesbank.
+- *Methodik* - Arbeitslosenquote sowie Veränderung des Harmonisierten Verbraucherpreisindex (HVPI) gegenüber dem Vorjahr in Prozent (Originalwerte).
+- *Quelle* - Deutsche Bundesbank.
