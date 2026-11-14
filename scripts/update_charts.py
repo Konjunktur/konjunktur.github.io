@@ -190,7 +190,7 @@ def draw_p4(ax, t, d):
     ax.set_xlim(-0.5, max(len(s_pi), 1) + 0.5); set_legend(ax, ncol=3)
 
 def draw_p5(ax, t, d):
-    style_panel(ax, t["p5_t"], t["p5_s"], 0, 35, range(0, 40, 5), z=False)
+    style_panel(ax, t["p5_t"], t["p5_s"], 0, 25, range(0, 30, 5), z=False)
     s_lb = d["s_lb"]
     bars = ax.bar(s_lb.index, s_lb.values, width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=t["p5_l"], zorder=2)
     for b in bars:
@@ -205,9 +205,13 @@ def draw_p6(ax, t, d):
     ax.axhline(3.0, color="#0284C7", ls="--", lw=1.4, label=l6[1])
     ax.plot(s_hv.index, s_hv.values, color="#D97706", lw=2.1, marker="o", ms=3, label=l6[2])
     ax.axhline(2.0, color="#D97706", ls="--", lw=1.4, label=l6[3])
-    mark_end(ax, s_al.index, s_al.values, "#0284C7", t["comma"])
-    mark_end(ax, s_hv.index, s_hv.values, "#D97706", t["comma"])
-    ax.set_xlim(-0.5, max(len(s_al), 1) + 0.5); set_legend(ax, ncol=2)
+    for s, col in ((s_al, "#0284C7"), (s_hv, "#D97706")):
+        if len(s) > 0:
+            ax.plot(s.index[-1], s.values[-1], marker="o", markersize=4.5, color=col, zorder=5)
+            ax.text(len(s) - 1, float(s.values[-1]) + 0.3, fmt_num(float(s.values[-1]), t["comma"]),
+                    fontsize=8, fontweight="bold", color=col, ha="center", va="bottom",
+                    bbox=dict(boxstyle="round,pad=0.12", facecolor="#F8FAFC", edgecolor="none", alpha=0.85), zorder=6)
+    ax.set_xlim(-0.5, max(len(s_al), 1) - 0.3); set_legend(ax, ncol=2)
 
 def save_single(draw_fn, t, data, base_name):
     fig, ax = plt.subplots(figsize=(7.2, 5.2), dpi=300, facecolor="white")
