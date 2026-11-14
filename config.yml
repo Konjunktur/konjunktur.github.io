@@ -28,7 +28,7 @@ languages:
         icon: favicon.ico
         iconHeight: 18
 
-  en:
+    en:
     languageName: "English"
     weight: 2
     menu:
@@ -36,7 +36,7 @@ languages:
         - name: Economy
           url: /en/
           weight: 1
-        - name: Tension Index
+        - name: Economic Tension Number
           url: /en/spannungszahl/
           weight: 2
     params:
