@@ -73,59 +73,53 @@ def fmt_num(val, use_comma, dec=1):
     return s.replace(".", ",") if use_comma else s
 
 def load_bbk_labor_market():
-    """Findet automatisch alle Arbeitsmarkt-Datenflüsse der Bundesbank (Arbeitslose, Stellen, Kurzarbeit)."""
-    df_url = "https://api.statistiken." + "bundesbank.de" + "/rest/dataflow/BBK"
-    r_df = requests.get(df_url, timeout=30)
-    flows = re.findall(r'id="(BB[A-Z0-9_]+)"[^>]*>.*?<common:Name xml:lang="de">([^<]+)</common:Name>', r_df.text, flags=re.S)
-    cand_flows = [fid for fid, fn in flows if any(w in fn.lower() for w in ("arbeitslos", "stellen", "kurzarbeit", "arbeitsmarkt"))]
-    for extra in ("BBDL1", "BBDP1", "BBDE1"):
-        if extra not in cand_flows:
-            cand_flows.append(extra)
-
+    """Lädt monatliche Ursprungswerte für Arbeitslose, Gemeldete Stellen und Kurzarbeit direkt aus BBDL1."""
     s_alo = pd.Series(dtype=float)
     s_ste = pd.Series(dtype=float)
     s_kug = pd.Series(dtype=float)
 
-    for fl in cand_flows[:6]:
-        u = f"{BBK_BASE}{fl}/M.DE.N.?format=csv&lang=de"
-        r = requests.get(u, timeout=30)
-        if r.status_code != 200 or len(r.text) < 500:
-            u = f"{BBK_BASE}{fl}/M.?format=csv&lang=de"
-            r = requests.get(u, timeout=30)
-        if r.status_code != 200 or len(r.text) < 500:
-            continue
-        first_line = next(iter(r.text.splitlines()), "")
-        sep = ";" if first_line.count(";") >= first_line.count(",") else ","
-        df = pd.read_csv(io.StringIO(r.text), sep=sep, low_memory=False)
-        time_col = next(iter(df.columns))
-        is_date = df[time_col].astype(str).str.match(r"^(19\d{2}|20\d{2})-\d{2}")
-        meta_df = df.loc[~is_date]
-        data_df = df.loc[is_date]
-        yms = data_df[time_col].astype(str).str.slice(0, 7).values
+    u = f"{BBK_BASE}BBDL1/M.DE.N.?format=csv&lang=de"
+    r = requests.get(u, timeout=45)
+    if r.status_code != 200 or len(r.text) < 500:
+        print(f"[BBK WARN] HTTP {r.status_code}")
+        return s_ste, s_alo, s_kug
 
-        for col in df.columns[1:]:
-            if str(col).endswith("_FLAGS"):
-                continue
-            desc = " | ".join(str(x).strip() for x in meta_df[col].dropna().tolist()[:8])
-            cl = f"{col} | {desc}".lower()
-            if any(ex in cl for ex in ("quote", "%", "saisonbereinigt", "kalenderbereinigt", "männer", "frauen", "ausländer", "zugang", "abgang", "anzeige", "index")):
-                continue
-            vals = pd.to_numeric(data_df[col].astype(str).str.replace(",", "."), errors="coerce")
-            valid = vals.notna()
-            if valid.sum() < 36:
-                continue
-            nums = vals.loc[valid].values
-            scale = 0.001 if np.nanmedian(nums) > 20000 else 1.0
-            ser = pd.Series(nums * scale, index=yms[valid]).groupby(level=0).last().sort_index()
-            if s_alo.empty and "arbeitslose" in cl:
+    first_line = next(iter(r.text.splitlines()), "")
+    sep = ";" if first_line.count(";") >= first_line.count(",") else ","
+    df = pd.read_csv(io.StringIO(r.text), sep=sep, low_memory=False)
+    time_col = next(iter(df.columns))
+    is_date = df[time_col].astype(str).str.match(r"^(19\d{2}|20\d{2})-\d{2}")
+    meta_df = df.loc[~is_date]
+    data_df = df.loc[is_date]
+    yms = data_df[time_col].astype(str).str.slice(0, 7).values
+
+    for col in df.columns[1:]:
+        if str(col).endswith("_FLAGS"):
+            continue
+        desc = " | ".join(str(x).strip() for x in meta_df[col].dropna().tolist()[:8])
+        cl = f"{col} | {desc}".lower()
+        if any(ex in cl for ex in ("quote", "%", "saisonbereinigt", "kalenderbereinigt", "männer", "frauen", "ausländer", "zugang", "abgang", "anzeige", "index", "geringfügig", "beschäftigte", "sozialversicherungspflichtig", "unterbeschäftigung")):
+            continue
+        vals = pd.to_numeric(data_df[col].astype(str).str.replace(",", "."), errors="coerce")
+        valid = vals.notna()
+        if valid.sum() < 36:
+            continue
+        nums = vals.loc[valid].values
+        scale = 0.001 if np.nanmedian(nums) > 20000 else 1.0
+        ser = pd.Series(nums * scale, index=yms[valid]).groupby(level=0).last().sort_index()
+
+        if "arbeitslose" in cl and ("insgesamt" in cl or "deutschland" in cl):
+            if s_alo.empty or ser.index[-1] > s_alo.index[-1]:
                 s_alo = ser
-                print(f"[BBK ALO OK] {fl}/{col}: {desc[:70]} ({ser.index[-1]}={ser.values[-1]:.1f})")
-            elif s_ste.empty and ("offene stellen" in cl or "gemeldete arbeitsstellen" in cl or "arbeitsstellen" in cl):
+                print(f"[BBK ALO OK] {col}: {desc[:75]} ({ser.index[-1]}={ser.values[-1]:.1f})")
+        elif ("gemeldete arbeitsstellen" in cl or "offene stellen" in cl) and ("insgesamt" in cl or "deutschland" in cl):
+            if s_ste.empty or ser.index[-1] > s_ste.index[-1]:
                 s_ste = ser
-                print(f"[BBK STE OK] {fl}/{col}: {desc[:70]} ({ser.index[-1]}={ser.values[-1]:.1f})")
-            elif s_kug.empty and "kurzarbeit" in cl:
+                print(f"[BBK STE OK] {col}: {desc[:75]} ({ser.index[-1]}={ser.values[-1]:.1f})")
+        elif "kurzarbeiter" in cl and ("deutschland" in cl or "insgesamt" in cl):
+            if s_kug.empty or ser.index[-1] > s_kug.index[-1]:
                 s_kug = ser
-                print(f"[BBK KUG OK] {fl}/{col}: {desc[:70]} ({ser.index[-1]}={ser.values[-1]:.1f})")
+                print(f"[BBK KUG OK] {col}: {desc[:75]} ({ser.index[-1]}={ser.values[-1]:.1f})")
 
     return s_ste, s_alo, s_kug
 
@@ -230,9 +224,11 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
         ax.plot(lu1_x, lu1_y, color="#D97706", ls=":", lw=1.8, label=l1_b, zorder=4)
 
     # Dynamische Wendepunkte: zuletzt höchster und niedrigster Wert im Beobachtungszeitraum
-    y_arr = np.array(y_einf)
-    idx_max = int(np.where(y_arr == np.nanmax(y_arr))[-1])
-    idx_min = int(np.where(y_arr == np.nanmin(y_arr))[-1])
+    y_arr = np.array(y_einf, dtype=float)
+    max_val = np.nanmax(y_arr)
+    min_val = np.nanmin(y_arr)
+    idx_max = int(np.where(np.isclose(y_arr, max_val))[0][-1])
+    idx_min = int(np.where(np.isclose(y_arr, min_val))[0][-1])
     ym_max, ym_min = months_all[idx_max], months_all[idx_min]
 
     if lang == "de":
