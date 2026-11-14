@@ -247,64 +247,64 @@ def main():
         vq = parse_destatis_series(df_q, inc + ["Ursprungswerte", "Vorjahr"], exc + ["kalender", "saison", "X-13", "Vorquartal"], qtrs)
         return vy + [np.nan] + vq
 
-bip_r = get_bip_combo(df_y1, df_q1, ["preisbereinigt"], ["Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst"])
-pg    = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Produzierendes Gewerbe ohne Baugewerbe"], [])
-bau   = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Baugewerbe"], ["ohne Baugewerbe"])
-hvg   = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Handel, Verkehr, Gastgewerbe"], [])
-
-bip_n = get_bip_combo(df_y2, df_q2, ["jeweiligen Preisen"], ["Konsum", "Investition", "Ausrüstung", "Bauten", "Export", "Import", "Inland"])
-kp    = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Private Konsumausgaben"], [])
-ks    = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Konsumausgaben des Staates"], [])
-aus   = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ausrüstungen"], [])
-binv  = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Bauten"], [])
-exp   = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Exporte"], [])
-imp   = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Importe"], [])
-
-if all(np.isnan(bip_r)):
-    bip_r = [3.9,1.8,-0.9,-0.5,0.2,np.nan,-0.8,-1.3,-1.0,-1.1,-0.2,-0.4,-0.2,0.1,0.0,0.3,0.5,0.8,1.0,1.3]
-    pg    = [4.5,0.8,-2.1,-3.1,-0.8,np.nan,-2.0,-3.2,-3.5,-3.8,-3.1,-2.9,-2.5,-1.5,-0.9,-0.2,0.4,0.6,0.8,np.nan]
-    bau   = [-1.5,-3.2,-2.5,-3.8,-0.5,np.nan,-2.8,-2.4,-2.9,-3.5,-4.1,-3.9,-3.6,-2.1,-1.2,0.1,0.8,0.9,1.1,np.nan]
-    hvg   = [4.8,3.8,-1.2,0.4,0.9,np.nan,-1.5,-1.8,-1.2,0.2,0.5,0.6,0.4,1.1,1.2,0.9,0.7,1.0,1.2,np.nan]
-
-if all(np.isnan(bip_n)):
-    bip_n = [6.8,8.3,5.8,2.6,3.3,np.nan,5.7,5.3,4.9,2.7,3.1,2.6,2.0,2.8,3.0,3.4,3.7,3.5,3.9,4.6]
-    kp    = [1.5,5.6,-0.4,0.3,1.5,np.nan,-0.8,-0.2,0.1,0.2,0.1,0.4,0.6,1.2,1.8,1.6,1.8,1.4,1.5,np.nan]
-    ks    = [3.1,1.6,-0.1,2.5,1.1,np.nan,-0.5,0.4,1.0,2.1,2.6,2.8,2.5,1.4,1.1,0.6,1.3,1.1,1.2,np.nan]
-    aus   = [3.5,4.0,3.0,-5.5,-1.2,np.nan,3.8,2.5,1.5,-4.8,-5.9,-6.1,-5.2,-3.1,-1.8,-0.4,0.3,0.1,0.4,np.nan]
-    binv  = [-1.8,-1.8,-3.1,-3.5,-0.4,np.nan,-3.1,-3.4,-3.5,-3.2,-3.8,-3.6,-3.4,-1.8,-0.9,-0.1,0.5,0.3,0.4,np.nan]
-    exp   = [9.7,3.3,-0.3,-1.1,0.8,np.nan,-0.5,-1.1,-0.8,-1.5,-0.9,-1.2,-0.8,0.2,0.7,1.0,1.6,1.1,1.3,np.nan]
-    imp   = [8.9,6.7,-3.0,-0.2,3.8,np.nan,-3.2,-4.1,-3.2,-2.1,-0.8,0.5,1.6,3.1,3.9,4.3,4.0,3.2,3.5,np.nan]
-
-m13 = ("2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10")
-s_ai = get_bbk("BBDE1.M.DE.Y.BAA1.A2P000000.G.C.I21.A", 13)
-s_ab = get_bbk("BBDE1.M.DE.Y.BAA1.F00000000.G.C.I21.A", 13)
-if s_ai.empty: s_ai = pd.Series((-0.5,10.5,11.4,3.7,2.1,1.5,0.8,1.2,1.9,0.5,-0.4,1.1,1.4), index=m13)
-if s_ab.empty: s_ab = pd.Series((2.5,4.1,4.6,5.2,3.8,4.1,2.9,3.4,2.1,1.8,2.5,3.0,2.8), index=m13)
-
-s_pi = get_bbk("BBDE1.M.DE.Y.BPA1.A2P000000.G.C.I21.A", 13)
-s_pb = get_bbk("BBDE1.M.DE.Y.BPA1.F00000000.G.C.I21.A", 13)
-s_eh = get_bbk("BBDE1.M.DE.Y.BVA1.G47000000.G.C.I21.A", 13)
-if s_pi.empty: s_pi = pd.Series((0.6,1.0,1.4,-2.6,-1.1,-0.5,0.2,0.4,0.8,-0.3,-0.6,0.2,0.5), index=m13)
-if s_pb.empty: s_pb = pd.Series((-0.5,-1.8,0.8,1.1,0.9,1.4,1.2,0.8,1.5,1.1,0.9,1.3,1.2), index=m13)
-if s_eh.empty: s_eh = pd.Series((2.0,1.4,2.5,1.1,1.5,1.8,1.4,1.6,2.1,1.7,1.3,1.5,1.6), index=m13)
-
-s_lb = get_bbk("BBFBOPV.M.N.DE.W1.S1.S1.T.B.CA._Z._Z._Z.EUR._T._X.N.ALL", 13, 0.001)
-if s_lb.empty: s_lb = pd.Series((15.3,10.1,10.5,14.2,16.8,18.1,17.4,16.9,18.5,15.2,14.8,16.1,15.7), index=m13)
-
-s_al = get_bbk("BBDE1.M.DE.S.ABA1.A00000000.U.A.A00.A", 13)
-s_hv = get_bbk("BBDP1.M.DE.N.HVPI.C.A00000.I15.A", 13)
-if s_al.empty: s_al = pd.Series((6.2,6.1,6.2,6.6,6.5,6.4,6.3,6.2,6.2,6.3,6.4,6.3,6.2), index=m13)
-if s_hv.empty: s_hv = pd.Series((2.3,2.6,2.0,2.1,2.0,2.1,2.2,2.1,2.0,1.9,2.0,2.1,2.0), index=m13)
-
-data = {
-    "xi": xi, "xl_bip": xl_bip,
-    "bip_r": bip_r, "pg": pg, "bau": bau, "hvg": hvg,
-    "bip_n": bip_n, "kp": kp, "ks": ks, "aus": aus, "binv": binv, "exp": exp, "imp": imp,
-    "s_ai": s_ai, "s_ab": s_ab, "s_pi": s_pi, "s_pb": s_pb, "s_eh": s_eh,
-    "s_lb": s_lb, "s_al": s_al, "s_hv": s_hv
-}
-build_for_lang("de", data)
-build_for_lang("en", data)
+    bip_r = get_bip_combo(df_y1, df_q1, ["preisbereinigt"], ["Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst"])
+    pg    = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Produzierendes Gewerbe ohne Baugewerbe"], [])
+    bau   = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Baugewerbe"], ["ohne Baugewerbe"])
+    hvg   = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Handel, Verkehr, Gastgewerbe"], [])
+    
+    bip_n = get_bip_combo(df_y2, df_q2, ["jeweiligen Preisen"], ["Konsum", "Investition", "Ausrüstung", "Bauten", "Export", "Import", "Inland"])
+    kp    = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Private Konsumausgaben"], [])
+    ks    = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Konsumausgaben des Staates"], [])
+    aus   = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ausrüstungen"], [])
+    binv  = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Bauten"], [])
+    exp   = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Exporte"], [])
+    imp   = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Importe"], [])
+    
+    if all(np.isnan(bip_r)):
+        bip_r = [3.9,1.8,-0.9,-0.5,0.2,np.nan,-0.8,-1.3,-1.0,-1.1,-0.2,-0.4,-0.2,0.1,0.0,0.3,0.5,0.8,1.0,1.3]
+        pg    = [4.5,0.8,-2.1,-3.1,-0.8,np.nan,-2.0,-3.2,-3.5,-3.8,-3.1,-2.9,-2.5,-1.5,-0.9,-0.2,0.4,0.6,0.8,np.nan]
+        bau   = [-1.5,-3.2,-2.5,-3.8,-0.5,np.nan,-2.8,-2.4,-2.9,-3.5,-4.1,-3.9,-3.6,-2.1,-1.2,0.1,0.8,0.9,1.1,np.nan]
+        hvg   = [4.8,3.8,-1.2,0.4,0.9,np.nan,-1.5,-1.8,-1.2,0.2,0.5,0.6,0.4,1.1,1.2,0.9,0.7,1.0,1.2,np.nan]
+    
+    if all(np.isnan(bip_n)):
+        bip_n = [6.8,8.3,5.8,2.6,3.3,np.nan,5.7,5.3,4.9,2.7,3.1,2.6,2.0,2.8,3.0,3.4,3.7,3.5,3.9,4.6]
+        kp    = [1.5,5.6,-0.4,0.3,1.5,np.nan,-0.8,-0.2,0.1,0.2,0.1,0.4,0.6,1.2,1.8,1.6,1.8,1.4,1.5,np.nan]
+        ks    = [3.1,1.6,-0.1,2.5,1.1,np.nan,-0.5,0.4,1.0,2.1,2.6,2.8,2.5,1.4,1.1,0.6,1.3,1.1,1.2,np.nan]
+        aus   = [3.5,4.0,3.0,-5.5,-1.2,np.nan,3.8,2.5,1.5,-4.8,-5.9,-6.1,-5.2,-3.1,-1.8,-0.4,0.3,0.1,0.4,np.nan]
+        binv  = [-1.8,-1.8,-3.1,-3.5,-0.4,np.nan,-3.1,-3.4,-3.5,-3.2,-3.8,-3.6,-3.4,-1.8,-0.9,-0.1,0.5,0.3,0.4,np.nan]
+        exp   = [9.7,3.3,-0.3,-1.1,0.8,np.nan,-0.5,-1.1,-0.8,-1.5,-0.9,-1.2,-0.8,0.2,0.7,1.0,1.6,1.1,1.3,np.nan]
+        imp   = [8.9,6.7,-3.0,-0.2,3.8,np.nan,-3.2,-4.1,-3.2,-2.1,-0.8,0.5,1.6,3.1,3.9,4.3,4.0,3.2,3.5,np.nan]
+    
+    m13 = ("2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10")
+    s_ai = get_bbk("BBDE1.M.DE.Y.BAA1.A2P000000.G.C.I21.A", 13)
+    s_ab = get_bbk("BBDE1.M.DE.Y.BAA1.F00000000.G.C.I21.A", 13)
+    if s_ai.empty: s_ai = pd.Series((-0.5,10.5,11.4,3.7,2.1,1.5,0.8,1.2,1.9,0.5,-0.4,1.1,1.4), index=m13)
+    if s_ab.empty: s_ab = pd.Series((2.5,4.1,4.6,5.2,3.8,4.1,2.9,3.4,2.1,1.8,2.5,3.0,2.8), index=m13)
+    
+    s_pi = get_bbk("BBDE1.M.DE.Y.BPA1.A2P000000.G.C.I21.A", 13)
+    s_pb = get_bbk("BBDE1.M.DE.Y.BPA1.F00000000.G.C.I21.A", 13)
+    s_eh = get_bbk("BBDE1.M.DE.Y.BVA1.G47000000.G.C.I21.A", 13)
+    if s_pi.empty: s_pi = pd.Series((0.6,1.0,1.4,-2.6,-1.1,-0.5,0.2,0.4,0.8,-0.3,-0.6,0.2,0.5), index=m13)
+    if s_pb.empty: s_pb = pd.Series((-0.5,-1.8,0.8,1.1,0.9,1.4,1.2,0.8,1.5,1.1,0.9,1.3,1.2), index=m13)
+    if s_eh.empty: s_eh = pd.Series((2.0,1.4,2.5,1.1,1.5,1.8,1.4,1.6,2.1,1.7,1.3,1.5,1.6), index=m13)
+    
+    s_lb = get_bbk("BBFBOPV.M.N.DE.W1.S1.S1.T.B.CA._Z._Z._Z.EUR._T._X.N.ALL", 13, 0.001)
+    if s_lb.empty: s_lb = pd.Series((15.3,10.1,10.5,14.2,16.8,18.1,17.4,16.9,18.5,15.2,14.8,16.1,15.7), index=m13)
+    
+    s_al = get_bbk("BBDE1.M.DE.S.ABA1.A00000000.U.A.A00.A", 13)
+    s_hv = get_bbk("BBDP1.M.DE.N.HVPI.C.A00000.I15.A", 13)
+    if s_al.empty: s_al = pd.Series((6.2,6.1,6.2,6.6,6.5,6.4,6.3,6.2,6.2,6.3,6.4,6.3,6.2), index=m13)
+    if s_hv.empty: s_hv = pd.Series((2.3,2.6,2.0,2.1,2.0,2.1,2.2,2.1,2.0,1.9,2.0,2.1,2.0), index=m13)
+    
+    data = {
+        "xi": xi, "xl_bip": xl_bip,
+        "bip_r": bip_r, "pg": pg, "bau": bau, "hvg": hvg,
+        "bip_n": bip_n, "kp": kp, "ks": ks, "aus": aus, "binv": binv, "exp": exp, "imp": imp,
+        "s_ai": s_ai, "s_ab": s_ab, "s_pi": s_pi, "s_pb": s_pb, "s_eh": s_eh,
+        "s_lb": s_lb, "s_al": s_al, "s_hv": s_hv
+    }
+    build_for_lang("de", data)
+    build_for_lang("en", data)
 
 if __name__ == "__main__":
     main()
