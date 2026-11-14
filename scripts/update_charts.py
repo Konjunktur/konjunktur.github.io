@@ -44,18 +44,19 @@ TEXTS = {
 
 def get_bbk(key, n=13, scale=1.0):
     flow, k = key.split(".", 1)
-    url = f"https://bundesbank.de{flow}/{k}?format=csv&lang=de"
+    url = "https://bundesbank.de" + flow + "/" + k + "?format=csv&lang=de"
     try:
         r = requests.get(url, timeout=15)
         if r.status_code != 200 or ";" not in r.text:
             print(f"[BBK WARN] {key}: HTTP {r.status_code}")
             return pd.Series(dtype=float)
-        df = pd.read_csv(io.StringIO(r.text), sep=";")
+        df = pd.read_csv(io.StringIO(r.text), sep=";", on_bad_lines="skip")
         tc = next(c for c in df.columns if "TIME_PERIOD" in c)
         vc = next(c for c in df.columns if "OBS_VALUE" in c)
         df = df.dropna(subset=[tc, vc]).tail(n)
-        vals = df[vc].astype(str).str.replace(",", ".").astype(float) * scale
-        s = pd.Series(vals.values, index=df[tc].astype(str).values)
+        vals = pd.to_numeric(df[vc].astype(str).str.replace(",", "."), errors="coerce") * scale
+        df = df.assign(V=vals).dropna(subset=["V"])
+        s = pd.Series(df["V"].values, index=df[tc].astype(str).values)
         print(f"[BBK OK] {key}: letzter Wert {s.index[-1]} = {s.values[-1]:.2f}")
         return s
     except Exception as e:
@@ -69,10 +70,11 @@ def get_destatis(table):
     p = {"username": D_USER, "password": D_PASS, "name": table, "area": "all", "compress": "false", "format": "ffcsv", "language": "de"}
     try:
         r = requests.get(G_URL, params=p, timeout=35)
-        if len(r.text) < 200 or "Fehler" in r.text[:250]:
+        lines = [ln for ln in r.text.splitlines() if ln.count(";") >= 4]
+        if len(lines) < 5:
             print(f"[DESTATIS WARN] {table}: {r.text[:150]}")
             return pd.DataFrame()
-        df = pd.read_csv(io.StringIO(r.text), sep=";", decimal=",")
+        df = pd.read_csv(io.StringIO("\n".join(lines)), sep=";", decimal=",", on_bad_lines="skip")
         text_cols = [c for c in df.columns if c not in ("ZEIT", "WERT")]
         df["_ROW"] = df[text_cols].fillna("").astype(str).agg(" | ".join, axis=1)
         print(f"[DESTATIS OK] {table}: {len(df)} Zeilen geladen")
@@ -140,7 +142,6 @@ def draw_bars_with_labels(ax, xi, vals, label, use_comma):
             off = 0.25 if h >= 0 else -0.35
             va = "bottom" if h >= 0 else "top"
             ax.text(b.get_x() + b.get_width() / 2, h + off, fmt_num(h, use_comma), ha="center", va=va, fontsize=6.2, color="#1E3A8A", fontweight="bold", zorder=4)
-
 def draw_p1(ax, t, d):
     xi, xl_bip = d["xi"], d["xl_bip"]
     style_panel(ax, t["p1_t"], t["p1_s"], -10, 8, range(-10, 10, 2))
@@ -180,9 +181,9 @@ def draw_p4(ax, t, d):
     style_panel(ax, t["p4_t"], t["p4_s"], -6, 6, range(-6, 8, 2))
     s_pi, s_pb, s_eh = d["s_pi"], d["s_pb"], d["s_eh"]
     l4 = t["p4_l"]
-    ax.plot(s_pi.index, s_pi.values, color="#1E3A8A", lw=2.1, marker="o", ms=3, label=l4)
-    ax.plot(s_pb.index, s_pb.values, color="#D97706", lw=2.1, marker="o", ms=3, label=l4)
-    ax.plot(s_eh.index, s_eh.values, color="#059669", lw=2.1, marker="o", ms=3, label=l4)
+    ax.plot(s_pi.index, s_pi.values, color="#1E3A8A", lw=2.1, marker="o", ms=3, label=l4[0])
+    ax.plot(s_pb.index, s_pb.values, color="#D97706", lw=2.1, marker="o", ms=3, label=l4[1])
+    ax.plot(s_eh.index, s_eh.values, color="#059669", lw=2.1, marker="o", ms=3, label=l4[2])
     mark_end(ax, s_pi.index, s_pi.values, "#1E3A8A", t["comma"])
     mark_end(ax, s_pb.index, s_pb.values, "#D97706", t["comma"], off=0.35)
     mark_end(ax, s_eh.index, s_eh.values, "#059669", t["comma"], off=-0.35)
@@ -300,7 +301,6 @@ def main():
 
     s_lb = get_bbk("BBFBOPV.M.N.DE.W1.S1.S1.T.B.CA._Z._Z._Z.EUR._T._X.N.ALL", 13, 0.001)
     if s_lb.empty: s_lb = pd.Series((15.3,10.1,10.5,14.2,16.8,18.1,17.4,16.9,18.5,15.2,14.8,16.1,15.7), index=m13)
-
 def save_single(draw_fn, t, data, base_name):
     fig, ax = plt.subplots(figsize=(7.2, 5.2), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.09, right=0.95, top=0.73, bottom=0.17)
@@ -411,3 +411,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
