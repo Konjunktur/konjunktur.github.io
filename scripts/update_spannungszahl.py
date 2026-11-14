@@ -84,48 +84,31 @@ def fmt_num(val, use_comma, dec=1):
 
 def fetch_ba_excel(name, nn_id, topic):
     base = "https://arbeitsagentur.de"
-    hdrs = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    hdrs = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Accept": "application/json, text/html, */*"}
     sess = requests.Session()
     try:
-        # 1. Direktaufruf mit Such-Trigger der BA-Einzelheftsuche
-        for params in (
-            {"nn": nn_id, "topic_f": topic, "submit": "Suchen", "r_s": "true"},
-            {"nn": nn_id, "topic_f": topic, "gts": "dateOfIssue_dt+desc"},
+        for extra in (
+            {"nn": nn_id, "topic_f": topic, "view": "renderJson"},
+            {"nn": nn_id, "topic_f": topic, "pageLocale": "de"},
             {"nn": nn_id, "topic_f": topic}
         ):
-            r = sess.get(base, params=params, headers=hdrs, timeout=25)
-            links = re.findall(r'["\']([^"\']*\.xlsx?(?:\?[^"\']*)?)["\']', r.text, flags=re.I)
-            if not links:
-                # Auch nach Blob-Download-URLs suchen
-                links = re.findall(r'["\'](/Statistik/[^"\']+?\.xlsx?[^"\']*)["\']', r.text, flags=re.I)
+            r = sess.get(base, params=extra, headers=hdrs, timeout=25)
+            links = re.findall(r'(/[^"\'\s\\]+\.xlsx?)', r.text.replace("\\/", "/"), flags=re.I)
             if links:
-                print(f"[BA {name}] Treffer ({len(links)}): {links[:3]}")
+                print(f"[BA {name}] Treffer ({len(links)}): {links[:4]}")
                 for lnk in links:
-                    xlsx_url = urljoin(base, lnk.replace("&amp;", "&"))
+                    xlsx_url = urljoin("https://arbeitsagentur.de", lnk)
                     xr = sess.get(xlsx_url, headers=hdrs, timeout=30)
                     if xr.status_code == 200 and len(xr.content) > 5000:
                         xl = pd.ExcelFile(io.BytesIO(xr.content))
                         print(f"[BA {name} OK] Geladen: {xlsx_url} | Blätter: {xl.sheet_names[:8]}")
                         return xl
-        # 2. Falls Formular-POST nötig ist
-        r0 = sess.get(base, params={"nn": nn_id, "topic_f": topic}, headers=hdrs, timeout=20)
-        forms = re.findall(r'<input[^>]+name=["\']([^"\']+)["\'][^>]+value=["\']([^"\']*)["\']', r0.text, flags=re.I)
-        payload = {k: v for k, v in forms}
-        payload["topic_f"] = topic
-        rp = sess.post(base, params={"nn": nn_id, "topic_f": topic}, data=payload, headers=hdrs, timeout=25)
-        links = re.findall(r'["\']([^"\']*\.xlsx?(?:\?[^"\']*)?)["\']', rp.text, flags=re.I)
-        print(f"[BA {name} POST] Treffer ({len(links)}): {links[:3]}")
-        for lnk in links:
-            xlsx_url = urljoin(base, lnk.replace("&amp;", "&"))
-            xr = sess.get(xlsx_url, headers=hdrs, timeout=30)
-            if xr.status_code == 200 and len(xr.content) > 5000:
-                xl = pd.ExcelFile(io.BytesIO(xr.content))
-                print(f"[BA {name} OK] Geladen: {xlsx_url} | Blätter: {xl.sheet_names[:8]}")
-                return xl
+        print(f"[BA {name} INFO] Antwort-Auszug: {r.text[:220].replace(chr(10), ' ')}")
         return None
     except Exception as e:
         print(f"[BA {name} ERR] {e}")
         return None
+
 def extract_monthly_series(name, xl, sheet_hints, col_hints, exclude_hints=(), scale=0.001):
     if xl is None:
         return pd.Series(dtype=float)
@@ -238,12 +221,12 @@ def line_unv(diff_series, anchor_ym, months):
     for ym in months:
         if ym < anchor_ym:
             continue
-        parts = ym.split("-")
-        y, m = int(parts), int(parts)
-        vj = f"{y - 1}-{m:02d}"
+        y_str, m_str = ym.split("-")
+        vj = f"{int(y_str) - 1}-{int(m_str):02d}"
         if vj in diff_series.index:
             out[ym] = d_t0 - float(diff_series.loc[vj])
     return pd.Series(out)
+
 def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     t = TEXTS[lang]
     plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
