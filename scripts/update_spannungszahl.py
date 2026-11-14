@@ -9,9 +9,11 @@ D_USER = os.environ.get("DESTATIS_USER", "")
 D_PASS = os.environ.get("DESTATIS_PASS", "")
 G_URL = "https://destatis.de"
 
-URL_STELLEN_AKT = "https://arbeitsagentur.de"
-URL_ALO_AKT     = "https://arbeitsagentur.de"
-URL_KUG_AKT     = "https://arbeitsagentur.de"
+BA_HOST = "https://arbeitsagentur.de"
+BA_PATH = "/Statistikdaten/Detail/"
+URL_STELLEN_AKT = BA_HOST + BA_PATH + "Aktuell/iiia4/gemeldete-arbeitsstellen/gemeldete-arbeitsstellen-d-0-xlsx.xlsx?__blob=publicationFile&v=1"
+URL_ALO_AKT     = BA_HOST + BA_PATH + "Aktuell/iiia4/zr-alo-bl/zr-alo-bl-dwolr-0-xlsx.xlsx?__blob=publicationFile&v=1"
+URL_KUG_AKT     = BA_HOST + BA_PATH + "Aktuell/iiia7/kurzarbeit-zr2/kurzarbeit-zr2-dwolkraa-0-xlsm.xlsm?__blob=publicationFile&v=1"
 
 MONATE_DE = ("Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember")
 MONATE_EN = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
@@ -80,11 +82,15 @@ def fmt_num(val, use_comma, dec=1):
     return s.replace(".", ",") if use_comma else s
 
 def load_excel_url(label, url):
-    hdrs = {"User-Agent": "Mozilla/5.0"}
+    hdrs = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": BA_HOST + "/",
+        "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,*/*"
+    }
     try:
-        r = requests.get(url, headers=hdrs, timeout=35)
-        if r.status_code == 200 and len(r.content) > 5000:
-            xl = pd.ExcelFile(io.BytesIO(r.content))
+        r = requests.get(url, headers=hdrs, timeout=35, allow_redirects=True)
+        if r.status_code == 200 and r.content[:2] == b"PK":
+            xl = pd.ExcelFile(io.BytesIO(r.content), engine="openpyxl")
             print(f"[{label} OK] Blätter: {xl.sheet_names}")
             return xl
         print(f"[{label} WARN] HTTP {r.status_code}, Bytes={len(r.content)}")
@@ -122,7 +128,7 @@ def extract_ba_universal(label, xl, sheet_prefers, row_includes, row_excludes=()
         df = xl.parse(sh, header=None)
         n_rows, n_cols = df.shape
 
-        # Fall A: Monate stehen nebeneinander in einer Kopfzeile
+        # Fall A: Monate nebeneinander in einer Kopfzeile
         for r_idx in range(min(25, n_rows)):
             ym_cols = {}
             for c_idx, cell in enumerate(df.iloc[r_idx].tolist()):
@@ -145,7 +151,7 @@ def extract_ba_universal(label, xl, sheet_prefers, row_includes, row_excludes=()
                             print(f"[{label}] Blatt '{sh}' (Spaltenformat, Zeile '{row_txt[:45]}'): {len(s)} Monate")
                             return s
 
-        # Fall B: Monate stehen untereinander in Spalte A oder B
+        # Fall B: Monate untereinander in Spalte A oder B
         cur_year = None
         ym_rows = {}
         for r_idx in range(n_rows):
@@ -182,7 +188,7 @@ def extract_ba_universal(label, xl, sheet_prefers, row_includes, row_excludes=()
 def load_stellen_full():
     combined = pd.Series(dtype=float)
     for y in range(2018, datetime.now().year + 1):
-        u = f"https://arbeitsagentur.de{y}12/iiia4/gemeldete-arbeitsstellen/gemeldete-arbeitsstellen-d-0-xlsx.xlsx?__blob=publicationFile&v=1"
+        u = BA_HOST + BA_PATH + f"{y}12/iiia4/gemeldete-arbeitsstellen/gemeldete-arbeitsstellen-d-0-xlsx.xlsx?__blob=publicationFile&v=1"
         xl = load_excel_url(f"STELLEN_{y}", u)
         s = extract_ba_universal(f"STELLEN_{y}", xl, ["1.1", "Bestand"], ["Insgesamt"], ["sozialversicherungspflichtige"])
         if not s.empty:
@@ -207,7 +213,7 @@ def load_ukraine_series(target_months):
         if ym < "2022-01" or ym in cached:
             continue
         ym_compact = ym.replace("-", "")
-        u = f"https://arbeitsagentur.de{ym_compact}/iiia4/nat-ins/nat-ins-dl-0-{ym_compact}-xlsx.xlsx?__blob=publicationFile&v=1"
+        u = BA_HOST + BA_PATH + f"{ym_compact}/iiia4/nat-ins/nat-ins-dl-0-{ym_compact}-xlsx.xlsx?__blob=publicationFile&v=1"
         xl = load_excel_url(f"UKR_{ym}", u)
         if xl is None:
             continue
@@ -342,6 +348,7 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
 
     # 2. Einfache Spannungszahl Zoom (13 Monate + mehrere Referenzlinien)
     months_z = months_all[-13:]
+    first_z = next(iter(months_z))
     xz = np.arange(len(months_z))
     yz_einf = [float(sz_einf.loc[ym]) for ym in months_z]
     fig, ax = plt.subplots(figsize=(7.6, 6.0), dpi=300, facecolor="white")
@@ -350,7 +357,7 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     ymax_z = max(100, int(np.ceil((max(yz_einf) + 120) / 100.0) * 100))
     style_sz_ax(ax, t.get("p2_t"), ymin_z, ymax_z, range(ymin_z, ymax_z + 100, 100), t.get("x_m"), title_y=1.52)
     ax.plot(xz, yz_einf, color="#D97706", lw=2.3, label=t.get("p2_l1"), zorder=4)
-    lu_vj = line_unv(d_einf, months_z, months_z)
+    lu_vj = line_unv(d_einf, first_z, months_z)
     if not lu_vj.empty:
         ax.plot(xz, [lu_vj.loc[ym] for ym in months_z], color="#D97706", ls="--", lw=1.9, label=t.get("p2_l_vj"), zorder=3)
     extra_cols = ("#1E3A8A", "#78350F", "#6D28D9", "#059669", "#0284C7")
@@ -388,7 +395,7 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     ymax_4 = max(400, int(np.ceil((max(yz_erw) + 100) / 100.0) * 100))
     style_sz_ax(ax, t.get("p4_t"), ymin_4, ymax_4, range(ymin_4, ymax_4 + 100, 100), t.get("x_m"))
     ax.plot(xz, yz_erw, color="#059669", lw=2.2, label=l3_a, zorder=4)
-    lu4 = line_unv(d_erw, months_z, months_z)
+    lu4 = line_unv(d_erw, first_z, months_z)
     if not lu4.empty:
         ax.plot(xz, [lu4.loc[ym] for ym in months_z], color="#059669", ls=":", lw=1.8, label=l3_b, zorder=3)
     draw_year_groups(ax, months_z, t.get("m"), step=1)
