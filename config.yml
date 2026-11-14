@@ -10,7 +10,7 @@ defaultContentLanguageInSubdir: false
 
 languages:
   de:
-    languageName: "Deutsch"
+    languageName: "DE"
     weight: 1
     menu:
       main:
@@ -28,8 +28,8 @@ languages:
         icon: favicon.ico
         iconHeight: 18
 
-    en:
-    languageName: "English"
+  en:
+    languageName: "EN"
     weight: 2
     menu:
       main:
