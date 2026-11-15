@@ -235,15 +235,15 @@ def build_for_lang(lang, data):
     save_single(draw_p5, t, data, "05_leistungsbilanz", "src_bbk")
     save_single(draw_p6, t, data, "06_arbeitslosigkeit_inflation", "src_bbk")
 
-        # Interaktive Plotly-Charts für die 6 Dashboard-Grafiken (Smartphone-optimiert)
-    now_str_p = now.strftime(t.get("date_fmt"))
+        # Interaktive Plotly-Charts für die 6 Dashboard-Grafiken (Desktop & Smartphone optimiert)
+    now_str_p = datetime.now().strftime(t.get("date_fmt"))
     def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p):
         fig_p.update_layout(
             title=dict(text=f"<b>{title_p}</b><br><span style='font-size:11.5px;color:#475569;'>{sub_p}</span>", x=0.03, y=0.95, font=dict(size=16, color="#0F172A", family="DejaVu Sans, sans-serif")),
             plot_bgcolor="#F8FAFC", paper_bgcolor="white",
-            hovermode="x",
+            hovermode="x unified",
             dragmode=False,
-            hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=12, color="#0F172A")),
+            hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=12, color="#0F172A"), namelength=-1),
             legend=dict(orientation="h", x=0.0, y=1.02, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=11, color="#1E293B")),
             margin=dict(l=46, r=16, t=118, b=82),
             height=460,
@@ -252,8 +252,8 @@ def build_for_lang(lang, data):
                 dict(text="T.H.", x=1.0, y=-0.22, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")
             ]
         )
-        fig_p.update_xaxes(showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.5, color="#475569"))
-        fig_p.update_yaxes(gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, tickfont=dict(size=10.5, color="#475569"))
+        fig_p.update_xaxes(fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.5, color="#475569"))
+        fig_p.update_yaxes(fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, tickfont=dict(size=10.5, color="#475569"))
         fig_p.write_html(f"static/dashboard/{fname_p}{t.get('sfx')}.html", include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
 
     xq_p = list(data.get("xl_bip"))
