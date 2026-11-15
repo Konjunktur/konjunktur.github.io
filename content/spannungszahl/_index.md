@@ -43,7 +43,7 @@ Die Spannungszahl misst die Zahl der gemeldeten Stellen (Arbeitsnachfrage) minus
 
 ## Erweiterte Spannungszahl (Aktueller 13-Monats-Verlauf)
 
-<iframe src="/spannungszahl/04_erweiterte_spannungszahl_zoom.html" style="width:100%; height:550px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
+<iframe src="/spannungszahl/04_erweiterte_spannungszahl_zoom.html" style="width:100%; height:470px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
 * [In Vollbild anzeigen](/spannungszahl/04_erweiterte_spannungszahl_zoom.png)
 * *Erläuterung* – Detailansicht der erweiterten Spannungszahl über die letzten 13 verfügbaren Berichtsmonate.
