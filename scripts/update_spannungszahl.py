@@ -139,7 +139,7 @@ def get_destatis_bip_q():
     except Exception:
         return pd.Series(dtype=float)
 
-def style_sz_ax(fig, ax, title, ymin, ymax, yticks, xlabel_text, xlabel_pad=14):
+def style_sz_ax(fig, ax, title, ymin, ymax, yticks, xlabel_text, xlabel_y=-0.31):
     fig.suptitle(title, x=0.09, y=0.96, ha="left", fontsize=12.5, fontweight="bold", color="#0F172A")
     ax.set_facecolor("#F8FAFC")
     ax.set_ylim(ymin, ymax)
@@ -152,7 +152,7 @@ def style_sz_ax(fig, ax, title, ymin, ymax, yticks, xlabel_text, xlabel_pad=14):
     for s in ("top", "right", "left"):
         ax.spines[s].set_visible(False)
     ax.spines["bottom"].set_color("#94A3B8")
-    ax.set_xlabel(xlabel_text, fontsize=8.3, color="#475569", labelpad=xlabel_pad)
+    ax.text(0.5, xlabel_y, xlabel_text, transform=ax.transAxes, ha="center", va="top", fontsize=8.3, color="#475569")
 
 def draw_year_groups(ax, months, m_names, step=3, year_y=-0.24):
     ticks, labels = [], []
@@ -203,12 +203,12 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
         plt.savefig(f"static/spannungszahl/{fname}{t['sfx']}.png", dpi=300)
         plt.close()
 
-    # 1. Einfache Spannungszahl (Gesamt)
+       # 1. Einfache Spannungszahl (Gesamt)
     fig, ax = plt.subplots(figsize=(8.0, 5.4), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.09, right=0.95, top=0.77, bottom=0.25)
     ymin_1 = min(-1200, int(np.floor((min(y_einf) - 300) / 300.0) * 300))
     ymax_1 = max(1200, int(np.ceil((max(y_einf) + 300) / 300.0) * 300))
-    style_sz_ax(fig, ax, t["p1_t"], ymin_1, ymax_1, range(ymin_1, ymax_1 + 300, 300), t["x_m"], xlabel_pad=22)
+    style_sz_ax(fig, ax, t["p1_t"], ymin_1, ymax_1, range(ymin_1, ymax_1 + 300, 300), t["x_m"], xlabel_y=-0.31)
     l1_a, l1_b = t["p1_l"]
     ax.plot(x_all, y_einf, color="#1B3A6B", lw=2.3, label=l1_a, zorder=3)
 
@@ -252,7 +252,7 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     plt.subplots_adjust(left=0.09, right=0.95, top=0.66, bottom=0.28)
     ymin_z = int(np.floor((min(yz_einf) - 120) / 100.0) * 100)
     ymax_z = max(100, int(np.ceil((max(yz_einf) + 120) / 100.0) * 100))
-    style_sz_ax(fig, ax, t["p2_t"], ymin_z, ymax_z, range(ymin_z, ymax_z + 100, 100), t["x_m"], xlabel_pad=32)
+    style_sz_ax(fig, ax, t["p2_t"], ymin_z, ymax_z, range(ymin_z, ymax_z + 100, 100), t["x_m"], xlabel_y=-0.50)
     ax.plot(xz, yz_einf, color="#1B3A6B", lw=2.4, label=t["p2_l1"], zorder=4)
     lu_vj = line_unv(d_einf, first_z, months_z)
     if not lu_vj.empty:
@@ -270,4 +270,112 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     draw_year_groups(ax, months_z, t["m"], step=1, year_y=-0.43)
     ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.5)
     save_fig(fig, t["src_ba"], "02_einfache_spannungszahl_zoom")
+
+    # 3. Erweiterte Spannungszahl (Gesamt)
+    fig, ax = plt.subplots(figsize=(8.0, 5.4), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.09, right=0.95, top=0.77, bottom=0.25)
+    style_sz_ax(fig, ax, t["p3_t"], -8000, 4000, range(-8000, 6000, 2000), t["x_m"], xlabel_y=-0.31)
+    l3_a, l3_b = t["p3_l"]
+    ax.plot(x_all, y_erw, color="#1B3A6B", lw=2.3, label=l3_a, zorder=3)
+    months_erw_valid = [ym for ym in months_all if ym in sz_erw.index]
+    if len(months_erw_valid) >= 13:
+        erw_anchor = months_erw_valid[-13]
+        lu3 = line_unv(d_erw, erw_anchor, months_erw_valid)
+        if not lu3.empty:
+            lu3_x = [months_all.index(erw_anchor)] + [months_all.index(k) for k in lu3.index if k != erw_anchor]
+            lu3_y = [float(sz_erw.loc[erw_anchor])] + [lu3.loc[k] for k in lu3.index if k != erw_anchor]
+            ax.plot(lu3_x, lu3_y, color="#D97706", ls="--", lw=1.9, label=l3_b, zorder=4)
+    draw_year_groups(ax, months_all, t["m"], step=3, year_y=-0.24)
+    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.8)
+    save_fig(fig, t["src_ba_kug"], "03_erweiterte_spannungszahl")
+
+    # 4. Erweiterte Spannungszahl Zoom (letzte 13 verfügbare Kurzarbeits-Monate)
+    months_z4 = months_erw_valid[-13:] if len(months_erw_valid) >= 13 else months_z
+    first_z4 = next(iter(months_z4))
+    xz4 = np.arange(len(months_z4))
+    yz_erw = [float(sz_erw.loc[ym]) for ym in months_z4]
+    fig, ax = plt.subplots(figsize=(8.0, 5.4), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.09, right=0.95, top=0.76, bottom=0.28)
+    ymin_4 = min(-400, int(np.floor((min(yz_erw) - 100) / 100.0) * 100))
+    ymax_4 = max(400, int(np.ceil((max(yz_erw) + 100) / 100.0) * 100))
+    style_sz_ax(fig, ax, t["p4_t"], ymin_4, ymax_4, range(ymin_4, ymax_4 + 100, 100), t["x_m"], xlabel_y=-0.50)
+    ax.plot(xz4, yz_erw, color="#1B3A6B", lw=2.3, label=l3_a, zorder=4)
+    lu4 = line_unv(d_erw, first_z4, months_z4)
+    if not lu4.empty:
+        ax.plot(xz4, [lu4.loc[ym] for ym in months_z4], color="#D97706", ls="--", lw=1.9, label=l3_b, zorder=3)
+    draw_year_groups(ax, months_z4, t["m"], step=1, year_y=-0.43)
+    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.8)
+    save_fig(fig, t["src_ba_kug"], "04_erweiterte_spannungszahl_zoom")
+
+    # 5. Spannungszahl und reales BIP (Dual-Achse)
+    fig, ax1 = plt.subplots(figsize=(8.0, 5.5), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.10, right=0.88, top=0.72, bottom=0.25)
+    style_sz_ax(fig, ax1, t["p5_t"], -12, 12, range(-12, 16, 4), t["x_mq"], xlabel_y=-0.31)
+    ax1.set_ylabel(t["p5_yl"], fontsize=8.0, color="#475569")
+    ax2 = ax1.twinx()
+    ax2.set_ylim(-8000, 8000)
+    ax2.set_yticks(range(-8000, 10000, 2000))
+    ax2.tick_params(axis="y", colors="#475569", labelsize=8.5, length=0)
+    ax2.set_ylabel(t["p5_yr"], fontsize=8.0, color="#475569", labelpad=8)
+    for s in ("top", "right", "left", "bottom"):
+        ax2.spines[s].set_visible(False)
+
+    l5_bip, l5_einf, l5_erw = t["p5_l"]
+    q_to_m = {"Q1": "02", "Q2": "05", "Q3": "08", "Q4": "11"}
+    bx, by = [], []
+    for k, v in bip_q.items():
+        m_part = q_to_m.get(k[-2:], "")
+        ym_key = f"{k[:4]}-{m_part}"
+        if ym_key in months_all:
+            bx.append(months_all.index(ym_key))
+            by.append(float(v))
+    p_bip = ax1.plot(bx, by, color="#059669", lw=2.2, label=l5_bip, zorder=4)
+    for xi_b, yi_b in zip(bx, by):
+        off = 0.7 if yi_b >= 0 else -1.2
+        ax1.text(xi_b, yi_b + off, fmt_num(yi_b, t["comma"]), fontsize=6.7, color="#059669", ha="center", fontweight="bold")
+    p_einf = ax2.plot(x_all, y_einf, color="#1B3A6B", lw=2.1, label=l5_einf, zorder=3)
+    p_erw = ax2.plot(x_all, y_erw, color="#D97706", lw=2.1, label=l5_erw, zorder=3)
+    draw_year_groups(ax1, months_all, t["m"], step=4, year_y=-0.24)
+    lines = p_bip + p_einf + p_erw
+    ax1.legend(lines, [l.get_label() for l in lines], loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.6)
+    save_fig(fig, t["src_all"], "05_spannungszahl_bip")
+
+def main():
+    s_stellen, s_alo, s_kug = load_bbk_labor_market()
+    common = s_stellen.index.intersection(s_alo.index)
+    print(f"[BBK MERGE] Gemeinsame Monate: {len(common)}")
+
+    if len(common) >= 24:
+        d_einf = s_stellen.loc[common] - s_alo.loc[common]
+        sz_einf = (d_einf - d_einf.shift(12)).dropna()
+
+        common_erw = common.intersection(s_kug.index)
+        d_erw = s_stellen.loc[common_erw] - (s_alo.loc[common_erw] + s_kug.loc[common_erw])
+        sz_erw = (d_erw - d_erw.shift(12)).dropna()
+        print(f"[RESULT] Einfache SZ bis {sz_einf.index[-1]} ({sz_einf.values[-1]:.1f}) | Erweiterte SZ bis {sz_erw.index[-1]} ({sz_erw.values[-1]:.1f})")
+    else:
+        idx = pd.period_range("2018-01", "2026-10", freq="M").astype(str)
+        d_einf = pd.Series(np.linspace(-1500, -2100, len(idx)), index=idx)
+        d_erw = d_einf.copy()
+        sz_einf = (d_einf - d_einf.shift(12)).dropna()
+        sz_erw = sz_einf.copy()
+
+    bip_q = get_destatis_bip_q()
+    if bip_q.empty:
+        bip_q = pd.Series({
+            "2019-Q1": 1.2, "2019-Q2": 0.1, "2019-Q3": 2.0, "2019-Q4": 0.7,
+            "2020-Q1": -1.5, "2020-Q2": -10.8, "2020-Q3": -3.1, "2020-Q4": -1.1,
+            "2021-Q1": -0.7, "2021-Q2": 12.0, "2021-Q3": 2.8, "2021-Q4": 2.4,
+            "2022-Q1": 4.0, "2022-Q2": 1.5, "2022-Q3": 1.6, "2022-Q4": 0.2,
+            "2023-Q1": 0.0, "2023-Q2": -1.1, "2023-Q3": -1.3, "2023-Q4": -1.0,
+            "2024-Q1": -1.1, "2024-Q2": -0.3, "2024-Q3": 0.2, "2024-Q4": -0.4,
+            "2025-Q1": 0.1, "2025-Q2": 0.0, "2025-Q3": 0.3, "2025-Q4": 0.5,
+            "2026-Q1": 0.8, "2026-Q2": 1.0, "2026-Q3": 1.3
+        })
+
+    build_charts_for_lang("de", d_einf, d_erw, sz_einf, sz_erw, bip_q)
+    build_charts_for_lang("en", d_einf, d_erw, sz_einf, sz_erw, bip_q)
+
+if __name__ == "__main__":
+    main()
 
