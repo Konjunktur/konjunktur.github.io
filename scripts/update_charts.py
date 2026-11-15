@@ -26,9 +26,9 @@ TEXTS = {
         "p6_t": "Arbeitslosigkeit und Inflation", "p6_s": "Quote bzw. Veränderung zum Vorjahr in % (Ursprungswerte)",
         "p6_l": ("Arbeitslosenquote", "Vollbeschäftigung (3%)", "Inflation (HVPI)", "EZB-Inflationsziel (2%)"),
         "unit_lb": "Mrd. €",
-        "src_all": "Quellen: Statistisches Bundesamt, Bundesagentur für Arbeit, Deutsche Bundesbank | Stand: ",
+        "src_all": "Quellen: Statistisches Bundesamt (u. a. BA-Daten), Deutsche Bundesbank | Stand: ",
         "src_destatis": "Quelle: Statistisches Bundesamt | Stand: ",
-        "src_ba_destatis": "Quellen: Bundesagentur für Arbeit, Statistisches Bundesamt | Stand: ",
+        "src_ba_destatis": "Quelle: Statistisches Bundesamt (BA-Daten) | Stand: ",
         "src_bbk": "Quelle: Deutsche Bundesbank | Stand: ",
         "date_fmt": "%d.%m.%Y", "comma": True, "sfx": ""
     },
@@ -47,9 +47,9 @@ TEXTS = {
         "p6_t": "Unemployment and Inflation", "p6_s": "Rate / change on previous year in % (unadjusted data)",
         "p6_l": ("Unemployment rate", "Full employment (3%)", "Inflation (HICP)", "ECB inflation target (2%)"),
         "unit_lb": "bn €",
-        "src_all": "Sources: Federal Statistical Office, Federal Employment Agency, Deutsche Bundesbank | As of: ",
+        "src_all": "Sources: Federal Statistical Office (incl. Federal Employment Agency data), Deutsche Bundesbank | As of: ",
         "src_destatis": "Source: Federal Statistical Office | As of: ",
-        "src_ba_destatis": "Sources: Federal Employment Agency, Federal Statistical Office | As of: ",
+        "src_ba_destatis": "Source: Federal Statistical Office (Federal Employment Agency data) | As of: ",
         "src_bbk": "Source: Deutsche Bundesbank | As of: ",
         "date_fmt": "%Y-%m-%d", "comma": False, "sfx": "_en"
     }
@@ -234,9 +234,9 @@ def build_for_lang(lang, data):
         save_single(fn, t, data, nm, sk, tp)
     now_str_p, fmt_arr = datetime.now().strftime(t["date_fmt"]), lambda seq: [fmt_num(v, use_c) for v in seq]
 
-    def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p, top_m=120, height_p=470):
+    def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p, top_m=132, height_p=470):
         fig_p.update_layout(
-            title=dict(text=f"<b>{title_p}</b><br><span style='font-size:11.5px;color:#475569;'>{sub_p}</span>", x=0.03, y=0.98, yanchor="top", font=dict(size=16, color="#0F172A", family="DejaVu Sans, sans-serif")),
+            title=dict(text=f"<b>{title_p}</b><br><span style='font-size:11.5px;color:#475569;'>{sub_p}</span>", x=0.03, y=0.955, yanchor="top", font=dict(size=16, color="#0F172A", family="DejaVu Sans, sans-serif")),
             plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
             hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
             legend=dict(orientation="v", x=0.0, y=1.01, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.5, color="#1E293B")),
@@ -256,36 +256,37 @@ def build_for_lang(lang, data):
     for lbl_s, hov_s, key_s, col_s in ((l1_1, h1_1, "pg", "#D97706"), (l1_2, h1_2, "bau", "#64748B"), (l1_3, h1_3, "hvg", "#059669")):
         ys = [None if np.isnan(v) else round(float(v), 1) for v in data[key_s]]
         fp1.add_trace(go.Scatter(x=xq_p, y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.1), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
-    save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_destatis", "01_bip_entstehung", 130, 480)
+    save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_destatis", "01_bip_entstehung", 142, 480)
 
     fp2 = go.Figure(); l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]; h2_0, h2_1, h2_2, h2_3, h2_4, h2_5, h2_6 = t["p2_h"]; y2_0 = [None if np.isnan(v) else round(float(v), 1) for v in data["bip_n"]]
     fp2.add_trace(go.Bar(x=xq_p, y=y2_0, customdata=fmt_arr(y2_0), name=l2_0, marker_color="#1B3A6B", hovertemplate=f"{h2_0}: <b>%{{customdata}} %</b><extra></extra>"))
     for lbl_s, hov_s, key_s, col_s, d_style in ((l2_1, h2_1, "kp", "#D97706", "solid"), (l2_2, h2_2, "kph", "#059669", "dash"), (l2_3, h2_3, "aus", "#7C3AED", "solid"), (l2_4, h2_4, "binv", "#0284C7", "solid"), (l2_5, h2_5, "exp", "#DC2626", "solid"), (l2_6, h2_6, "imp", "#64748B", "solid")):
         ys = [None if np.isnan(v) else round(float(v), 1) for v in data[key_s]]
         fp2.add_trace(go.Scatter(x=xq_p, y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0, dash=d_style), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
-    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_destatis", "02_bip_verwendung", 185, 535)
+    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_destatis", "02_bip_verwendung", 197, 535)
 
     fp3 = go.Figure(); l3_0, l3_1 = t["p3_l"]; s_ai, s_ab = data["s_ai"], data["s_ab"]; y3_0, y3_1 = [None if np.isnan(v) else round(float(v), 1) for v in s_ai.values], [None if np.isnan(v) else round(float(v), 1) for v in s_ab.values]
     fp3.add_trace(go.Scatter(x=list(s_ai.index), y=y3_0, customdata=fmt_arr(y3_0), name=l3_0, mode="lines+markers", marker=dict(size=5), line=dict(color="#1B3A6B", width=2.3), hovertemplate=f"{l3_0}: <b>%{{customdata}} %</b><extra></extra>"))
     fp3.add_trace(go.Scatter(x=list(s_ab.index), y=y3_1, customdata=fmt_arr(y3_1), name=l3_1, mode="lines+markers", marker=dict(size=5), line=dict(color="#D97706", width=2.2), hovertemplate=f"{l3_1}: <b>%{{customdata}} %</b><extra></extra>"))
-    save_dash_plotly(fp3, t["p3_t"], t["p3_s"], "src_destatis", "03_auftragseingaenge", 100, 450)
+    save_dash_plotly(fp3, t["p3_t"], t["p3_s"], "src_destatis", "03_auftragseingaenge", 112, 450)
 
     fp4 = go.Figure(); l4_0, l4_1, l4_2 = t["p4_l"]
     for lbl_s, key_s, col_s in ((l4_0, "s_pi", "#1B3A6B"), (l4_1, "s_pb", "#D97706"), (l4_2, "s_eh", "#059669")):
         ser_p = data[key_s]; ys = [None if np.isnan(v) else round(float(v), 1) for v in ser_p.values]
         fp4.add_trace(go.Scatter(x=list(ser_p.index), y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.2), hovertemplate=f"{lbl_s}: <b>%{{customdata}} %</b><extra></extra>"))
-    save_dash_plotly(fp4, t["p4_t"], t["p4_s"], "src_destatis", "04_produktion_einzelhandel", 115, 465)
+    save_dash_plotly(fp4, t["p4_t"], t["p4_s"], "src_destatis", "04_produktion_einzelhandel", 127, 465)
 
     fp5 = go.Figure(); s_lb = data["s_lb"]; y5 = [None if np.isnan(v) else round(float(v), 1) for v in s_lb.values]
     fp5.add_trace(go.Bar(x=list(s_lb.index), y=y5, customdata=fmt_arr(y5), name=t["p5_l"], marker_color="#1B3A6B", hovertemplate=f"<b>%{{customdata}} {t['unit_lb']}</b><extra></extra>"))
-    save_dash_plotly(fp5, t["p5_t"], t["p5_s"], "src_bbk", "05_leistungsbilanz", 85, 435)
+    save_dash_plotly(fp5, t["p5_t"], t["p5_s"], "src_bbk", "05_leistungsbilanz", 97, 435)
 
     fp6 = go.Figure(); l6_0, l6_1, l6_2, l6_3 = t["p6_l"]; s_al, s_hv = data["s_al"], data["s_hv"]; x6 = list(s_al.index); y6_0, y6_2 = [None if np.isnan(v) else round(float(v), 1) for v in s_al.values], [None if np.isnan(v) else round(float(v), 1) for v in s_hv.values]
     fp6.add_trace(go.Scatter(x=x6, y=y6_0, customdata=fmt_arr(y6_0), name=l6_0, mode="lines+markers", marker=dict(size=5), line=dict(color="#1B3A6B", width=2.3), hovertemplate=f"{l6_0}: <b>%{{customdata}} %</b><extra></extra>"))
     fp6.add_trace(go.Scatter(x=x6, y=[3.0]*len(x6), name=l6_1, mode="lines", line=dict(color="#1B3A6B", width=1.4, dash="dot"), hoverinfo="skip"))
     fp6.add_trace(go.Scatter(x=x6, y=y6_2, customdata=fmt_arr(y6_2), name=l6_2, mode="lines+markers", marker=dict(size=5), line=dict(color="#D97706", width=2.3), hovertemplate=f"{l6_2}: <b>%{{customdata}} %</b><extra></extra>"))
     fp6.add_trace(go.Scatter(x=x6, y=[2.0]*len(x6), name=l6_3, mode="lines", line=dict(color="#D97706", width=1.4, dash="dot"), hoverinfo="skip"))
-    save_dash_plotly(fp6, t["p6_t"], t["p6_s"], "src_ba_destatis", "06_arbeitslosigkeit_inflation", 130, 480)
+    save_dash_plotly(fp6, t["p6_t"], t["p6_s"], "src_ba_destatis", "06_arbeitslosigkeit_inflation", 142, 480)
+
 
 def align_series(series_list):
     all_idx = sorted(set().union(*(s.index for s in series_list if not s.empty)))[-13:]
