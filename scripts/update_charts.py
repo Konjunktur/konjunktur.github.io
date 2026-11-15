@@ -66,10 +66,10 @@ def get_bbk(keys, n=13, scale=1.0):
         rows = []
         for ln in r.text.splitlines():
             parts = [p.strip().strip('"') for p in ln.split(";")]
-            if len(parts) >= 2 and re.match(r"^\d{4}-\d{2}$", parts[0]):
+            if len(parts) >= 2 and re.match(r"^\d{4}-\d{2}$", parts):
                 try:
-                    val = float(parts[1].replace(",", ".")) * scale
-                    rows.append((parts[0], val))
+                    val = float(parts.replace(",", ".")) * scale
+                    rows.append((parts, val))
                 except ValueError:
                     pass
         if rows:
@@ -115,7 +115,7 @@ def get_destatis(table, startyear="2021"):
     rows = [row for row in reader if len(row) >= 5]
     if len(rows) < 3:
         raise RuntimeError(f"Destatis Tabelle {table} zu wenig Zeilen: {raw_text[:300]}")
-    header = rows[0]
+    header = rows
     width = len(header)
     clean_rows = [row[:width] for row in rows[1:] if len(row) >= width]
     df = pd.DataFrame(clean_rows, columns=header)
@@ -127,12 +127,12 @@ def get_destatis(table, startyear="2021"):
     zeit_s = df[t_col].astype(str).str.strip()
     for c in df.columns:
         s_code = df[c].astype(str).str.strip()
-        if s_code.str.contains(r"QUART0?[1-4]", regex=True).any():
-            q_num = s_code.str.extract(r"QUART0?([1-4])")[0]
+        if s_code.str.contains(r"(?:QUART0?[1-4]|[1-4]\.\s*(?:Quartal|Vierteljahr))", case=False, regex=True).any():
+            q_num = s_code.str.extract(r"(?:QUART0?([1-4])|([1-4])\.\s*(?:Quartal|Vierteljahr))", flags=re.IGNORECASE).bfill(axis=1).iloc[:, 0]
             zeit_s = zeit_s + "-Q" + q_num
             break
         if s_code.str.contains(r"MONAT0?(?:[1-9]|1[0-2])", regex=True).any():
-            m_num = s_code.str.extract(r"MONAT0?([1-9]|1[0-2])")[0].str.zfill(2)
+            m_num = s_code.str.extract(r"MONAT0?([1-9]|1[0-2])").iloc[:, 0].str.zfill(2)
             zeit_s = zeit_s + "-" + m_num
             break
     df["ZEIT"] = zeit_s
@@ -456,14 +456,17 @@ def main():
     if np.all(np.isnan(imp)):
         imp = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ursprungswerte", "Importe"], [])
 
-    s_ai, s_ab = align_series([
-        get_bbk(["BBDE1.M.DE.Y.BAA1.A2P000000.G.C.I21.A", "BBDE1.M.DE.Y.BAA1.A2P000000.G.C.I15.A"], 13),
-        get_bbk(["BBDE1.M.DE.Y.BAA1.F00000000.G.C.I21.A", "BBDE1.M.DE.Y.BAA1.F00000000.G.C.I15.A", "BBDE1.M.DE.Y.BAA1.F41000000.G.C.I21.A"], 13)
-    ])
+    s_ai = get_bbk(["BBDE1.M.DE.Y.BAA1.A2P000000.G.C.I21.A", "BBDE1.M.DE.Y.BAA1.A2P000000.G.C.I15.A"], 13)
+    df_bau_ae = get_destatis("44111-0001", "2024")
+    bau_ae_vals = parse_destatis_series(df_bau_ae, ["Volumenindex", "Veränderung zum Vorjahresmonat", "kalender"], ["saison"], list(s_ai.index))
+    if all(np.isnan(v) for v in bau_ae_vals):
+        bau_ae_vals = parse_destatis_series(df_bau_ae, ["Volumenindex", "Veränderung zum Vorjahresmonat"], ["saison"], list(s_ai.index))
+    s_ab = pd.Series(bau_ae_vals, index=s_ai.index)
+    s_ai, s_ab = align_series([s_ai, s_ab])
 
     s_pi, s_pb, s_eh = align_series([
         get_bbk(["BBDE1.M.DE.Y.BPA1.A2P000000.G.C.I21.A", "BBDE1.M.DE.Y.BPA1.A2P000000.G.C.I15.A"], 13),
-        get_bbk(["BBDE1.M.DE.Y.BPA1.F00000000.G.C.I21.A", "BBDE1.M.DE.Y.BPA1.F00000000.G.C.I15.A"], 13),
+        get_bbk(["BBDE1.M.DE.Y.BPA1.F00000000.G.C.I21.A", "BBDE1.M.DE.Y.BPA1.F00000000.G.C.I15.A", "BBDE1.M.DE.Y.BPA1.F41000000.G.C.I21.A"], 13),
         get_bbk(["BBDE1.M.DE.Y.BVA1.G47000000.G.C.I21.A", "BBDE1.M.DE.Y.BVA1.G47000000.G.C.I15.A"], 13)
     ])
 
