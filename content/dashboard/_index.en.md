@@ -1,5 +1,5 @@
 ---
-title: "German Economic Dashboard"
+title: "The German Business Cycle in 6 Charts"
 description: "Current macroeconomic indicators for economic development in Germany."
 ---
 
