@@ -103,15 +103,15 @@ def get_destatis(table, startyear="2020"):
     t_col, v_col = col_map.get("time") or col_map.get("zeit"), col_map.get("value") or col_map.get("wert")
     zeit_s = df[t_col].astype(str).str.strip()
     for c in df.columns:
-        if "attribute_code" not in c.lower(): continue
+        if c in (t_col, v_col) or "label" in c.lower(): continue
         s_code = df[c].astype(str).str.strip()
-        if s_code.str.match(r"^QUART0?[1-4]$", case=False).any():
-            q_ser = s_code.str.extract(r"([1-4])", expand=False)
-            zeit_s = pd.Series(np.where(q_ser.notna(), zeit_s + "-Q" + q_ser.fillna(""), zeit_s), index=df.index)
+        if s_code.str.contains(r"QUART0?[1-4]", case=False, regex=True).any():
+            q_ext = s_code.str.extract(r"QUART0?([1-4])", expand=False)
+            zeit_s = pd.Series(np.where(q_ext.notna(), zeit_s + "-Q" + q_ext.fillna(""), zeit_s), index=df.index)
             break
-        if s_code.str.match(r"^MONAT0?(?:[1-9]|1[0-2])$", case=False).any():
-            m_ser = s_code.str.extract(r"([0-9]+)", expand=False).str.zfill(2)
-            zeit_s = pd.Series(np.where(m_ser.notna(), zeit_s + "-" + m_ser.fillna(""), zeit_s), index=df.index)
+        if s_code.str.contains(r"MONAT0?(?:[1-9]|1[0-2])", regex=True).any():
+            m_ext = s_code.str.extract(r"MONAT0?([1-9]|1[0-2])", expand=False).str.zfill(2)
+            zeit_s = pd.Series(np.where(m_ext.notna(), zeit_s + "-" + m_ext.fillna(""), zeit_s), index=df.index)
             break
     df["ZEIT"], df["WERT"] = zeit_s, df[v_col]
     val_cols = [c for c in df.columns if ("attribute" in c.lower() or "value_variable" in c.lower()) and c not in {"ZEIT", "WERT", t_col, v_col}]
@@ -139,9 +139,7 @@ def extract_yoy_series(df, include_terms, exclude_terms, target_times):
     lvl_map = dict(zip(sub_lvl["ZEIT"].astype(str).str.strip(), sub_lvl["V"]))
     out = []
     for t in target_times:
-        vc = lvl_map.get(t, np.nan)
-        yr_s, rest_s = t[:4], t[4:]
-        prev_t = (str(int(yr_s) - 1) + rest_s) if yr_s.isdigit() else ""
+        vc, prev_t = lvl_map.get(t, np.nan), (str(int(t[:4]) - 1) + t[4:]) if t[:4].isdigit() else ""
         vp = lvl_map.get(prev_t, np.nan)
         out.append(((vc / vp - 1.0) * 100.0) if (not np.isnan(vc) and not np.isnan(vp) and vp != 0) else np.nan)
     return out
@@ -316,7 +314,6 @@ def main():
         for alt_q2 in ("81000-0014", "81000-0016"):
             df_q2 = get_destatis(alt_q2, "2020")
             if any("-Q" in str(z) for z in df_q2["ZEIT"].unique()): break
-    print(f"[BIP] Jahre={yrs} | Quartale={qtrs}")
     xl_bip, xi = yrs + ("",) + tuple(f"Q{q[-1]} {q[2:4]}" for q in qtrs), np.arange(len(yrs) + 1 + len(qtrs))
 
     def get_bip_combo(df_y, df_q, inc, exc):
@@ -328,7 +325,6 @@ def main():
     pg = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Produzierendes Gewerbe ohne Baugewerbe"], [])
     bau = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Baugewerbe"], ["ohne Baugewerbe"])
     hvg = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Handel, Verkehr, Gastgewerbe"], [])
-    print(f"[P1] bip_r={np.round(bip_r, 1)} | pg={np.round(pg, 1)} | bau={np.round(bau, 1)} | hvg={np.round(hvg, 1)}")
 
     bip_n = get_bip_combo(df_y2, df_q2, ["BIP004", "jeweilige"], ["preisbereinigt", "Konsum", "Investitionen", "Exporte", "Importe", "Beitrag"])
     if np.all(np.isnan(bip_n)): bip_n = get_bip_combo(df_y2, df_q2, ["Bruttoinlandsprodukt", "jeweilige"], ["preisbereinigt", "Konsum", "Investitionen", "Exporte", "Importe", "Beitrag"])
