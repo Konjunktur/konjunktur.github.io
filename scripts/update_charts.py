@@ -259,34 +259,34 @@ def build_for_lang(lang, data):
     xq_p = list(data.get("xl_bip"))
     # 1. BIP Entstehung (Interaktiv)
     fp1 = go.Figure()
-    l1 = t.get("p1_l")
-    fp1.add_trace(go.Bar(x=xq_p, y=[round(float(v), 1) for v in data.get("bip_r")], name=l1[0], marker_color="#1B3A6B", hovertemplate=f"{l1[0]}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    for idx_s, key_s, col_s in ((1, "pg", "#D97706"), (2, "bau", "#059669"), (3, "hvg", "#0284C7")):
-        fp1.add_trace(go.Scatter(x=xq_p, y=[round(float(v), 1) for v in data.get(key_s)], name=l1[idx_s], mode="lines+markers", marker=dict(size=6), line=dict(color=col_s, width=2.2), hovertemplate=f"{l1[idx_s]}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    l1_0, l1_1, l1_2, l1_3 = t.get("p1_l")
+    fp1.add_trace(go.Bar(x=xq_p, y=[round(float(v), 1) for v in data.get("bip_r")], name=l1_0, marker_color="#1B3A6B", hovertemplate=f"{l1_0}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    for lbl_s, key_s, col_s in ((l1_1, "pg", "#D97706"), (l1_2, "bau", "#059669"), (l1_3, "hvg", "#0284C7")):
+        fp1.add_trace(go.Scatter(x=xq_p, y=[round(float(v), 1) for v in data.get(key_s)], name=lbl_s, mode="lines+markers", marker=dict(size=6), line=dict(color=col_s, width=2.2), hovertemplate=f"{lbl_s}: <b>%{{y:.1f}} %</b><extra></extra>"))
     save_dash_plotly(fp1, t.get("p1_t"), t.get("p1_s"), "src_destatis", "01_bip_entstehung")
 
     # 2. BIP Verwendung (Interaktiv)
     fp2 = go.Figure()
-    l2 = t.get("p2_l")
-    fp2.add_trace(go.Bar(x=xq_p, y=[round(float(v), 1) for v in data.get("bip_n")], name=l2[0], marker_color="#1B3A6B", hovertemplate=f"{l2[0]}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    for idx_s, key_s, col_s in ((1, "kp", "#D97706"), (2, "ks", "#059669"), (3, "aus", "#7C3AED"), (4, "binv", "#0284C7"), (5, "exp", "#DC2626"), (6, "imp", "#64748B")):
-        fp2.add_trace(go.Scatter(x=xq_p, y=[round(float(v), 1) for v in data.get(key_s)], name=l2[idx_s], mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0), hovertemplate=f"{l2[idx_s]}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t.get("p2_l")
+    fp2.add_trace(go.Bar(x=xq_p, y=[round(float(v), 1) for v in data.get("bip_n")], name=l2_0, marker_color="#1B3A6B", hovertemplate=f"{l2_0}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    for lbl_s, key_s, col_s in ((l2_1, "kp", "#D97706"), (l2_2, "ks", "#059669"), (l2_3, "aus", "#7C3AED"), (l2_4, "binv", "#0284C7"), (l2_5, "exp", "#DC2626"), (l2_6, "imp", "#64748B")):
+        fp2.add_trace(go.Scatter(x=xq_p, y=[round(float(v), 1) for v in data.get(key_s)], name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0), hovertemplate=f"{lbl_s}: <b>%{{y:.1f}} %</b><extra></extra>"))
     save_dash_plotly(fp2, t.get("p2_t"), t.get("p2_s"), "src_destatis", "02_bip_verwendung")
 
     # 3. Auftragseingänge (Interaktiv)
     fp3 = go.Figure()
-    l3 = t.get("p3_l")
+    l3_0, l3_1 = t.get("p3_l")
     s_ai, s_ab = data.get("s_ai"), data.get("s_ab")
-    fp3.add_trace(go.Scatter(x=list(s_ai.index), y=[round(float(v), 1) for v in s_ai.values], name=l3[0], mode="lines+markers", marker=dict(size=6), line=dict(color="#1B3A6B", width=2.4), hovertemplate=f"{l3[0]}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    fp3.add_trace(go.Scatter(x=list(s_ab.index), y=[round(float(v), 1) for v in s_ab.values], name=l3[1], mode="lines+markers", marker=dict(size=6), line=dict(color="#D97706", width=2.2), hovertemplate=f"{l3[1]}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    fp3.add_trace(go.Scatter(x=list(s_ai.index), y=[round(float(v), 1) for v in s_ai.values], name=l3_0, mode="lines+markers", marker=dict(size=6), line=dict(color="#1B3A6B", width=2.4), hovertemplate=f"{l3_0}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    fp3.add_trace(go.Scatter(x=list(s_ab.index), y=[round(float(v), 1) for v in s_ab.values], name=l3_1, mode="lines+markers", marker=dict(size=6), line=dict(color="#D97706", width=2.2), hovertemplate=f"{l3_1}: <b>%{{y:.1f}} %</b><extra></extra>"))
     save_dash_plotly(fp3, t.get("p3_t"), t.get("p3_s"), "src_bbk", "03_auftragseingaenge")
 
     # 4. Produktion & Einzelhandelsumsätze (Interaktiv)
     fp4 = go.Figure()
-    l4 = t.get("p4_l")
-    for idx_s, key_s, col_s in ((0, "s_pi", "#1B3A6B"), (1, "s_pb", "#D97706"), (2, "s_eh", "#059669")):
+    l4_0, l4_1, l4_2 = t.get("p4_l")
+    for lbl_s, key_s, col_s in ((l4_0, "s_pi", "#1B3A6B"), (l4_1, "s_pb", "#D97706"), (l4_2, "s_eh", "#059669")):
         ser_p = data.get(key_s)
-        fp4.add_trace(go.Scatter(x=list(ser_p.index), y=[round(float(v), 1) for v in ser_p.values], name=l4[idx_s], mode="lines+markers", marker=dict(size=6), line=dict(color=col_s, width=2.2), hovertemplate=f"{l4[idx_s]}: <b>%{{y:.1f}} %</b><extra></extra>"))
+        fp4.add_trace(go.Scatter(x=list(ser_p.index), y=[round(float(v), 1) for v in ser_p.values], name=lbl_s, mode="lines+markers", marker=dict(size=6), line=dict(color=col_s, width=2.2), hovertemplate=f"{lbl_s}: <b>%{{y:.1f}} %</b><extra></extra>"))
     save_dash_plotly(fp4, t.get("p4_t"), t.get("p4_s"), "src_bbk", "04_produktion_einzelhandel")
 
     # 5. Leistungsbilanzsaldo (Interaktiv)
@@ -297,12 +297,12 @@ def build_for_lang(lang, data):
 
     # 6. Arbeitslosigkeit und Inflation (Interaktiv)
     fp6 = go.Figure()
-    l6 = t.get("p6_l")
+    l6_0, l6_1, l6_2, l6_3 = t.get("p6_l")
     s_al, s_hv = data.get("s_al"), data.get("s_hv")
-    fp6.add_trace(go.Scatter(x=list(s_al.index), y=[round(float(v), 1) for v in s_al.values], name=l6[0], mode="lines+markers", marker=dict(size=6), line=dict(color="#1B3A6B", width=2.4), hovertemplate=f"{l6[0]}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    fp6.add_trace(go.Scatter(x=list(s_hv.index), y=[round(float(v), 1) for v in s_hv.values], name=l6[2], mode="lines+markers", marker=dict(size=6), line=dict(color="#D97706", width=2.4), hovertemplate=f"{l6[2]}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    fp6.add_hline(y=3.0, line_dash="dot", line_color="#1B3A6B", annotation_text=l6[1], annotation_position="top left", annotation_font=dict(size=10.5, color="#1B3A6B"))
-    fp6.add_hline(y=2.0, line_dash="dot", line_color="#059669", annotation_text=l6[3], annotation_position="bottom left", annotation_font=dict(size=10.5, color="#059669"))
+    fp6.add_trace(go.Scatter(x=list(s_al.index), y=[round(float(v), 1) for v in s_al.values], name=l6_0, mode="lines+markers", marker=dict(size=6), line=dict(color="#1B3A6B", width=2.4), hovertemplate=f"{l6_0}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    fp6.add_trace(go.Scatter(x=list(s_hv.index), y=[round(float(v), 1) for v in s_hv.values], name=l6_2, mode="lines+markers", marker=dict(size=6), line=dict(color="#D97706", width=2.4), hovertemplate=f"{l6_2}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    fp6.add_hline(y=3.0, line_dash="dot", line_color="#1B3A6B", annotation_text=l6_1, annotation_position="top left", annotation_font=dict(size=10.5, color="#1B3A6B"))
+    fp6.add_hline(y=2.0, line_dash="dot", line_color="#059669", annotation_text=l6_3, annotation_position="bottom left", annotation_font=dict(size=10.5, color="#059669"))
     save_dash_plotly(fp6, t.get("p6_t"), t.get("p6_s"), "src_all", "06_arbeitslosigkeit_inflation")
 
 def main():
