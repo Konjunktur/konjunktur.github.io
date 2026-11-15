@@ -103,19 +103,21 @@ def get_destatis(table, startyear="2020"):
     t_col, v_col = col_map.get("time") or col_map.get("zeit"), col_map.get("value") or col_map.get("wert")
     zeit_s = df[t_col].astype(str).str.strip()
     for c in df.columns:
-        if c in (t_col, v_col): continue
+        if "attribute_code" not in c.lower(): continue
         s_code = df[c].astype(str).str.strip()
-        if s_code.str.contains(r"(?:QUART0?[1-4]|[1-4]\.\s*(?:Quartal|Vierteljahr)|^Q[1-4]$)", case=False, regex=True).any():
-            q_num = s_code.str.extract(r"(?:QUART0?([1-4])|([1-4])\.\s*(?:Quartal|Vierteljahr)|^Q([1-4])$)", flags=re.IGNORECASE).bfill(axis=1)
-            q_ser = q_num[q_num.columns[0]]
-            zeit_s = np.where(q_ser.notna(), zeit_s + "-Q" + q_ser.fillna(""), zeit_s)
+        if s_code.str.match(r"^QUART0?[1-4]$", case=False).any():
+            q_ser = s_code.str.extract(r"([1-4])", expand=False)
+            zeit_s = pd.Series(np.where(q_ser.notna(), zeit_s + "-Q" + q_ser.fillna(""), zeit_s), index=df.index)
             break
-        if s_code.str.contains(r"MONAT0?(?:[1-9]|1[0-2])", regex=True).any():
-            m_ser = s_code.str.extract(r"MONAT0?([1-9]|1[0-2])", expand=False).str.zfill(2)
-            zeit_s = np.where(m_ser.notna(), zeit_s + "-" + m_ser.fillna(""), zeit_s)
+        if s_code.str.match(r"^MONAT0?(?:[1-9]|1[0-2])$", case=False).any():
+            m_ser = s_code.str.extract(r"([0-9]+)", expand=False).str.zfill(2)
+            zeit_s = pd.Series(np.where(m_ser.notna(), zeit_s + "-" + m_ser.fillna(""), zeit_s), index=df.index)
             break
     df["ZEIT"], df["WERT"] = zeit_s, df[v_col]
-    df["_ROW"] = df.loc[:, [c for c in df.columns if c not in {"ZEIT", "WERT", t_col, v_col}]].fillna("").astype(str).agg(" | ".join, axis=1)
+    val_cols = [c for c in df.columns if ("attribute" in c.lower() or "value_variable" in c.lower()) and c not in {"ZEIT", "WERT", t_col, v_col}]
+    if not val_cols:
+        val_cols = [c for c in df.columns if c not in {"ZEIT", "WERT", t_col, v_col}]
+    df["_ROW"] = df.loc[:, val_cols].fillna("").astype(str).agg(" | ".join, axis=1)
     return df
 
 def extract_yoy_series(df, include_terms, exclude_terms, target_times):
@@ -321,26 +323,26 @@ def main():
         base_exc = exc + ["kalender", "saison", "X-13", "Vorquartal"]
         return np.array(extract_yoy_series(df_y, inc, base_exc, yrs) + [np.nan] + extract_yoy_series(df_q, inc, base_exc, qtrs), dtype=float)
 
-    bip_r = get_bip_combo(df_y1, df_q1, ["BIP004", "preisbereinigt"], ["Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst", "jeweilige"])
-    if np.all(np.isnan(bip_r)): bip_r = get_bip_combo(df_y1, df_q1, ["Bruttoinlandsprodukt", "preisbereinigt"], ["Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst", "jeweilige"])
-    pg = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Produzierendes Gewerbe ohne Baugewerbe"], ["jeweilige"])
-    bau = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Baugewerbe"], ["ohne Baugewerbe", "jeweilige"])
-    hvg = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Handel, Verkehr, Gastgewerbe"], ["jeweilige"])
+    bip_r = get_bip_combo(df_y1, df_q1, ["BIP004", "preisbereinigt"], ["Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst"])
+    if np.all(np.isnan(bip_r)): bip_r = get_bip_combo(df_y1, df_q1, ["Bruttoinlandsprodukt", "preisbereinigt"], ["Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst"])
+    pg = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Produzierendes Gewerbe ohne Baugewerbe"], [])
+    bau = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Baugewerbe"], ["ohne Baugewerbe"])
+    hvg = get_bip_combo(df_y1, df_q1, ["preisbereinigt", "Handel, Verkehr, Gastgewerbe"], [])
     print(f"[P1] bip_r={np.round(bip_r, 1)} | pg={np.round(pg, 1)} | bau={np.round(bau, 1)} | hvg={np.round(hvg, 1)}")
 
     bip_n = get_bip_combo(df_y2, df_q2, ["BIP004", "jeweilige"], ["preisbereinigt", "Konsum", "Investitionen", "Exporte", "Importe", "Beitrag"])
     if np.all(np.isnan(bip_n)): bip_n = get_bip_combo(df_y2, df_q2, ["Bruttoinlandsprodukt", "jeweilige"], ["preisbereinigt", "Konsum", "Investitionen", "Exporte", "Importe", "Beitrag"])
-    kp = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Private Konsumausgaben"], ["jeweilige"])
-    kph = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "privaten Haushalte"], ["Organisationen", "jeweilige"])
-    if np.all(np.isnan(kph)): kph = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "privater Haushalte"], ["Organisationen", "jeweilige"])
-    aus = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Ausrüstungen"], ["jeweilige"])
-    if np.all(np.isnan(aus)): aus = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ausrüstungen"], ["jeweilige"])
-    binv = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Bauten"], ["jeweilige"])
-    if np.all(np.isnan(binv)): binv = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Bauten"], ["jeweilige"])
-    exp = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Exporte"], ["jeweilige"])
-    if np.all(np.isnan(exp)): exp = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Exporte"], ["jeweilige"])
-    imp = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Importe"], ["jeweilige"])
-    if np.all(np.isnan(imp)): imp = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Importe"], ["jeweilige"])
+    kp = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Private Konsumausgaben"], [])
+    kph = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "privaten Haushalte"], ["Organisationen"])
+    if np.all(np.isnan(kph)): kph = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "privater Haushalte"], ["Organisationen"])
+    aus = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Ausrüstungen"], [])
+    if np.all(np.isnan(aus)): aus = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ausrüstungen"], [])
+    binv = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Bauten"], [])
+    if np.all(np.isnan(binv)): binv = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Bauten"], [])
+    exp = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Exporte"], [])
+    if np.all(np.isnan(exp)): exp = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Exporte"], [])
+    imp = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Importe"], [])
+    if np.all(np.isnan(imp)): imp = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Importe"], [])
 
     s_lb = get_bbk(["BBFBOPV.M.N.DE.W1.S1.S1.T.B.CA._Z._Z._Z.EUR._T._X.N.ALL"], 13, 0.001)
     m_cur = list(s_lb.index)
