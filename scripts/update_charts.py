@@ -1,4 +1,4 @@
-import os, io, requests
+import os, io, zipfile, requests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -127,7 +127,7 @@ def style_panel(ax, title, sub, ymin, ymax, yticks, z=True, title_y=1.40, sub_y=
 
 def set_legend(ax, ncol=2):
     handles, labels = ax.get_legend_handles_labels()
-    if len(handles) > 1 and not hasattr(handles, "get_xydata"):
+    if len(handles) > 1 and not hasattr(handles[-1], "get_xydata"):
         handles = handles[-1:] + handles[:-1]
         labels = labels[-1:] + labels[:-1]
     ax.legend(handles, labels, loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=ncol, frameon=False, fontsize=6.9)
