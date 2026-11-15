@@ -129,13 +129,11 @@ def get_destatis(table, startyear="2021"):
         raise RuntimeError(f"Unerwartete Spalten in {table}: {list(df.columns)}")
     zeit_s = df[t_col].astype(str).str.strip()
     for c in df.columns:
+        if c in (t_col, v_col):
+            continue
         s_code = df[c].astype(str).str.strip()
-        if s_code.str.contains(r"QUART0?[1-4]", case=False, regex=True).any():
-            q_num = s_code.str.extract(r"QUART0?([1-4])", expand=False)
-            zeit_s = zeit_s + "-Q" + q_num
-            break
-        if s_code.str.contains(r"^[1-4]\.\s*(?:Quartal|Vierteljahr)$", case=False, regex=True).any():
-            q_num = s_code.str.extract(r"^([1-4])\.", expand=False)
+        if s_code.str.contains(r"(?:QUART0?[1-4]|^[1-4]\.\s*(?:Quartal|Vierteljahr)$|^Q[1-4]$)", case=False, regex=True).any():
+            q_num = s_code.str.extract(r"([1-4])", expand=False)
             zeit_s = zeit_s + "-Q" + q_num
             break
         if s_code.str.contains(r"MONAT0?(?:[1-9]|1[0-2])", regex=True).any():
@@ -430,6 +428,8 @@ def main():
 
     yrs = tuple(sorted([z for z in df_y1["ZEIT"].astype(str).unique() if len(z) == 4 and z.isdigit()])[-5:])
     qtrs = tuple(sorted([z for z in df_q1["ZEIT"].astype(str).unique() if "Q" in z])[-14:])
+    if not qtrs:
+        print("[INFO 81000-0013 Zeilenbeispiel]:", df_q1.head(2).to_dict(orient="records"))
     print(f"[ZEITRAUM] Jahre: {yrs} | Quartale: {qtrs}")
 
     xl_bip = yrs + ("",) + tuple(f"Q{q[-1]} {q[2:4]}" for q in qtrs)
@@ -492,8 +492,13 @@ def main():
     s_pi, s_pb, s_eh = align_series([s_pi, s_pb, s_eh])
 
     s_lb = get_bbk(["BBFBOPV.M.N.DE.W1.S1.S1.T.B.CA._Z._Z._Z.EUR._T._X.N.ALL"], 13, 0.001)
-    s_al = get_bbk(["BBDE1.M.DE.Y.ABA1.A00000000.U.A.A00.A", "BBDE1.M.DE.S.ABA1.A00000000.S.A.A00.A", "BBK01.UU0062"], 13)
-    m_cur = list(s_al.index)
+    m_cur = list(s_lb.index)
+
+    df_al = get_destatis("13211-0001", "2024")
+    al_vals = parse_destatis_series(df_al, ["Arbeitslosenquote", "alle zivilen Erwerbspersonen"], ["Männer", "Frauen", "Ausländer", "Jugendliche"], m_cur)
+    if all(np.isnan(v) for v in al_vals):
+        al_vals = parse_destatis_series(df_al, ["Arbeitslosenquote"], ["Männer", "Frauen", "Ausländer", "Jugendliche"], m_cur)
+    s_al = pd.Series(al_vals, index=m_cur)
 
     df_hv = get_destatis("61121-0002", "2024")
     hv_vals = parse_destatis_series(df_hv, ["Veränderung zum Vorjahresmonat"], ["Jahresdurchschnitt"], m_cur)
