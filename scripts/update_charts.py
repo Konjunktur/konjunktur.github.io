@@ -9,12 +9,18 @@ def inspect_destatis(table):
     headers = {"username": D_USER, "password": D_PASS, "Content-Type": "application/x-www-form-urlencoded"}
     data = {"name": table, "area": "all", "compress": "false", "format": "ffcsv", "language": "de"}
     r = requests.post(G_URL, headers=headers, data=data, timeout=45)
-    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
-        csv_name = next(n for n in zf.namelist() if n.endswith(".csv"))
-        raw = zf.read(csv_name).decode("utf-8", errors="replace")
+    if r.content[:2] == b"PK":
+        with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+            csv_name = next(n for n in zf.namelist() if n.endswith(".csv"))
+            raw = zf.read(csv_name).decode("utf-8", errors="replace")
+    else:
+        raw = r.text
     lines = [ln for ln in raw.splitlines() if ln.count(";") >= 4]
+    print(f"\n=== DESTATIS {table} (CSV-Zeilen: {len(lines)}) ===")
+    if len(lines) < 5:
+        print("  Roh-Antwort:", raw[:350])
+        return
     df = pd.read_csv(io.StringIO("\n".join(lines)), sep=";", decimal=",", on_bad_lines="skip")
-    print(f"\n=== DESTATIS {table} (Zeilen: {len(df)}) ===")
     print(df.head(3).to_string())
     for c in df.columns:
         if "attribute_code" in c or "attribute_label" in c or "variable_label" in c:
