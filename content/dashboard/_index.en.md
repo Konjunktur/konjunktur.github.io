@@ -1,56 +1,56 @@
 ---
-title: "Economic Dashboard Germany"
-description: "Current macroeconomic indicators on economic developments in Germany."
+title: "German Economic Dashboard"
+description: "Current macroeconomic indicators for economic development in Germany."
 ---
 
-This dashboard presents current macroeconomic indicators for Germany. All charts are updated automatically based on official data from the Federal Statistical Office (Destatis) and the Deutsche Bundesbank.
+This dashboard displays current business cycle indicators for Germany. All charts update automatically based on official data from the Federal Statistical Office (Destatis) and the Deutsche Bundesbank.
 
-- [Open full overview (6-panel dashboard)](/dashboard/dashboard_en.png)
+- [Open Full Overview (6-Panel Dashboard)](/dashboard/dashboard_en.png)
 
-## Gross Domestic Product: Production Approach
+## Gross Domestic Product: Production
 
-![Gross Domestic Product: Production Approach](/dashboard/01_bip_entstehung_en.png)
+<iframe src="/dashboard/01_bip_entstehung_en.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
 
-- [View full screen](/dashboard/01_bip_entstehung_en.png)
-- *Explanation* - Year-on-year percentage change in price-adjusted GDP and selected economic sectors (unadjusted data).
-- *Source* - Federal Statistical Office (Destatis, GENESIS table 81000-0011).
+- [Open in full screen](/dashboard/01_bip_entstehung_en.png)
+- *Explanation* - Year-on-year change in price-adjusted Gross Domestic Product and selected production components in percent (unadjusted data).
+- *Source* - Federal Statistical Office (GENESIS Table 81000-0011).
 
-## Gross Domestic Product: Expenditure Approach
+## Gross Domestic Product: Expenditure
 
-![Gross Domestic Product: Expenditure Approach](/dashboard/02_bip_verwendung_en.png)
+<iframe src="/dashboard/02_bip_verwendung_en.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
 
-- [View full screen](/dashboard/02_bip_verwendung_en.png)
-- *Explanation* - Year-on-year percentage change in nominal GDP and price-adjusted expenditure components (unadjusted data).
-- *Source* - Federal Statistical Office (Destatis, GENESIS table 81000-0012).
+- [Open in full screen](/dashboard/02_bip_verwendung_en.png)
+- *Explanation* - Year-on-year change in nominal GDP and price-adjusted expenditure components in percent (unadjusted data).
+- *Source* - Federal Statistical Office (GENESIS Table 81000-0012).
 
 ## New Orders
 
-![New Orders](/dashboard/03_auftragseingaenge_en.png)
+<iframe src="/dashboard/03_auftragseingaenge_en.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
 
-- [View full screen](/dashboard/03_auftragseingaenge_en.png)
-- *Explanation* - Volume index of new orders in manufacturing and main construction, year-on-year percentage change.
+- [Open in full screen](/dashboard/03_auftragseingaenge_en.png)
+- *Explanation* - Volume index of new orders in manufacturing and main construction, year-on-year change in percent.
 - *Source* - Deutsche Bundesbank.
 
-## Industrial Production & Retail Sales
+## Production & Retail Sales
 
-![Industrial Production & Retail Sales](/dashboard/04_produktion_einzelhandel_en.png)
+<iframe src="/dashboard/04_produktion_einzelhandel_en.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
 
-- [View full screen](/dashboard/04_produktion_einzelhandel_en.png)
-- *Explanation* - Price- and calendar-adjusted year-on-year percentage change.
+- [Open in full screen](/dashboard/04_produktion_einzelhandel_en.png)
+- *Explanation* - Price- and calendar-adjusted year-on-year change in percent.
 - *Source* - Deutsche Bundesbank.
 
 ## Current Account Balance
 
-![Current Account Balance](/dashboard/05_leistungsbilanz_en.png)
+<iframe src="/dashboard/05_leistungsbilanz_en.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
 
-- [View full screen](/dashboard/05_leistungsbilanz_en.png)
-- *Explanation* - Monthly German current account balance in billion euros (unadjusted data).
+- [Open in full screen](/dashboard/05_leistungsbilanz_en.png)
+- *Explanation* - Germany's monthly current account balance in billion euros (unadjusted data).
 - *Source* - Deutsche Bundesbank.
 
 ## Unemployment and Inflation
 
-![Unemployment and Inflation](/dashboard/06_arbeitslosigkeit_inflation_en.png)
+<iframe src="/dashboard/06_arbeitslosigkeit_inflation_en.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
 
-- [View full screen](/dashboard/06_arbeitslosigkeit_inflation_en.png)
-- *Explanation* - Unemployment rate and year-on-year percentage change in the Harmonised Index of Consumer Prices (HICP, unadjusted data).
-- *Source* - Deutsche Bundesbank.
+- [Open in full screen](/dashboard/06_arbeitslosigkeit_inflation_en.png)
+- *Explanation* - Unemployment rate and year-on-year change in the Harmonised Index of Consumer Prices (HICP) in percent (unadjusted data).
+- *Source* - Federal Statistical Office, Deutsche Bundesbank.
