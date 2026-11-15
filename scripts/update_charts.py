@@ -14,8 +14,10 @@ TEXTS = {
     "de": {
         "p1_t": "Bruttoinlandsprodukt: Entstehung", "p1_s": "Veränderung zum Vorjahr in % (preisbereinigt, Ursprungswerte)",
         "p1_l": ("Bruttoinlandsprodukt", "Produzierendes Gewerbe ohne Baugewerbe", "Baugewerbe", "Handel, Verkehr, Gastgewerbe"),
+        "p1_h": ("BIP", "Prod. Gew. o. Bau", "Baugewerbe", "Handel/Verkehr/Gastg."),
         "p2_t": "Bruttoinlandsprodukt: Verwendung", "p2_s": "Veränderung zum Vorjahr in % (Ursprungswerte)",
         "p2_l": ("Nominales BIP", "Privater Konsum", "Konsumausgaben der priv. Haushalte", "Ausrüstungsinvestitionen", "Bauinvestitionen", "Exporte", "Importe"),
+        "p2_h": ("Nom. BIP", "Priv. Konsum", "Konsum priv. HH", "Ausrüstungen", "Bauten", "Exporte", "Importe"),
         "p3_t": "Auftragseingänge", "p3_s": "Volumenindex, Veränderung zum Vorjahr in %",
         "p3_l": ("Auftragseingang Industrie", "Auftragseingang Bauwirtschaft"),
         "p4_t": "Produktion & Einzelhandelsumsätze", "p4_s": "Real, Veränderung zum Vorjahr in %",
@@ -31,8 +33,10 @@ TEXTS = {
     "en": {
         "p1_t": "Gross Domestic Product: Production", "p1_s": "Change on previous year in % (price-adjusted, unadjusted data)",
         "p1_l": ("Gross domestic product", "Industry excluding construction", "Construction", "Trade, transport, accommodation and food services"),
+        "p1_h": ("GDP", "Industry excl. constr.", "Construction", "Trade/transp./hosp."),
         "p2_t": "Gross Domestic Product: Expenditure", "p2_s": "Change on previous year in % (unadjusted data)",
         "p2_l": ("Nominal GDP", "Private consumption", "Household final consumption expenditure", "Machinery and equipment investment", "Construction investment", "Exports", "Imports"),
+        "p2_h": ("Nom. GDP", "Priv. cons.", "Household cons.", "Machinery/equip.", "Construction", "Exports", "Imports"),
         "p3_t": "New Orders", "p3_s": "Volume index, change on previous year in %",
         "p3_l": ("New orders: Manufacturing", "New orders: Construction"),
         "p4_t": "Production & Retail Sales", "p4_s": "Real, change on previous year in %",
@@ -97,10 +101,10 @@ def fmt_num(val, use_comma):
     s = f"{val:.1f}"
     return s.replace(".", ",") if use_comma else s
 
-def style_panel(ax, title, sub, ymin, ymax, yticks, z=True):
+def style_panel(ax, title, sub, ymin, ymax, yticks, z=True, title_y=1.38, sub_y=1.30):
     ax.set_facecolor("#F8FAFC")
-    ax.text(0.0, 1.33, title, transform=ax.transAxes, fontsize=11.5, fontweight="bold", color="#0F172A")
-    ax.text(0.0, 1.26, sub, transform=ax.transAxes, fontsize=8.2, color="#64748B")
+    ax.text(0.0, title_y, title, transform=ax.transAxes, fontsize=11.5, fontweight="bold", color="#0F172A")
+    ax.text(0.0, sub_y, sub, transform=ax.transAxes, fontsize=8.2, color="#64748B")
     ax.set_ylim(ymin, ymax)
     ax.set_yticks(yticks)
     ax.tick_params(axis="y", colors="#475569", labelsize=8.5, length=0)
@@ -117,7 +121,7 @@ def style_panel(ax, title, sub, ymin, ymax, yticks, z=True):
     ax.text(1.0, -0.22, "T.H.", transform=ax.transAxes, ha="right", fontsize=7.5, color="#94A3B8")
 
 def set_legend(ax, ncol=2):
-    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=ncol, frameon=False, fontsize=7.2)
+    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=ncol, frameon=False, fontsize=7.0)
 
 def mark_end(ax, x_vals, y_vals, col, use_comma, off=0.0):
     if len(x_vals) == 0 or len(y_vals) == 0:
@@ -148,7 +152,7 @@ def draw_p1(ax, t, d):
 
 def draw_p2(ax, t, d):
     xi, xl_bip = d["xi"], d["xl_bip"]
-    style_panel(ax, t["p2_t"], t["p2_s"], -10, 15, range(-10, 20, 5))
+    style_panel(ax, t["p2_t"], t["p2_s"], -10, 15, range(-10, 20, 5), title_y=1.45, sub_y=1.37)
     l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]
     draw_bars_with_labels(ax, xi, d["bip_n"], l2_0, t["comma"])
     for vals, col, lbl in (
@@ -203,9 +207,9 @@ def draw_p6(ax, t, d):
     mark_end(ax, xm, s_hv.values, "#D97706", t["comma"], 0.25)
     ax.set_xticks(xm); ax.set_xticklabels(list(s_al.index)); set_legend(ax, 2)
 
-def save_single(draw_fn, t, data, fname, src_key):
-    fig, ax = plt.subplots(figsize=(7.2, 4.6), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.93, top=0.72, bottom=0.22)
+def save_single(draw_fn, t, data, fname, src_key, top_adj=0.69):
+    fig, ax = plt.subplots(figsize=(7.4, 4.8), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.09, right=0.93, top=top_adj, bottom=0.22)
     draw_fn(ax, t, data)
     now_s = datetime.now().strftime(t["date_fmt"])
     fig.text(0.09, 0.02, f"{t[src_key]}{now_s}", fontsize=7.5, color="#64748B")
@@ -215,8 +219,8 @@ def save_single(draw_fn, t, data, fname, src_key):
 def build_for_lang(lang, data):
     t = TEXTS[lang]
     plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
-    fig, axes = plt.subplots(3, 2, figsize=(12.6, 17.8), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.06, right=0.95, top=0.90, bottom=0.06, hspace=0.62, wspace=0.20)
+    fig, axes = plt.subplots(3, 2, figsize=(12.6, 18.2), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.06, right=0.95, top=0.89, bottom=0.06, hspace=0.66, wspace=0.20)
     ax1, ax2, ax3, ax4, ax5, ax6 = axes.flatten()
     draw_p1(ax1, t, data); draw_p2(ax2, t, data); draw_p3(ax3, t, data)
     draw_p4(ax4, t, data); draw_p5(ax5, t, data); draw_p6(ax6, t, data)
@@ -225,12 +229,12 @@ def build_for_lang(lang, data):
     plt.savefig(f"static/dashboard/dashboard{t['sfx']}.png", dpi=300)
     plt.close()
 
-    save_single(draw_p1, t, data, "01_bip_entstehung", "src_destatis")
-    save_single(draw_p2, t, data, "02_bip_verwendung", "src_destatis")
-    save_single(draw_p3, t, data, "03_auftragseingaenge", "src_bbk")
-    save_single(draw_p4, t, data, "04_produktion_einzelhandel", "src_bbk")
-    save_single(draw_p5, t, data, "05_leistungsbilanz", "src_bbk")
-    save_single(draw_p6, t, data, "06_arbeitslosigkeit_inflation", "src_all")
+    save_single(draw_p1, t, data, "01_bip_entstehung", "src_destatis", top_adj=0.69)
+    save_single(draw_p2, t, data, "02_bip_verwendung", "src_destatis", top_adj=0.64)
+    save_single(draw_p3, t, data, "03_auftragseingaenge", "src_bbk", top_adj=0.69)
+    save_single(draw_p4, t, data, "04_produktion_einzelhandel", "src_bbk", top_adj=0.69)
+    save_single(draw_p5, t, data, "05_leistungsbilanz", "src_bbk", top_adj=0.69)
+    save_single(draw_p6, t, data, "06_arbeitslosigkeit_inflation", "src_all", top_adj=0.69)
 
     # Interaktive Plotly-Charts für die 6 Dashboard-Grafiken (Desktop & Smartphone optimiert)
     now_str_p = datetime.now().strftime(t["date_fmt"])
@@ -240,7 +244,7 @@ def build_for_lang(lang, data):
             plot_bgcolor="#F8FAFC", paper_bgcolor="white",
             hovermode="x unified",
             dragmode=False,
-            hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=11.5, color="#0F172A"), namelength=0),
+            hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
             legend=dict(orientation="h", x=0.0, y=1.02, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.5, color="#1E293B")),
             margin=dict(l=46, r=16, t=top_m, b=82),
             height=height_p,
@@ -258,17 +262,23 @@ def build_for_lang(lang, data):
     # 1. BIP Entstehung (Interaktiv)
     fp1 = go.Figure()
     l1_0, l1_1, l1_2, l1_3 = t["p1_l"]
-    fp1.add_trace(go.Bar(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data["bip_r"]], name=l1_0, marker_color="#1B3A6B", hovertemplate=f"{l1_0}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    for lbl_s, key_s, col_s in ((l1_1, "pg", "#D97706"), (l1_2, "bau", "#64748B"), (l1_3, "hvg", "#059669")):
-        fp1.add_trace(go.Scatter(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data[key_s]], name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.1), hovertemplate=f"{lbl_s}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    h1_0, h1_1, h1_2, h1_3 = t["p1_h"]
+    fp1.add_trace(go.Bar(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data["bip_r"]], name=l1_0, marker_color="#1B3A6B", hovertemplate=f"{h1_0}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    for lbl_s, hov_s, key_s, col_s in ((l1_1, h1_1, "pg", "#D97706"), (l1_2, h1_2, "bau", "#64748B"), (l1_3, h1_3, "hvg", "#059669")):
+        fp1.add_trace(go.Scatter(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data[key_s]], name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.1), hovertemplate=f"{hov_s}: <b>%{{y:.1f}} %</b><extra></extra>"))
     save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_destatis", "01_bip_entstehung", top_m=142, height_p=500)
 
     # 2. BIP Verwendung (Interaktiv)
     fp2 = go.Figure()
     l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]
-    fp2.add_trace(go.Bar(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data["bip_n"]], name=l2_0, marker_color="#1B3A6B", hovertemplate=f"{l2_0}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    for lbl_s, key_s, col_s in ((l2_1, "kp", "#D97706"), (l2_2, "kph", "#059669"), (l2_3, "aus", "#7C3AED"), (l2_4, "binv", "#0284C7"), (l2_5, "exp", "#DC2626"), (l2_6, "imp", "#64748B")):
-        fp2.add_trace(go.Scatter(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data[key_s]], name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0), hovertemplate=f"{lbl_s}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    h2_0, h2_1, h2_2, h2_3, h2_4, h2_5, h2_6 = t["p2_h"]
+    fp2.add_trace(go.Bar(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data["bip_n"]], name=l2_0, marker_color="#1B3A6B", hovertemplate=f"{h2_0}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    for lbl_s, hov_s, key_s, col_s in (
+        (l2_1, h2_1, "kp", "#D97706"), (l2_2, h2_2, "kph", "#059669"),
+        (l2_3, h2_3, "aus", "#7C3AED"), (l2_4, h2_4, "binv", "#0284C7"),
+        (l2_5, h2_5, "exp", "#DC2626"), (l2_6, h2_6, "imp", "#64748B")
+    ):
+        fp2.add_trace(go.Scatter(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data[key_s]], name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0), hovertemplate=f"{hov_s}: <b>%{{y:.1f}} %</b><extra></extra>"))
     save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_destatis", "02_bip_verwendung", top_m=170, height_p=525)
 
     # 3. Auftragseingänge (Interaktiv)
@@ -341,7 +351,7 @@ def main():
     kp = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ursprungswerte", "Private Konsumausgaben"], [])
     if np.all(np.isnan(kp)):
         kp = np.array([2.1, 5.6, -0.4, 0.3, 0.8, np.nan, -0.8, -0.6, -0.2, 0.1, 0.3, 0.5, 0.4, 0.6, 0.8, 1.0, 1.1, 1.2, 1.4, 1.6])
-    kph = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Ursprungswerte", "Konsumausgaben der privaten Haushalte"], [])
+    kph = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Ursprungswerte", "privaten Haushalte"], ["Organisationen"])
     if np.all(np.isnan(kph)):
         kph = kp.copy()
     aus = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Ursprungswerte", "Ausrüstungen"], [])
