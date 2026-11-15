@@ -83,7 +83,24 @@ def get_destatis(table):
     if len(lines) < 5:
         raise RuntimeError(f"Destatis Tabelle {table} Antwort: {raw_text[:300]}")
     df = pd.read_csv(io.StringIO("\n".join(lines)), sep=";", decimal=",", on_bad_lines="skip")
-    text_cols = [c for c in df.columns if c not in ("ZEIT", "WERT")]
+    col_map = {c.lower(): c for c in df.columns}
+    t_col = col_map.get("zeit")
+    v_col = col_map.get("value") or col_map.get("wert")
+    if not t_col or not v_col:
+        raise RuntimeError(f"Unerwartete Spalten in {table}: {list(df.columns)}")
+    zeit_s = df[t_col].astype(str).str.strip()
+    for c in df.columns:
+        s_code = df[c].astype(str).str.strip()
+        if s_code.str.match(r"^QUART0[1-4]$").any():
+            zeit_s = zeit_s + "-Q" + s_code.str[-1:]
+            break
+        if s_code.str.match(r"^MONAT(0[1-9]|1[0-2])$").any():
+            zeit_s = zeit_s + "-" + s_code.str[-2:]
+            break
+    df["ZEIT"] = zeit_s
+    df["WERT"] = df[v_col]
+    skip_cols = {"ZEIT", "WERT", t_col, v_col}
+    text_cols = [c for c in df.columns if c not in skip_cols]
     df["_ROW"] = df.loc[:, text_cols].fillna("").astype(str).agg(" | ".join, axis=1)
     return df
 
@@ -352,6 +369,12 @@ def align_series(series_list):
     all_idx = sorted(set().union(*(s.index for s in series_list if not s.empty)))[-13:]
     return [s.reindex(all_idx) for s in series_list]
 
+def verify_non_empty(name, arr):
+    vals = [float(v) for v in arr if not np.isnan(v)]
+    if not vals:
+        raise RuntimeError(f"Zeitreihe '{name}' enthält keine echten Daten!")
+    print(f"[OK] {name}: {len(vals)} Werte (letzter: {vals[-1]:.1f})")
+
 def main():
     df_y1 = get_destatis("81000-0001")
     df_q1 = get_destatis("81000-0011")
@@ -362,6 +385,7 @@ def main():
 
     yrs = tuple(sorted([z for z in df_y1["ZEIT"].astype(str).unique() if len(z) == 4 and z.isdigit()])[-5:])
     qtrs = tuple(sorted([z for z in df_q1["ZEIT"].astype(str).unique() if "Q" in z])[-14:])
+    print(f"[ZEITRAUM] Jahre: {yrs} | Quartale: {qtrs}")
 
     xl_bip = yrs + ("",) + tuple(f"Q{q[-1]} {q[2:4]}" for q in qtrs)
     xi = np.arange(len(xl_bip))
@@ -419,6 +443,16 @@ def main():
             v_m = parse_destatis_series(df_hv, ["Veränderung zum Vorjahresmonat", mn], ["Jahresdurchschnitt"], [ym[:4]])
             hv_vals.append(next(iter(v_m), np.nan))
     s_hv = pd.Series(hv_vals, index=m_cur)
+
+    for nm, arr in (
+        ("Reales BIP", bip_r), ("Prod. Gewerbe", pg), ("Baugewerbe", bau), ("Handel/Verkehr", hvg),
+        ("Nominales BIP", bip_n), ("Privater Konsum", kp), ("Konsum priv. Haushalte", kph),
+        ("Ausrüstungen", aus), ("Bauten", binv), ("Exporte", exp), ("Importe", imp),
+        ("Auftragseingang Ind.", s_ai.values), ("Produktion Ind.", s_pi.values),
+        ("Einzelhandel", s_eh.values), ("Leistungsbilanz", s_lb.values),
+        ("Arbeitslosenquote", s_al.values), ("HVPI Inflation", s_hv.values)
+    ):
+        verify_non_empty(nm, arr)
 
     data = {
         "xi": xi, "xl_bip": xl_bip,
