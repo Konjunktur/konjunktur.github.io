@@ -13,7 +13,7 @@ The Economic Tension Number measures the number of reported job vacancies (labor
 
 ## Simple Economic Tension Number (Full History)
 
-![Simple Economic Tension Number](/spannungszahl/01_einfache_spannungszahl_en.png)
+<iframe src="/spannungszahl/01_einfache_spannungszahl_en.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
 
 * [Open in full screen](/spannungszahl/01_einfache_spannungszahl_en.png)
 * *Explanation* – Change in the difference between reported job vacancies and registered unemployed persons compared to the respective prior-year month (unadjusted data, in thousands). Values above the line of unchanged economic activity indicate a cyclical improvement compared to the reference month.
@@ -23,7 +23,7 @@ The Economic Tension Number measures the number of reported job vacancies (labor
 
 ## Simple Economic Tension Number (Current 13-Month Trend)
 
-![Simple Economic Tension Number Zoom](/spannungszahl/02_einfache_spannungszahl_zoom_en.png)
+<iframe src="/spannungszahl/02_einfache_spannungszahl_zoom_en.html" style="width:100%; height:550px; border:none;" loading="lazy"></iframe>
 
 * [Open in full screen](/spannungszahl/02_einfache_spannungszahl_zoom_en.png)
 * *Explanation* – Detailed view of the past 13 months with lines of unchanged economic activity starting from the prior-year month as well as selected reference months.
@@ -33,7 +33,7 @@ The Economic Tension Number measures the number of reported job vacancies (labor
 
 ## Extended Economic Tension Number (Full History)
 
-![Extended Economic Tension Number](/spannungszahl/03_erweiterte_spannungszahl_en.png)
+<iframe src="/spannungszahl/03_erweiterte_spannungszahl_en.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
 
 * [Open in full screen](/spannungszahl/03_erweiterte_spannungszahl_en.png)
 * *Explanation* – Incorporates cyclical short-time work in addition to reported job vacancies and registered unemployed persons (unadjusted data, in thousands).
@@ -43,7 +43,7 @@ The Economic Tension Number measures the number of reported job vacancies (labor
 
 ## Extended Economic Tension Number (Current 13-Month Trend)
 
-![Extended Economic Tension Number Zoom](/spannungszahl/04_erweiterte_spannungszahl_zoom_en.png)
+<iframe src="/spannungszahl/04_erweiterte_spannungszahl_zoom_en.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
 
 * [Open in full screen](/spannungszahl/04_erweiterte_spannungszahl_zoom_en.png)
 * *Explanation* – Detailed view of the Extended Economic Tension Number over the most recent 13 available reporting months.
@@ -53,7 +53,7 @@ The Economic Tension Number measures the number of reported job vacancies (labor
 
 ## Economic Tension Number and Real GDP
 
-![Economic Tension Number and Real GDP](/spannungszahl/05_spannungszahl_bip_en.png)
+<iframe src="/spannungszahl/05_spannungszahl_bip_en.html" style="width:100%; height:500px; border:none;" loading="lazy"></iframe>
 
 * [Open in full screen](/spannungszahl/05_spannungszahl_bip_en.png)
 * *Explanation* – Comparison of the Simple and Extended Economic Tension Number (monthly values, right axis) with year-on-year growth of price-adjusted Gross Domestic Product (quarterly values, unadjusted data, left axis).
