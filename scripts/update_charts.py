@@ -1,4 +1,4 @@
-import os, io, re, zipfile, requests
+import os, io, re, csv, json, time, zipfile, requests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 os.makedirs("static/dashboard", exist_ok=True)
 D_USER = os.environ.get("DESTATIS_USER", "")
 D_PASS = os.environ.get("DESTATIS_PASS", "")
-G_URL = "https://destatis.de"
+G_BASE = "https://destatis.de"
 BBK_BASE = "https://bundesbank.de"
 
 TEXTS = {
@@ -77,23 +77,48 @@ def get_bbk(keys, n=13, scale=1.0):
             return pd.Series(df_s["v"].values, index=df_s["t"].values).tail(n)
     raise RuntimeError(f"Bundesbank-Abruf lieferte keine Daten für: {keys}")
 
+def _extract_payload(resp):
+    if resp.content[:2] == b"PK":
+        with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+            csv_name = next(n for n in zf.namelist() if n.endswith(".csv"))
+            return zf.read(csv_name).decode("utf-8", errors="replace")
+    return resp.text
+
 def get_destatis(table, startyear="2021"):
     if not D_USER or not D_PASS:
         raise RuntimeError("DESTATIS_USER oder DESTATIS_PASS fehlt.")
     headers = {"username": D_USER, "password": D_PASS, "Content-Type": "application/x-www-form-urlencoded"}
     data = {"name": table, "area": "all", "compress": "false", "format": "ffcsv", "language": "de", "startyear": startyear}
-    r = requests.post(G_URL, headers=headers, data=data, timeout=60)
+    r = requests.post(f"{G_BASE}/tablefile", headers=headers, data=data, timeout=60)
     r.raise_for_status()
-    if r.content[:2] == b"PK":
-        with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
-            csv_name = next(n for n in zf.namelist() if n.endswith(".csv"))
-            raw_text = zf.read(csv_name).decode("utf-8", errors="replace")
-    else:
-        raw_text = r.text
-    lines = [ln for ln in raw_text.splitlines() if ln.count(";") >= 4]
-    if len(lines) < 5:
-        raise RuntimeError(f"Destatis Tabelle {table} Antwort: {raw_text[:300]}")
-    df = pd.read_csv(io.StringIO("\n".join(lines)), sep=";", decimal=",", on_bad_lines="skip")
+    raw_text = _extract_payload(r)
+    if raw_text.lstrip().startswith("{"):
+        r_job = requests.post(f"{G_BASE}/tablefile", headers=headers, data={**data, "job": "true"}, timeout=60)
+        r_job.raise_for_status()
+        info = json.loads(r_job.text)
+        msg = str(info.get("Status", {}).get("Content", ""))
+        m = re.search(r"([0-9A-Z\-]+_[0-9]+)", msg)
+        if not m:
+            raise RuntimeError(f"Destatis Job-ID nicht gefunden für {table}: {info}")
+        job_name = m.group(1)
+        raw_text = ""
+        for _ in range(24):
+            time.sleep(2.5)
+            r_res = requests.post(f"{G_BASE}/resultfile", headers=headers, data={"name": job_name, "area": "all", "compress": "false", "language": "de"}, timeout=60)
+            txt = _extract_payload(r_res)
+            if not txt.lstrip().startswith("{"):
+                raw_text = txt
+                break
+        if not raw_text:
+            raise RuntimeError(f"Destatis Job {job_name} für {table} nicht rechtzeitig fertig.")
+    reader = csv.reader(io.StringIO(raw_text), delimiter=";", quotechar='"')
+    rows = [row for row in reader if len(row) >= 5]
+    if len(rows) < 3:
+        raise RuntimeError(f"Destatis Tabelle {table} zu wenig Zeilen: {raw_text[:300]}")
+    header = rows[0]
+    width = len(header)
+    clean_rows = [row[:width] for row in rows[1:] if len(row) >= width]
+    df = pd.DataFrame(clean_rows, columns=header)
     col_map = {c.lower().strip(): c for c in df.columns}
     t_col = col_map.get("time") or col_map.get("zeit")
     v_col = col_map.get("value") or col_map.get("wert")
