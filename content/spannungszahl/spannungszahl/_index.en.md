@@ -1,28 +1,60 @@
 ---
-title: "Leading Indicator: Economic Tension Number"
-description: "Labor market leading indicator for Germany based on job vacancies, unemployment, and short-time work."
+title: "The Leading Indicator Economic Tension Number"
+description: "Leading business cycle indicator for Germany based on reported job vacancies, unemployment, and short-time work."
 ---
 
-The **Economic Tension Number** (*Spannungszahl*) measures the year-on-year change in labor market tightness as the difference between reported job vacancies and registered unemployed persons (adjusted for Ukrainian refugees). The **Extended Economic Tension Number** additionally incorporates cyclical short-time work.
+Leading business cycle indicator for Germany based on reported job vacancies, unemployment, and short-time work.
 
-Whenever the Economic Tension Number moves above the **line of unchanged economic activity**, cyclical momentum has improved relative to the respective anchor month; when it falls below, momentum has weakened.
+The Economic Tension Number measures the number of reported job vacancies (labor demand) minus the number of unemployed persons (labor supply) minus the same difference from the prior-year period. It was developed by Claus Köhler, former member of the German Council of Economic Experts and the Executive Board of the Deutsche Bundesbank.
+
+*For a detailed discussion of the Economic Tension Number, see:* Claus Köhler, *Die Spannungszahl – Ein Indikator der gesamtwirtschaftlichen Entwicklung*, Working Papers of the Institute for Empirical Economic Research, Vol. 10, 1993.
+
+---
 
 ## Simple Economic Tension Number (Full History)
 
 ![Simple Economic Tension Number](/spannungszahl/01_einfache_spannungszahl_en.png)
 
-## Simple Economic Tension Number (13-Month Zoom)
+* [Open in full screen](/spannungszahl/01_einfache_spannungszahl_en.png)
+* *Explanation* – Change in the difference between reported job vacancies and registered unemployed persons compared to the respective prior-year month (unadjusted data, in thousands). Values above the line of unchanged economic activity indicate a cyclical improvement compared to the reference month.
+* *Source* – Deutsche Bundesbank (Federal Employment Agency data), own calculations.
+
+---
+
+## Simple Economic Tension Number (Current 13-Month Trend)
 
 ![Simple Economic Tension Number Zoom](/spannungszahl/02_einfache_spannungszahl_zoom_en.png)
 
-## Extended Economic Tension Number (incl. Short-Time Work)
+* [Open in full screen](/spannungszahl/02_einfache_spannungszahl_zoom_en.png)
+* *Explanation* – Detailed view of the past 13 months with lines of unchanged economic activity starting from the prior-year month as well as selected reference months.
+* *Source* – Deutsche Bundesbank (Federal Employment Agency data), own calculations.
+
+---
+
+## Extended Economic Tension Number (Full History)
 
 ![Extended Economic Tension Number](/spannungszahl/03_erweiterte_spannungszahl_en.png)
 
-## Extended Economic Tension Number (13-Month Zoom)
+* [Open in full screen](/spannungszahl/03_erweiterte_spannungszahl_en.png)
+* *Explanation* – Incorporates cyclical short-time work in addition to reported job vacancies and registered unemployed persons (unadjusted data, in thousands).
+* *Source* – Deutsche Bundesbank (Federal Employment Agency data), own calculations.
+
+---
+
+## Extended Economic Tension Number (Current 13-Month Trend)
 
 ![Extended Economic Tension Number Zoom](/spannungszahl/04_erweiterte_spannungszahl_zoom_en.png)
+
+* [Open in full screen](/spannungszahl/04_erweiterte_spannungszahl_zoom_en.png)
+* *Explanation* – Detailed view of the Extended Economic Tension Number over the most recent 13 available reporting months.
+* *Source* – Deutsche Bundesbank (Federal Employment Agency data), own calculations.
+
+---
 
 ## Economic Tension Number and Real GDP
 
 ![Economic Tension Number and Real GDP](/spannungszahl/05_spannungszahl_bip_en.png)
+
+* [Open in full screen](/spannungszahl/05_spannungszahl_bip_en.png)
+* *Explanation* – Comparison of the Simple and Extended Economic Tension Number (monthly values, right axis) with year-on-year growth of price-adjusted Gross Domestic Product (quarterly values, unadjusted data, left axis).
+* *Sources* – Federal Statistical Office (Destatis), Deutsche Bundesbank (Federal Employment Agency data), own calculations.
