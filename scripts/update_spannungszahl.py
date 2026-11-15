@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 os.makedirs("static/spannungszahl", exist_ok=True)
 D_USER = os.environ.get("DESTATIS_USER", "")
@@ -339,6 +341,75 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     lines = p_bip + p_einf + p_erw
     ax1.legend(lines, [l.get_label() for l in lines], loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.6)
     save_fig(fig, t["src_all"], "05_spannungszahl_bip")
+    # Interaktive Plotly-Charts (Hover-Werte)
+    
+    def save_plotly(fig_p, title_p, src_p, fname_p, height_p=460, top_m=105):
+        fig_p.update_layout(
+            title=dict(text=f"<b>{title_p}</b>", x=0.04, y=0.96, font=dict(size=17, color="#0F172A", family="DejaVu Sans, sans-serif")),
+            plot_bgcolor="#F8FAFC", paper_bgcolor="white",
+            hovermode="x unified",
+            hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=12, color="#0F172A")),
+            legend=dict(orientation="v", x=0.0, y=1.02, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=11.5, color="#1E293B")),
+            margin=dict(l=55, r=30, t=top_m, b=65),
+            height=height_p,
+            annotations=[
+                dict(text=f"{src_p}{now_str}", x=0.0, y=-0.16, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#64748B"), xanchor="left"),
+                dict(text="T.H.", x=1.0, y=-0.16, xref="paper", yref="paper", showarrow=False, font=dict(size=11, color="#94A3B8"), xanchor="right")
+            ]
+        )
+        fig_p.update_xaxes(showgrid=False, linecolor="#94A3B8", tickfont=dict(size=11, color="#475569"), title_text=t["x_m"] if fname_p != "05_spannungszahl_bip" else t["x_mq"], title_font=dict(size=11, color="#475569"))
+        fig_p.update_yaxes(gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, tickfont=dict(size=11, color="#475569"))
+        fig_p.write_html(f"static/spannungszahl/{fname_p}{t['sfx']}.html", include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
+    
+    # 1. Einfache Spannungszahl (Interaktiv)
+    fp1 = go.Figure()
+    fp1.add_trace(go.Scatter(x=months_all, y=[round(v, 1) for v in y_einf], name=l1_a, mode="lines", line=dict(color="#1B3A6B", width=2.5), hovertemplate="%{y:.1f}<extra>" + l1_a[:35] + "</extra>"))
+    if not lu1.empty:
+        fp1.add_trace(go.Scatter(x=[months_all[i] for i in lu1_x], y=[round(v, 1) for v in lu1_y], name=l1_b, mode="lines", line=dict(color="#D97706", width=2.0, dash="dash"), hovertemplate="%{y:.1f}<extra>" + l1_b[:35] + "</extra>"))
+    fp1.update_yaxes(range=[ymin_1, ymax_1])
+    save_plotly(fp1, t["p1_t"], t["src_ba"], "01_einfache_spannungszahl")
+    
+    # 2. Einfache Spannungszahl Zoom (Interaktiv)
+    fp2 = go.Figure()
+    fp2.add_trace(go.Scatter(x=months_z, y=[round(v, 1) for v in yz_einf], name=t["p2_l1"], mode="lines+markers", marker=dict(size=5), line=dict(color="#1B3A6B", width=2.6), hovertemplate="%{y:.1f}"))
+    if not lu_vj.empty:
+        fp2.add_trace(go.Scatter(x=months_z, y=[round(float(lu_vj.loc[ym]), 1) for ym in months_z], name=t["p2_l_vj"], mode="lines", line=dict(color="#D97706", width=2.0, dash="dash"), hovertemplate="%{y:.1f}"))
+    c_i = 0
+    for ym in months_z[1:-1]:
+        m_num = int(ym[5:7])
+        if m_num in (1, 3, 6, 9, 12):
+            lu_e = line_unv(d_einf, ym, months_z)
+            if not lu_e.empty:
+                lbl = f"{t['p2_l_prefix']}{t['m'][m_num - 1]} {ym[:4]})"
+                fp2.add_trace(go.Scatter(x=list(lu_e.index), y=[round(float(v), 1) for v in lu_e.values], name=lbl, mode="lines", line=dict(color=extra_cols[c_i % len(extra_cols)], width=1.8, dash="dot"), hovertemplate="%{y:.1f}"))
+                c_i += 1
+    fp2.update_yaxes(range=[ymin_z, ymax_z])
+    save_plotly(fp2, t["p2_t"], t["src_ba"], "02_einfache_spannungszahl_zoom", height_p=540, top_m=185)
+    
+    # 3. Erweiterte Spannungszahl (Interaktiv)
+    fp3 = go.Figure()
+    fp3.add_trace(go.Scatter(x=months_all, y=[None if np.isnan(v) else round(v, 1) for v in y_erw], name=l3_a, mode="lines", line=dict(color="#1B3A6B", width=2.5), hovertemplate="%{y:.1f}"))
+    if len(months_erw_valid) >= 13 and not lu3.empty:
+        fp3.add_trace(go.Scatter(x=[months_all[i] for i in lu3_x], y=[round(v, 1) for v in lu3_y], name=l3_b, mode="lines", line=dict(color="#D97706", width=2.0, dash="dash"), hovertemplate="%{y:.1f}"))
+    fp3.update_yaxes(range=[-8000, 4000])
+    save_plotly(fp3, t["p3_t"], t["src_ba_kug"], "03_erweiterte_spannungszahl")
+    
+    # 4. Erweiterte Spannungszahl Zoom (Interaktiv)
+    fp4 = go.Figure()
+    fp4.add_trace(go.Scatter(x=months_z4, y=[round(v, 1) for v in yz_erw], name=l3_a, mode="lines+markers", marker=dict(size=5), line=dict(color="#1B3A6B", width=2.5), hovertemplate="%{y:.1f}"))
+    if not lu4.empty:
+        fp4.add_trace(go.Scatter(x=months_z4, y=[round(float(lu4.loc[ym]), 1) for ym in months_z4], name=l3_b, mode="lines", line=dict(color="#D97706", width=2.0, dash="dash"), hovertemplate="%{y:.1f}"))
+    fp4.update_yaxes(range=[ymin_4, ymax_4])
+    save_plotly(fp4, t["p4_t"], t["src_ba_kug"], "04_erweiterte_spannungszahl_zoom")
+    
+    # 5. Spannungszahl und reales BIP (Interaktiv Dual-Achse)
+    fp5 = make_subplots(specs=[[{"secondary_y": True}]])
+    fp5.add_trace(go.Scatter(x=[months_all[i] for i in bx], y=[round(v, 1) for v in by], name=l5_bip, mode="lines+markers", marker=dict(size=6), line=dict(color="#059669", width=2.3), hovertemplate="%{y:.1f} %"), secondary_y=False)
+    fp5.add_trace(go.Scatter(x=months_all, y=[round(v, 1) for v in y_einf], name=l5_einf, mode="lines", line=dict(color="#1B3A6B", width=2.2), hovertemplate="%{y:.1f}"), secondary_y=True)
+    fp5.add_trace(go.Scatter(x=months_all, y=[None if np.isnan(v) else round(v, 1) for v in y_erw], name=l5_erw, mode="lines", line=dict(color="#D97706", width=2.2), hovertemplate="%{y:.1f}"), secondary_y=True)
+    fp5.update_yaxes(title_text=t["p5_yl"].replace("\n", " "), range=[-12, 12], secondary_y=False, title_font=dict(size=10.5, color="#475569"))
+    fp5.update_yaxes(title_text=t["p5_yr"].replace("\n", " "), range=[-8000, 8000], showgrid=False, secondary_y=True, title_font=dict(size=10.5, color="#475569"))
+    save_plotly(fp5, t["p5_t"], t["src_all"], "05_spannungszahl_bip", height_p=490, top_m=125)
 
 def main():
     s_stellen, s_alo, s_kug = load_bbk_labor_market()
