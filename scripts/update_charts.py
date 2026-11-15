@@ -29,13 +29,12 @@ def inspect_table(table, startyear="2023"):
     hdr = [h.strip() for h in rows.pop(0)]
     df = pd.DataFrame([row[:len(hdr)] for row in rows if len(row) >= len(hdr)], columns=hdr)
     print(f"\n=== {table} (Zeilen: {len(df)}) ===")
-    print("Spalten:", hdr)
     for c in hdr:
         if any(k in c.lower() for k in ("time", "attribute", "value_variable")):
-            vals = [v for v in df[c].astype(str).unique() if v.strip()][:8]
+            vals = [v for v in df[c].astype(str).unique() if v.strip()][:12]
             print(f"  {c}: {vals}")
 
-for tbl, yr in [("81000-0001", "2023"), ("81000-0011", "2023"), ("81000-0002", "2023"), ("81000-0012", "2023"), ("42151-0001", "2024"), ("44111-0001", "2024"), ("42153-0001", "2024"), ("45212-0001", "2024"), ("13211-0002", "2024"), ("61121-0002", "2024")]:
+for tbl, yr in [("81000-0002", "2023"), ("81000-0003", "2023"), ("81000-0013", "2023"), ("81000-0014", "2023"), ("42151-0002", "2024"), ("42151-0004", "2024"), ("44141-0001", "2024"), ("45212-0002", "2024"), ("45212-0004", "2024")]:
     try:
         inspect_table(tbl, yr)
     except Exception as e:
