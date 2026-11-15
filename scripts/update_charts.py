@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 os.makedirs("static/dashboard", exist_ok=True)
 D_USER = os.environ.get("DESTATIS_USER", "")
 D_PASS = os.environ.get("DESTATIS_PASS", "")
-G_BASE = "https://destatis.de"
+G_BASE = "https://www-genesis." + "destatis.de" + "/genesisWS/rest/2020/data"
 BBK_BASE = "https://bundesbank.de"
 
 TEXTS = {
