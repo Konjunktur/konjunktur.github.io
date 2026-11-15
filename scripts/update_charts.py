@@ -13,9 +13,9 @@ G_URL = "https://www-genesis." + "destatis.de" + "/genesisWS/rest/2020/data/tabl
 TEXTS = {
     "de": {
         "p1_t": "Bruttoinlandsprodukt: Entstehung", "p1_s": "Veränderung zum Vorjahr in % (preisbereinigt, Ursprungswerte)",
-        "p1_l": ("Reales BIP", "Prod. Gewerbe (o. Bau)", "Baugewerbe", "Handel, Verkehr, Gastgewerbe"),
+        "p1_l": ("Bruttoinlandsprodukt", "Produzierendes Gewerbe ohne Baugewerbe", "Baugewerbe", "Handel, Verkehr, Gastgewerbe"),
         "p2_t": "Bruttoinlandsprodukt: Verwendung", "p2_s": "Veränderung zum Vorjahr in % (Ursprungswerte)",
-        "p2_l": ("Nominales BIP", "Privater Konsum", "Staatskonsum", "Ausrüstungen", "Bauinvestitionen", "Exporte", "Importe"),
+        "p2_l": ("Nominales BIP", "Privater Konsum", "Konsumausgaben der priv. Haushalte", "Ausrüstungsinvestitionen", "Bauinvestitionen", "Exporte", "Importe"),
         "p3_t": "Auftragseingänge", "p3_s": "Volumenindex, Veränderung zum Vorjahr in %",
         "p3_l": ("Auftragseingang Industrie", "Auftragseingang Bauwirtschaft"),
         "p4_t": "Produktion & Einzelhandelsumsätze", "p4_s": "Real, Veränderung zum Vorjahr in %",
@@ -30,9 +30,9 @@ TEXTS = {
     },
     "en": {
         "p1_t": "Gross Domestic Product: Production", "p1_s": "Change on previous year in % (price-adjusted, unadjusted data)",
-        "p1_l": ("Real GDP", "Manufacturing (excl. construction)", "Construction", "Trade, transport, hospitality"),
+        "p1_l": ("Gross domestic product", "Industry excluding construction", "Construction", "Trade, transport, accommodation and food services"),
         "p2_t": "Gross Domestic Product: Expenditure", "p2_s": "Change on previous year in % (unadjusted data)",
-        "p2_l": ("Nominal GDP", "Private consumption", "Government consumption", "Machinery & equipment", "Construction investment", "Exports", "Imports"),
+        "p2_l": ("Nominal GDP", "Private consumption", "Household final consumption expenditure", "Machinery and equipment investment", "Construction investment", "Exports", "Imports"),
         "p3_t": "New Orders", "p3_s": "Volume index, change on previous year in %",
         "p3_l": ("New orders: Manufacturing", "New orders: Construction"),
         "p4_t": "Production & Retail Sales", "p4_s": "Real, change on previous year in %",
@@ -117,7 +117,7 @@ def style_panel(ax, title, sub, ymin, ymax, yticks, z=True):
     ax.text(1.0, -0.22, "T.H.", transform=ax.transAxes, ha="right", fontsize=7.5, color="#94A3B8")
 
 def set_legend(ax, ncol=2):
-    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=ncol, frameon=False, fontsize=7.6)
+    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=ncol, frameon=False, fontsize=7.2)
 
 def mark_end(ax, x_vals, y_vals, col, use_comma, off=0.0):
     if len(x_vals) == 0 or len(y_vals) == 0:
@@ -152,7 +152,7 @@ def draw_p2(ax, t, d):
     l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]
     draw_bars_with_labels(ax, xi, d["bip_n"], l2_0, t["comma"])
     for vals, col, lbl in (
-        (d["kp"], "#D97706", l2_1), (d["ks"], "#059669", l2_2),
+        (d["kp"], "#D97706", l2_1), (d["kph"], "#059669", l2_2),
         (d["aus"], "#7C3AED", l2_3), (d["binv"], "#0284C7", l2_4),
         (d["exp"], "#DC2626", l2_5), (d["imp"], "#64748B", l2_6)
     ):
@@ -234,16 +234,16 @@ def build_for_lang(lang, data):
 
     # Interaktive Plotly-Charts für die 6 Dashboard-Grafiken (Desktop & Smartphone optimiert)
     now_str_p = datetime.now().strftime(t["date_fmt"])
-    def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p):
+    def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p, top_m=132, height_p=490):
         fig_p.update_layout(
-            title=dict(text=f"<b>{title_p}</b><br><span style='font-size:11.5px;color:#475569;'>{sub_p}</span>", x=0.03, y=0.95, font=dict(size=16, color="#0F172A", family="DejaVu Sans, sans-serif")),
+            title=dict(text=f"<b>{title_p}</b><br><span style='font-size:11.5px;color:#475569;'>{sub_p}</span>", x=0.03, y=0.96, font=dict(size=16, color="#0F172A", family="DejaVu Sans, sans-serif")),
             plot_bgcolor="#F8FAFC", paper_bgcolor="white",
             hovermode="x unified",
             dragmode=False,
-            hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=12, color="#0F172A"), namelength=-1),
-            legend=dict(orientation="h", x=0.0, y=1.02, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=11, color="#1E293B")),
-            margin=dict(l=46, r=16, t=118, b=82),
-            height=460,
+            hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=11.5, color="#0F172A"), namelength=0),
+            legend=dict(orientation="h", x=0.0, y=1.02, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.5, color="#1E293B")),
+            margin=dict(l=46, r=16, t=top_m, b=82),
+            height=height_p,
             annotations=[
                 dict(text=f"{t[src_key]}{now_str_p}", x=0.0, y=-0.22, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"),
                 dict(text="T.H.", x=1.0, y=-0.22, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")
@@ -260,54 +260,56 @@ def build_for_lang(lang, data):
     l1_0, l1_1, l1_2, l1_3 = t["p1_l"]
     fp1.add_trace(go.Bar(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data["bip_r"]], name=l1_0, marker_color="#1B3A6B", hovertemplate=f"{l1_0}: <b>%{{y:.1f}} %</b><extra></extra>"))
     for lbl_s, key_s, col_s in ((l1_1, "pg", "#D97706"), (l1_2, "bau", "#64748B"), (l1_3, "hvg", "#059669")):
-        fp1.add_trace(go.Scatter(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data[key_s]], name=lbl_s, mode="lines+markers", marker=dict(size=6), line=dict(color=col_s, width=2.2), hovertemplate=f"{lbl_s}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_destatis", "01_bip_entstehung")
+        fp1.add_trace(go.Scatter(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data[key_s]], name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.1), hovertemplate=f"{lbl_s}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_destatis", "01_bip_entstehung", top_m=142, height_p=500)
 
     # 2. BIP Verwendung (Interaktiv)
     fp2 = go.Figure()
     l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]
     fp2.add_trace(go.Bar(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data["bip_n"]], name=l2_0, marker_color="#1B3A6B", hovertemplate=f"{l2_0}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    for lbl_s, key_s, col_s in ((l2_1, "kp", "#D97706"), (l2_2, "ks", "#059669"), (l2_3, "aus", "#7C3AED"), (l2_4, "binv", "#0284C7"), (l2_5, "exp", "#DC2626"), (l2_6, "imp", "#64748B")):
+    for lbl_s, key_s, col_s in ((l2_1, "kp", "#D97706"), (l2_2, "kph", "#059669"), (l2_3, "aus", "#7C3AED"), (l2_4, "binv", "#0284C7"), (l2_5, "exp", "#DC2626"), (l2_6, "imp", "#64748B")):
         fp2.add_trace(go.Scatter(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data[key_s]], name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0), hovertemplate=f"{lbl_s}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_destatis", "02_bip_verwendung")
+    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_destatis", "02_bip_verwendung", top_m=170, height_p=525)
 
     # 3. Auftragseingänge (Interaktiv)
     fp3 = go.Figure()
     l3_0, l3_1 = t["p3_l"]
     s_ai, s_ab = data["s_ai"], data["s_ab"]
-    fp3.add_trace(go.Scatter(x=list(s_ai.index), y=[round(float(v), 1) for v in s_ai.values], name=l3_0, mode="lines+markers", marker=dict(size=6), line=dict(color="#1B3A6B", width=2.4), hovertemplate=f"{l3_0}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    fp3.add_trace(go.Scatter(x=list(s_ab.index), y=[round(float(v), 1) for v in s_ab.values], name=l3_1, mode="lines+markers", marker=dict(size=6), line=dict(color="#D97706", width=2.2), hovertemplate=f"{l3_1}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    save_dash_plotly(fp3, t["p3_t"], t["p3_s"], "src_bbk", "03_auftragseingaenge")
+    fp3.add_trace(go.Scatter(x=list(s_ai.index), y=[round(float(v), 1) for v in s_ai.values], name=l3_0, mode="lines+markers", marker=dict(size=5), line=dict(color="#1B3A6B", width=2.3), hovertemplate=f"{l3_0}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    fp3.add_trace(go.Scatter(x=list(s_ab.index), y=[round(float(v), 1) for v in s_ab.values], name=l3_1, mode="lines+markers", marker=dict(size=5), line=dict(color="#D97706", width=2.2), hovertemplate=f"{l3_1}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    save_dash_plotly(fp3, t["p3_t"], t["p3_s"], "src_bbk", "03_auftragseingaenge", top_m=122, height_p=470)
 
     # 4. Produktion & Einzelhandelsumsätze (Interaktiv)
     fp4 = go.Figure()
     l4_0, l4_1, l4_2 = t["p4_l"]
     for lbl_s, key_s, col_s in ((l4_0, "s_pi", "#1B3A6B"), (l4_1, "s_pb", "#D97706"), (l4_2, "s_eh", "#059669")):
         ser_p = data[key_s]
-        fp4.add_trace(go.Scatter(x=list(ser_p.index), y=[round(float(v), 1) for v in ser_p.values], name=lbl_s, mode="lines+markers", marker=dict(size=6), line=dict(color=col_s, width=2.2), hovertemplate=f"{lbl_s}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    save_dash_plotly(fp4, t["p4_t"], t["p4_s"], "src_bbk", "04_produktion_einzelhandel")
+        fp4.add_trace(go.Scatter(x=list(ser_p.index), y=[round(float(v), 1) for v in ser_p.values], name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.2), hovertemplate=f"{lbl_s}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    save_dash_plotly(fp4, t["p4_t"], t["p4_s"], "src_bbk", "04_produktion_einzelhandel", top_m=132, height_p=480)
 
     # 5. Leistungsbilanzsaldo (Interaktiv)
     fp5 = go.Figure()
     s_lb = data["s_lb"]
     fp5.add_trace(go.Bar(x=list(s_lb.index), y=[round(float(v), 1) for v in s_lb.values], name=t["p5_l"], marker_color="#1B3A6B", hovertemplate="<b>%{y:.1f} Mrd. €</b><extra></extra>"))
-    save_dash_plotly(fp5, t["p5_t"], t["p5_s"], "src_bbk", "05_leistungsbilanz")
+    save_dash_plotly(fp5, t["p5_t"], t["p5_s"], "src_bbk", "05_leistungsbilanz", top_m=118, height_p=460)
 
     # 6. Arbeitslosigkeit und Inflation (Interaktiv)
     fp6 = go.Figure()
     l6_0, l6_1, l6_2, l6_3 = t["p6_l"]
     s_al, s_hv = data["s_al"], data["s_hv"]
-    fp6.add_trace(go.Scatter(x=list(s_al.index), y=[round(float(v), 1) for v in s_al.values], name=l6_0, mode="lines+markers", marker=dict(size=6), line=dict(color="#1B3A6B", width=2.4), hovertemplate=f"{l6_0}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    fp6.add_trace(go.Scatter(x=list(s_hv.index), y=[round(float(v), 1) for v in s_hv.values], name=l6_2, mode="lines+markers", marker=dict(size=6), line=dict(color="#D97706", width=2.4), hovertemplate=f"{l6_2}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    fp6.add_trace(go.Scatter(x=list(s_al.index), y=[round(float(v), 1) for v in s_al.values], name=l6_0, mode="lines+markers", marker=dict(size=5), line=dict(color="#1B3A6B", width=2.3), hovertemplate=f"{l6_0}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    fp6.add_trace(go.Scatter(x=list(s_hv.index), y=[round(float(v), 1) for v in s_hv.values], name=l6_2, mode="lines+markers", marker=dict(size=5), line=dict(color="#D97706", width=2.3), hovertemplate=f"{l6_2}: <b>%{{y:.1f}} %</b><extra></extra>"))
     fp6.add_hline(y=3.0, line_dash="dot", line_color="#1B3A6B", annotation_text=l6_1, annotation_position="top left", annotation_font=dict(size=10.5, color="#1B3A6B"))
     fp6.add_hline(y=2.0, line_dash="dot", line_color="#059669", annotation_text=l6_3, annotation_position="bottom left", annotation_font=dict(size=10.5, color="#059669"))
-    save_dash_plotly(fp6, t["p6_t"], t["p6_s"], "src_all", "06_arbeitslosigkeit_inflation")
+    save_dash_plotly(fp6, t["p6_t"], t["p6_s"], "src_all", "06_arbeitslosigkeit_inflation", top_m=125, height_p=470)
 
 def main():
     df_y1 = get_destatis("81000-0001")
     df_q1 = get_destatis("81000-0011")
     df_y2 = get_destatis("81000-0002")
     df_q2 = get_destatis("81000-0012")
+    df_y2_hh = get_destatis("81000-0019")
+    df_q2_hh = get_destatis("81000-0020")
 
     yrs = tuple(sorted([z for z in df_y1["ZEIT"].astype(str).unique() if len(z) == 4 and z.isdigit()])[-5:]) if not df_y1.empty else ("2021", "2022", "2023", "2024", "2025")
     qtrs = tuple(sorted([z for z in df_q1["ZEIT"].astype(str).unique() if "Q" in z])[-14:]) if not df_q1.empty else ("2023-Q2","2023-Q3","2023-Q4","2024-Q1","2024-Q2","2024-Q3","2024-Q4","2025-Q1","2025-Q2","2025-Q3","2025-Q4","2026-Q1","2026-Q2","2026-Q3")
@@ -339,19 +341,27 @@ def main():
     kp = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ursprungswerte", "Private Konsumausgaben"], [])
     if np.all(np.isnan(kp)):
         kp = np.array([2.1, 5.6, -0.4, 0.3, 0.8, np.nan, -0.8, -0.6, -0.2, 0.1, 0.3, 0.5, 0.4, 0.6, 0.8, 1.0, 1.1, 1.2, 1.4, 1.6])
-    ks = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ursprungswerte", "Konsumausgaben des Staates"], [])
-    if np.all(np.isnan(ks)):
-        ks = np.array([3.8, 0.1, -0.1, 3.5, 2.4, np.nan, -0.4, 0.2, 1.8, 2.9, 3.4, 3.8, 3.9, 2.8, 2.5, 2.2, 2.1, 1.9, 1.8, 1.7])
-    aus = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ursprungswerte", "Ausrüstungen"], [])
+    kph = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Ursprungswerte", "Konsumausgaben der privaten Haushalte"], [])
+    if np.all(np.isnan(kph)):
+        kph = kp.copy()
+    aus = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Ursprungswerte", "Ausrüstungen"], [])
+    if np.all(np.isnan(aus)):
+        aus = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ursprungswerte", "Ausrüstungen"], [])
     if np.all(np.isnan(aus)):
         aus = np.array([4.2, 4.0, 3.0, -5.5, -1.2, np.nan, 3.5, 2.1, -1.2, -4.8, -5.9, -6.1, -5.2, -2.4, -1.1, 0.2, 1.1, 2.0, 2.8, 3.4])
-    binv = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ursprungswerte", "Bauten"], [])
+    binv = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Ursprungswerte", "Bauten"], [])
+    if np.all(np.isnan(binv)):
+        binv = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ursprungswerte", "Bauten"], [])
     if np.all(np.isnan(binv)):
         binv = np.array([-1.5, -1.8, -2.1, -3.4, -1.6, np.nan, -2.2, -2.5, -3.1, -3.8, -3.4, -3.1, -2.8, -2.1, -1.6, -1.1, -0.6, 0.1, 0.5, 0.9])
-    exp = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ursprungswerte", "Exporte"], [])
+    exp = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Ursprungswerte", "Exporte"], [])
+    if np.all(np.isnan(exp)):
+        exp = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ursprungswerte", "Exporte"], [])
     if np.all(np.isnan(exp)):
         exp = np.array([10.1, 3.1, -0.3, -1.1, 0.9, np.nan, -0.8, -1.4, -1.9, -1.5, -0.8, -1.1, -1.2, 0.2, 0.6, 1.1, 1.5, 1.9, 2.2, 2.5])
-    imp = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ursprungswerte", "Importe"], [])
+    imp = get_bip_combo(df_y2_hh, df_q2_hh, ["preisbereinigt", "Ursprungswerte", "Importe"], [])
+    if np.all(np.isnan(imp)):
+        imp = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ursprungswerte", "Importe"], [])
     if np.all(np.isnan(imp)):
         imp = np.array([9.0, 6.7, -3.0, 0.2, 1.4, np.nan, -3.5, -4.1, -2.8, -0.6, 0.1, 0.5, 0.8, 1.1, 1.3, 1.6, 1.8, 2.1, 2.4, 2.7])
 
@@ -391,7 +401,7 @@ def main():
     data = {
         "xi": xi, "xl_bip": xl_bip,
         "bip_r": bip_r, "pg": pg, "bau": bau, "hvg": hvg,
-        "bip_n": bip_n, "kp": kp, "ks": ks, "aus": aus, "binv": binv, "exp": exp, "imp": imp,
+        "bip_n": bip_n, "kp": kp, "kph": kph, "aus": aus, "binv": binv, "exp": exp, "imp": imp,
         "s_ai": s_ai, "s_ab": s_ab, "s_pi": s_pi, "s_pb": s_pb, "s_eh": s_eh,
         "s_lb": s_lb, "s_al": s_al, "s_hv": s_hv
     }
