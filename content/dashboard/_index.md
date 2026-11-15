@@ -1,5 +1,5 @@
 ---
-title: "Konjunktur-Dashboard Deutschland"
+title: "Die deutsche Konjunktur in 6 Grafiken"
 description: "Aktuelle Indikatoren zur wirtschaftlichen Entwicklung in Deutschland."
 ---
 
