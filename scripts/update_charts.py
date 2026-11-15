@@ -426,6 +426,8 @@ def main():
 
     yrs = tuple(sorted([z for z in df_y1["ZEIT"].astype(str).unique() if len(z) == 4 and z.isdigit()])[-5:])
     qtrs = tuple(sorted([z for z in df_q1["ZEIT"].astype(str).unique() if "Q" in z])[-14:])
+    if not qtrs:
+        print("[INFO 81000-0011 Zeilenbeispiel]:", df_q1.head(2).to_dict(orient="records"))
     print(f"[ZEITRAUM] Jahre: {yrs} | Quartale: {qtrs}")
 
     xl_bip = yrs + ("",) + tuple(f"Q{q[-1]} {q[2:4]}" for q in qtrs)
@@ -467,11 +469,15 @@ def main():
     s_ab = pd.Series(bau_ae_vals, index=s_ai.index)
     s_ai, s_ab = align_series([s_ai, s_ab])
 
-    s_pi, s_pb, s_eh = align_series([
-        get_bbk(["BBDE1.M.DE.Y.BPA1.A2P000000.G.C.I21.A", "BBDE1.M.DE.Y.BPA1.A2P000000.G.C.I15.A"], 13),
-        get_bbk(["BBDE1.M.DE.Y.BPA1.F00000000.G.C.I21.A", "BBDE1.M.DE.Y.BPA1.F00000000.G.C.I15.A", "BBDE1.M.DE.Y.BPA1.F41000000.G.C.I21.A"], 13),
-        get_bbk(["BBDE1.M.DE.Y.BVA1.G47000000.G.C.I21.A", "BBDE1.M.DE.Y.BVA1.G47000000.G.C.I15.A"], 13)
-    ])
+    s_pi = get_bbk(["BBDE1.M.DE.Y.BPI1.A2P000000.G.C.I21.A", "BBDE1.M.DE.Y.BPI1.A2P000000.G.C.I15.A", "BBDE1.M.DE.Y.BPI1.A20000000.G.C.I21.A"], 13)
+    df_bau_pr = get_destatis("44111-0002", "2024")
+    bau_pr_vals = parse_destatis_series(df_bau_pr, ["Veränderung zum Vorjahresmonat", "kalender"], ["saison"], list(s_pi.index))
+    if all(np.isnan(v) for v in bau_pr_vals):
+        bau_pr_vals = parse_destatis_series(df_bau_pr, ["Veränderung zum Vorjahresmonat"], ["saison"], list(s_pi.index))
+    s_pb = pd.Series(bau_pr_vals, index=s_pi.index)
+
+    s_eh = get_bbk(["BBDE1.M.DE.Y.BVA1.G47000000.G.C.I21.A", "BBDE1.M.DE.Y.BVA1.G47000000.G.C.I15.A"], 13)
+    s_pi, s_pb, s_eh = align_series([s_pi, s_pb, s_eh])
 
     s_lb = get_bbk(["BBFBOPV.M.N.DE.W1.S1.S1.T.B.CA._Z._Z._Z.EUR._T._X.N.ALL"], 13, 0.001)
     s_al = get_bbk(["BBDE1.M.DE.S.ABA1.A00000000.U.A.A00.A"], 13)
