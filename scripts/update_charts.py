@@ -130,12 +130,16 @@ def get_destatis(table, startyear="2021"):
     zeit_s = df[t_col].astype(str).str.strip()
     for c in df.columns:
         s_code = df[c].astype(str).str.strip()
-        if s_code.str.contains(r"(?:QUART0?[1-4]|[1-4]\.\s*(?:Quartal|Vierteljahr))", case=False, regex=True).any():
-            q_num = s_code.str.extract(r"(?:QUART0?([1-4])|([1-4])\.\s*(?:Quartal|Vierteljahr))", flags=re.IGNORECASE).bfill(axis=1).iloc[:, 0]
+        if s_code.str.contains(r"QUART0?[1-4]", case=False, regex=True).any():
+            q_num = s_code.str.extract(r"QUART0?([1-4])", expand=False)
+            zeit_s = zeit_s + "-Q" + q_num
+            break
+        if s_code.str.contains(r"^[1-4]\.\s*(?:Quartal|Vierteljahr)$", case=False, regex=True).any():
+            q_num = s_code.str.extract(r"^([1-4])\.", expand=False)
             zeit_s = zeit_s + "-Q" + q_num
             break
         if s_code.str.contains(r"MONAT0?(?:[1-9]|1[0-2])", regex=True).any():
-            m_num = s_code.str.extract(r"MONAT0?([1-9]|1[0-2])").iloc[:, 0].str.zfill(2)
+            m_num = s_code.str.extract(r"MONAT0?([1-9]|1[0-2])", expand=False).str.zfill(2)
             zeit_s = zeit_s + "-" + m_num
             break
     df["ZEIT"] = zeit_s
@@ -488,7 +492,7 @@ def main():
     s_pi, s_pb, s_eh = align_series([s_pi, s_pb, s_eh])
 
     s_lb = get_bbk(["BBFBOPV.M.N.DE.W1.S1.S1.T.B.CA._Z._Z._Z.EUR._T._X.N.ALL"], 13, 0.001)
-    s_al = get_bbk(["BBDE1.M.DE.S.ABA1.A00000000.U.A.A00.A"], 13)
+    s_al = get_bbk(["BBDE1.M.DE.Y.ABA1.A00000000.U.A.A00.A", "BBDE1.M.DE.S.ABA1.A00000000.S.A.A00.A", "BBK01.UU0062"], 13)
     m_cur = list(s_al.index)
 
     df_hv = get_destatis("61121-0002", "2024")
