@@ -1,5 +1,5 @@
 ---
-"The German Business Cycle in 6 Charts"
+title: "Economic Indicators"
 description: "Current economic indicators based on official data."
 ---
 
