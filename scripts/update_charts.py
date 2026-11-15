@@ -31,10 +31,10 @@ def inspect_table(table, startyear="2023"):
     print(f"\n=== {table} (Zeilen: {len(df)}) ===")
     for c in hdr:
         if any(k in c.lower() for k in ("time", "attribute", "value_variable")):
-            vals = [v for v in df[c].astype(str).unique() if v.strip()][:12]
+            vals = [v for v in df[c].astype(str).unique() if v.strip()][:15]
             print(f"  {c}: {vals}")
 
-for tbl, yr in [("81000-0002", "2023"), ("81000-0003", "2023"), ("81000-0013", "2023"), ("81000-0014", "2023"), ("42151-0002", "2024"), ("42151-0004", "2024"), ("44141-0001", "2024"), ("45212-0002", "2024"), ("45212-0004", "2024")]:
+for tbl, yr in [("81000-0015", "2023"), ("81000-0016", "2023"), ("81000-0019", "2023"), ("81000-0020", "2023"), ("44111-0005", "2024"), ("44111-0006", "2024"), ("44111-0007", "2024"), ("44111-0008", "2024")]:
     try:
         inspect_table(tbl, yr)
     except Exception as e:
