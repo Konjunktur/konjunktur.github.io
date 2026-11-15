@@ -9,7 +9,7 @@ os.makedirs("static/dashboard", exist_ok=True)
 D_USER = os.environ.get("DESTATIS_USER", "")
 D_PASS = os.environ.get("DESTATIS_PASS", "")
 G_BASE = "https://www-genesis." + "destatis.de" + "/genesisWS/rest/2020/data"
-BBK_BASE = "https://bundesbank.de"
+BBK_BASE = "https://api.statistiken." + "bundesbank.de" + "/rest/data"
 
 TEXTS = {
     "de": {
@@ -124,7 +124,7 @@ def get_destatis(table, startyear="2021"):
     v_col = col_map.get("value") or col_map.get("wert")
     if not t_col or not v_col:
         raise RuntimeError(f"Unerwartete Spalten in {table}: {list(df.columns)}")
-        zeit_s = df[t_col].astype(str).str.strip()
+    zeit_s = df[t_col].astype(str).str.strip()
     for c in df.columns:
         s_code = df[c].astype(str).str.strip()
         if s_code.str.contains(r"QUART0?[1-4]", regex=True).any():
@@ -135,7 +135,6 @@ def get_destatis(table, startyear="2021"):
             m_num = s_code.str.extract(r"MONAT0?([1-9]|1[0-2])")[0].str.zfill(2)
             zeit_s = zeit_s + "-" + m_num
             break
-
     df["ZEIT"] = zeit_s
     df["WERT"] = df[v_col]
     skip_cols = {"ZEIT", "WERT", t_col, v_col}
