@@ -39,7 +39,7 @@ TEXTS = {
         "x_mq": "Monatswerte (Spannungszahl) / Quartalswerte (reales BIP)",
         "src_ba": "Quelle: Statistisches Bundesamt (BA-Daten), eigene Berechnungen | Stand: ",
         "src_ba_kug": "Quelle: Statistisches Bundesamt (BA-Daten), eigene Berechnungen; *berücksichtigt Kurzarbeit | Stand: ",
-        "src_all": "Quellen: Statistisches Bundesamt (BA-Daten), eigene Berechnungen | Stand: ",
+        "src_all": "Quellen: Statistisches Bundesamt, eigene Berechnungen | Stand: ",
         "date_fmt": "%d.%m.%Y", "comma": True, "sfx": ""
     },
     "en": {
@@ -65,7 +65,7 @@ TEXTS = {
         "x_mq": "Monthly values (Economic Tension Number) / Quarterly values (real GDP)",
         "src_ba": "Source: Federal Statistical Office (Federal Employment Agency data), own calculations | As of: ",
         "src_ba_kug": "Source: Federal Statistical Office (Federal Employment Agency data), own calculations; *includes short-time work | As of: ",
-        "src_all": "Sources: Federal Statistical Office (Federal Employment Agency data), own calculations | As of: ",
+        "src_all": "Sources: Federal Statistical Office, own calculations | As of: ",
         "date_fmt": "%Y-%m-%d", "comma": False, "sfx": "_en"
     }
 }
@@ -256,7 +256,7 @@ def line_unv(diff_series, anchor_ym, months):
             out[ym] = d_t0 - float(diff_series.loc[vj])
     return pd.Series(out)
 
-def save_sz_plotly(fig_p, title_p, src_text, now_str, fname_p, sfx, height_p=460, top_m=95):
+def save_sz_plotly(fig_p, title_p, src_text, now_str, fname_p, sfx, height_p=460, top_m=95, tick_step=1):
     fig_p.update_layout(
         title=dict(text=f"<b>{title_p}</b>", x=0.03, y=0.96, yanchor="top", font=dict(size=16, color="#0F172A", family="DejaVu Sans, sans-serif")),
         plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
@@ -268,7 +268,12 @@ def save_sz_plotly(fig_p, title_p, src_text, now_str, fname_p, sfx, height_p=460
             dict(text="T.H.", x=1.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")
         ]
     )
-    fig_p.update_xaxes(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.5, color="#475569"))
+    xaxis_kw = dict(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.5, color="#475569"))
+    if tick_step > 1 and fig_p.data and fig_p.data[0].x is not None:
+        all_x = list(fig_p.data[0].x)
+        t_vals = [x for i, x in enumerate(all_x) if i % tick_step == 0]
+        xaxis_kw.update(tickmode="array", tickvals=t_vals, ticktext=t_vals)
+    fig_p.update_xaxes(**xaxis_kw)
     fig_p.update_yaxes(fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, tickfont=dict(size=10.5, color="#475569"))
     out_path = f"static/spannungszahl/{fname_p}{sfx}.html"
     fig_p.write_html(out_path, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
@@ -319,7 +324,7 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     if not s_unv1.empty:
         yu1 = [round(float(v), 1) for v in s_unv1.values]
         fp1.add_trace(go.Scatter(x=list(s_unv1.index), y=yu1, customdata=fmt_arr(yu1), name=l1_b, mode="lines", line=dict(color="#D97706", width=1.8, dash="dash"), hovertemplate=f"{l1_b}: <b>%{{customdata}}</b><extra></extra>"))
-    save_sz_plotly(fp1, t["p1_t"], t["src_ba"], now_str, "01_einfache_spannungszahl", t["sfx"], height_p=460, top_m=105)
+    save_sz_plotly(fp1, t["p1_t"], t["src_ba"], now_str, "01_einfache_spannungszahl", t["sfx"], height_p=460, top_m=105, tick_step=6)
 
     # 2. Einfache Spannungszahl (Zoom 13 Monate)
     months_z = months_all[-13:]
@@ -337,7 +342,8 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     anchors_z = [
         (months_z[0], t["p2_l_vj"], "#D97706", "--"),
         (months_z[max(0, len(months_z) - 7)], f"{t['p2_l_prefix']}{t['m'][int(months_z[max(0, len(months_z) - 7)][5:7]) - 1]} {months_z[max(0, len(months_z) - 7)][:4]})", "#059669", ":"),
-        (months_z[max(0, len(months_z) - 4)], f"{t['p2_l_prefix']}{t['m'][int(months_z[max(0, len(months_z) - 4)][5:7]) - 1]} {months_z[max(0, len(months_z) - 4)][:4]})", "#7C3AED", "-.")
+        (months_z[max(0, len(months_z) - 4)], f"{t['p2_l_prefix']}{t['m'][int(months_z[max(0, len(months_z) - 4)][5:7]) - 1]} {months_z[max(0, len(months_z) - 4)][:4]})", "#7C3AED", "-."),
+        (months_z[max(0, len(months_z) - 2)], f"{t['p2_l_prefix']}{t['m'][int(months_z[max(0, len(months_z) - 2)][5:7]) - 1]} {months_z[max(0, len(months_z) - 2)][:4]})", "#DC2626", "--")
     ]
     for anc_ym, anc_lbl, anc_col, anc_ls in anchors_z:
         su = line_unv(d_einf, anc_ym, months_z)
@@ -351,7 +357,7 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     draw_year_groups(ax, months_z, t["m"], step=1, year_y=-0.24)
     ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.3)
     save_fig(fig, t["src_ba"], "02_einfache_spannungszahl_zoom")
-    save_sz_plotly(fp2, t["p2_t"], t["src_ba"], now_str, "02_einfache_spannungszahl_zoom", t["sfx"], height_p=540, top_m=150)
+    save_sz_plotly(fp2, t["p2_t"], t["src_ba"], now_str, "02_einfache_spannungszahl_zoom", t["sfx"], height_p=555, top_m=170)
 
     # 3. Erweiterte Spannungszahl (Gesamt)
     months_erw = [ym for ym in sz_erw.index if ym >= "2019-01"]
@@ -380,7 +386,7 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     if not s_unv3.empty:
         yu3 = [round(float(v), 1) for v in s_unv3.values]
         fp3.add_trace(go.Scatter(x=list(s_unv3.index), y=yu3, customdata=fmt_arr(yu3), name=l3_b, mode="lines", line=dict(color="#1B3A6B", width=1.8, dash="dash"), hovertemplate=f"{l3_b}: <b>%{{customdata}}</b><extra></extra>"))
-    save_sz_plotly(fp3, t["p3_t"], t["src_ba_kug"], now_str, "03_erweiterte_spannungszahl", t["sfx"], height_p=460, top_m=105)
+    save_sz_plotly(fp3, t["p3_t"], t["src_ba_kug"], now_str, "03_erweiterte_spannungszahl", t["sfx"], height_p=460, top_m=105, tick_step=6)
 
     # 4. Erweiterte Spannungszahl (Zoom 13 Monate)
     months_ez = months_erw[-13:]
@@ -420,14 +426,14 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
 
     l5_bip, l5_einf, l5_erw = t["p5_l"]
     q_to_m = {"Q1": "02", "Q2": "05", "Q3": "08", "Q4": "11"}
-    bx, by, b_months = [], [], []
+    bx, by, bip_map = [], [], {}
     for k, v in bip_q.items():
         m_part = q_to_m.get(k[-2:], "")
         ym_key = f"{k[:4]}-{m_part}"
         if ym_key in months_all:
             bx.append(months_all.index(ym_key))
             by.append(float(v))
-            b_months.append(ym_key)
+            bip_map[ym_key] = round(float(v), 1)
     p_bip = ax1.plot(bx, by, color="#059669", lw=2.2, label=l5_bip, zorder=4)
     for xi_b, yi_b in zip(bx, by):
         off = 0.7 if yi_b >= 0 else -1.2
@@ -439,14 +445,15 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     ax1.legend(lines, [l.get_label() for l in lines], loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.6)
     save_fig(fig, t["src_all"], "05_spannungszahl_bip")
 
+    y_bip_full = [bip_map.get(ym, None) for ym in months_all]
     fp5 = make_subplots(specs=[[{"secondary_y": True}]])
-    fp5.add_trace(go.Scatter(x=b_months, y=[round(v, 1) for v in by], customdata=fmt_arr(by), name=l5_bip, mode="lines+markers", marker=dict(size=6), line=dict(color="#059669", width=2.3), connectgaps=True, hovertemplate=f"{l5_bip}: <b>%{{customdata}} %</b><extra></extra>"), secondary_y=False)
+    fp5.add_trace(go.Scatter(x=months_all, y=y_bip_full, customdata=fmt_arr(y_bip_full), name=l5_bip, mode="lines+markers", marker=dict(size=6), line=dict(color="#059669", width=2.3), connectgaps=True, hovertemplate=f"{l5_bip}: <b>%{{customdata}} %</b><extra></extra>"), secondary_y=False)
     fp5.add_trace(go.Scatter(x=months_all, y=[round(v, 1) for v in y_einf], customdata=fmt_arr(y_einf), name=l5_einf, mode="lines", line=dict(color="#1B3A6B", width=2.1), hovertemplate=f"{l5_einf}: <b>%{{customdata}}</b><extra></extra>"), secondary_y=True)
     y_erw_clean = [None if np.isnan(v) else round(float(v), 1) for v in y_erw]
     fp5.add_trace(go.Scatter(x=months_all, y=y_erw_clean, customdata=fmt_arr(y_erw_clean), name=l5_erw, mode="lines", line=dict(color="#D97706", width=2.1), hovertemplate=f"{l5_erw}: <b>%{{customdata}}</b><extra></extra>"), secondary_y=True)
     fp5.update_yaxes(title_text=t["p5_yl"].replace("\n", " "), range=[-12, 12], dtick=4, fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, secondary_y=False)
     fp5.update_yaxes(title_text=t["p5_yr"].replace("\n", " "), range=[-8000, 8000], dtick=2000, fixedrange=True, showgrid=False, secondary_y=True)
-    save_sz_plotly(fp5, t["p5_t"], t["src_all"], now_str, "05_spannungszahl_bip", t["sfx"], height_p=490, top_m=125)
+    save_sz_plotly(fp5, t["p5_t"], t["src_all"], now_str, "05_spannungszahl_bip", t["sfx"], height_p=490, top_m=125, tick_step=6)
 
 def main():
     s_stellen, s_alo, s_kug = load_labor_market()
