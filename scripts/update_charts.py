@@ -1,4 +1,4 @@
-import os, io, zipfile, requests
+import os, io, re, zipfile, requests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -58,13 +58,19 @@ def get_bbk(key, n=13, scale=1.0):
     url = "https://api.statistiken." + "bundesbank.de" + "/rest/data/" + flow + "/" + k + "?format=csv&lang=de"
     r = requests.get(url, timeout=20)
     r.raise_for_status()
-    df = pd.read_csv(io.StringIO(r.text), sep=";", on_bad_lines="skip")
-    tc = next(c for c in df.columns if "TIME_PERIOD" in c)
-    vc = next(c for c in df.columns if "OBS_VALUE" in c)
-    df = df.dropna(subset=(tc, vc))
-    vals = pd.to_numeric(df[vc].astype(str).str.replace(",", "."), errors="coerce") * scale
-    df = df.assign(V=vals).dropna(subset=("V",)).tail(n)
-    return pd.Series(df["V"].values, index=df[tc].astype(str).str.strip().values)
+    rows = []
+    for ln in r.text.splitlines():
+        parts = [p.strip().strip('"') for p in ln.split(";")]
+        if len(parts) >= 2 and re.match(r"^\d{4}-\d{2}$", parts[0]):
+            try:
+                val = float(parts[1].replace(",", ".")) * scale
+                rows.append((parts[0], val))
+            except ValueError:
+                pass
+    if not rows:
+        raise RuntimeError(f"Bundesbank {key} lieferte keine Monatswerte. Erste Zeilen: {r.text[:250]}")
+    s = pd.Series([v for _, v in rows], index=[t for t, _ in rows]).tail(n)
+    return s
 
 def get_destatis(table):
     if not D_USER or not D_PASS:
@@ -91,11 +97,12 @@ def get_destatis(table):
     zeit_s = df[t_col].astype(str).str.strip()
     for c in df.columns:
         s_code = df[c].astype(str).str.strip()
-        if s_code.str.match(r"^QUART0[1-4]$").any():
+        if s_code.str.match(r"^QUART0?[1-4]$").any():
             zeit_s = zeit_s + "-Q" + s_code.str[-1:]
             break
-        if s_code.str.match(r"^MONAT(0[1-9]|1[0-2])$").any():
-            zeit_s = zeit_s + "-" + s_code.str[-2:]
+        if s_code.str.match(r"^MONAT(0?[1-9]|1[0-2])$").any():
+            m_num = s_code.str.replace("MONAT", "", regex=False).str.zfill(2)
+            zeit_s = zeit_s + "-" + m_num
             break
     df["ZEIT"] = zeit_s
     df["WERT"] = df[v_col]
