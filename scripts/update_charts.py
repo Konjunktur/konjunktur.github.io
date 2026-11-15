@@ -13,8 +13,8 @@ G_URL = "https://www-genesis." + "destatis.de" + "/genesisWS/rest/2020/data/tabl
 TEXTS = {
     "de": {
         "p1_t": "Bruttoinlandsprodukt: Entstehung", "p1_s": "Veränderung zum Vorjahr in % (preisbereinigt, Ursprungswerte)",
-        "p1_l": ("Bruttoinlandsprodukt", "Produzierendes Gewerbe ohne Baugewerbe", "Baugewerbe", "Handel, Verkehr, Gastgewerbe"),
-        "p1_h": ("BIP", "Prod. Gew. o. Bau", "Baugewerbe", "Handel/Verkehr/Gastg."),
+        "p1_l": ("Reales BIP", "Produzierendes Gewerbe ohne Baugewerbe", "Baugewerbe", "Handel, Verkehr, Gastgewerbe"),
+        "p1_h": ("Reales BIP", "Prod. Gew. o. Bau", "Baugewerbe", "Handel/Verkehr/Gastg."),
         "p2_t": "Bruttoinlandsprodukt: Verwendung", "p2_s": "Veränderung zum Vorjahr in % (Ursprungswerte)",
         "p2_l": ("Nominales BIP", "Privater Konsum", "Konsumausgaben der priv. Haushalte", "Ausrüstungsinvestitionen", "Bauinvestitionen", "Exporte", "Importe"),
         "p2_h": ("Nom. BIP", "Priv. Konsum", "Konsum priv. HH", "Ausrüstungen", "Bauten", "Exporte", "Importe"),
@@ -32,8 +32,8 @@ TEXTS = {
     },
     "en": {
         "p1_t": "Gross Domestic Product: Production", "p1_s": "Change on previous year in % (price-adjusted, unadjusted data)",
-        "p1_l": ("Gross domestic product", "Industry excluding construction", "Construction", "Trade, transport, accommodation and food services"),
-        "p1_h": ("GDP", "Industry excl. constr.", "Construction", "Trade/transp./hosp."),
+        "p1_l": ("Real GDP", "Industry excluding construction", "Construction", "Trade, transport, accommodation and food services"),
+        "p1_h": ("Real GDP", "Industry excl. constr.", "Construction", "Trade/transp./hosp."),
         "p2_t": "Gross Domestic Product: Expenditure", "p2_s": "Change on previous year in % (unadjusted data)",
         "p2_l": ("Nominal GDP", "Private consumption", "Household final consumption expenditure", "Machinery and equipment investment", "Construction investment", "Exports", "Imports"),
         "p2_h": ("Nom. GDP", "Priv. cons.", "Household cons.", "Machinery/equip.", "Construction", "Exports", "Imports"),
@@ -155,12 +155,15 @@ def draw_p2(ax, t, d):
     style_panel(ax, t["p2_t"], t["p2_s"], -10, 15, range(-10, 20, 5), title_y=1.52, sub_y=1.43)
     l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]
     draw_bars_with_labels(ax, xi, d["bip_n"], l2_0, t["comma"])
-    for vals, col, lbl in (
-        (d["kp"], "#D97706", l2_1), (d["kph"], "#059669", l2_2),
-        (d["aus"], "#7C3AED", l2_3), (d["binv"], "#0284C7", l2_4),
-        (d["exp"], "#DC2626", l2_5), (d["imp"], "#64748B", l2_6)
+    for vals, col, lbl, lstyle in (
+        (d["kp"], "#D97706", l2_1, "-"),
+        (d["kph"], "#059669", l2_2, "--"),
+        (d["aus"], "#7C3AED", l2_3, "-"),
+        (d["binv"], "#0284C7", l2_4, "-"),
+        (d["exp"], "#DC2626", l2_5, "-"),
+        (d["imp"], "#64748B", l2_6, "-")
     ):
-        ax.plot(xi, vals, color=col, lw=1.6, label=lbl, zorder=3)
+        ax.plot(xi, vals, color=col, lw=1.7, ls=lstyle, label=lbl, zorder=3)
     ax.set_xticks(xi); ax.set_xticklabels(xl_bip); set_legend(ax, 2)
 
 def draw_p3(ax, t, d):
@@ -268,18 +271,21 @@ def build_for_lang(lang, data):
         fp1.add_trace(go.Scatter(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data[key_s]], name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.1), hovertemplate=f"{hov_s}: <b>%{{y:.1f}} %</b><extra></extra>"))
     save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_destatis", "01_bip_entstehung", top_m=165, height_p=515)
 
-    # 2. BIP Verwendung (Interaktiv)
+    # 2. BIP Verwendung (Interaktiv, grüne Linie gestrichelt)
     fp2 = go.Figure()
     l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]
     h2_0, h2_1, h2_2, h2_3, h2_4, h2_5, h2_6 = t["p2_h"]
     fp2.add_trace(go.Bar(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data["bip_n"]], name=l2_0, marker_color="#1B3A6B", hovertemplate=f"{h2_0}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    for lbl_s, hov_s, key_s, col_s in (
-        (l2_1, h2_1, "kp", "#D97706"), (l2_2, h2_2, "kph", "#059669"),
-        (l2_3, h2_3, "aus", "#7C3AED"), (l2_4, h2_4, "binv", "#0284C7"),
-        (l2_5, h2_5, "exp", "#DC2626"), (l2_6, h2_6, "imp", "#64748B")
+    for lbl_s, hov_s, key_s, col_s, d_style in (
+        (l2_1, h2_1, "kp", "#D97706", "solid"),
+        (l2_2, h2_2, "kph", "#059669", "dash"),
+        (l2_3, h2_3, "aus", "#7C3AED", "solid"),
+        (l2_4, h2_4, "binv", "#0284C7", "solid"),
+        (l2_5, h2_5, "exp", "#DC2626", "solid"),
+        (l2_6, h2_6, "imp", "#64748B", "solid")
     ):
-        fp2.add_trace(go.Scatter(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data[key_s]], name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0), hovertemplate=f"{hov_s}: <b>%{{y:.1f}} %</b><extra></extra>"))
-    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_destatis", "02_bip_verwendung", top_m=225, height_p=575)
+        fp2.add_trace(go.Scatter(x=xq_p, y=[None if np.isnan(v) else round(float(v), 1) for v in data[key_s]], name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0, dash=d_style), hovertemplate=f"{hov_s}: <b>%{{y:.1f}} %</b><extra></extra>"))
+    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_destatis", "02_bip_verwendung", top_m=245, height_p=595)
 
     # 3. Auftragseingänge (Interaktiv)
     fp3 = go.Figure()
@@ -320,7 +326,6 @@ def main():
     df_q2 = get_destatis("81000-0012")
     df_y2_hh = get_destatis("81000-0019")
     df_q2_hh = get_destatis("81000-0020")
-    print(f"[DESTATIS] 81000-0019: {df_y2_hh.shape} | 81000-0020: {df_q2_hh.shape}")
 
     yrs = tuple(sorted([z for z in df_y1["ZEIT"].astype(str).unique() if len(z) == 4 and z.isdigit()])[-5:]) if not df_y1.empty else ("2021", "2022", "2023", "2024", "2025")
     qtrs = tuple(sorted([z for z in df_q1["ZEIT"].astype(str).unique() if "Q" in z])[-14:]) if not df_q1.empty else ("2023-Q2","2023-Q3","2023-Q4","2024-Q1","2024-Q2","2024-Q3","2024-Q4","2025-Q1","2025-Q2","2025-Q3","2025-Q4","2026-Q1","2026-Q2","2026-Q3")
