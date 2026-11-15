@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+import plotly.graph_objects as go
 
 os.makedirs("static/dashboard", exist_ok=True)
 D_USER = os.environ.get("DESTATIS_USER", "")
@@ -233,6 +234,75 @@ def build_for_lang(lang, data):
     save_single(draw_p4, t, data, "04_produktion_einzelhandel", "src_bbk")
     save_single(draw_p5, t, data, "05_leistungsbilanz", "src_bbk")
     save_single(draw_p6, t, data, "06_arbeitslosigkeit_inflation", "src_bbk")
+
+    # Interaktive Plotly-Charts für die 6 Dashboard-Grafiken
+    now_str_p = now.strftime(t.get("date_fmt"))
+    def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p, x_title=""):
+        fig_p.update_layout(
+            title=dict(text=f"<b>{title_p}</b><br><span style='font-size:12px;color:#475569;'>{sub_p}</span>", x=0.04, y=0.95, font=dict(size=16.5, color="#0F172A", family="DejaVu Sans, sans-serif")),
+            plot_bgcolor="#F8FAFC", paper_bgcolor="white",
+            hovermode="x unified",
+            hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=12, color="#0F172A")),
+            legend=dict(orientation="h", x=0.0, y=1.02, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=11.5, color="#1E293B")),
+            margin=dict(l=55, r=25, t=115, b=65),
+            height=460,
+            annotations=[
+                dict(text=f"{t.get(src_key)}{now_str_p}", x=0.0, y=-0.16, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#64748B"), xanchor="left"),
+                dict(text="T.H.", x=1.0, y=-0.16, xref="paper", yref="paper", showarrow=False, font=dict(size=11, color="#94A3B8"), xanchor="right")
+            ]
+        )
+        fig_p.update_xaxes(showgrid=False, linecolor="#94A3B8", tickfont=dict(size=11, color="#475569"), title_text=x_title, title_font=dict(size=11, color="#475569"))
+        fig_p.update_yaxes(gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, tickfont=dict(size=11, color="#475569"))
+        fig_p.write_html(f"static/dashboard/{fname_p}{t.get('sfx')}.html", include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
+
+    xq_p = list(data.get("xl_bip"))
+    # 1. BIP Entstehung (Interaktiv)
+    fp1 = go.Figure()
+    l1 = t.get("p1_l")
+    fp1.add_trace(go.Bar(x=xq_p, y=[round(float(v), 1) for v in data.get("bip_r")], name=l1[0], marker_color="#1B3A6B", hovertemplate="%{y:.1f} %"))
+    for idx_s, key_s, col_s in ((1, "pg", "#D97706"), (2, "bau", "#059669"), (3, "hvg", "#0284C7")):
+        fp1.add_trace(go.Scatter(x=xq_p, y=[round(float(v), 1) for v in data.get(key_s)], name=l1[idx_s], mode="lines+markers", marker=dict(size=6), line=dict(color=col_s, width=2.2), hovertemplate="%{y:.1f} %"))
+    save_dash_plotly(fp1, t.get("p1_t"), t.get("p1_s"), "src_destatis", "01_bip_entstehung")
+
+    # 2. BIP Verwendung (Interaktiv)
+    fp2 = go.Figure()
+    l2 = t.get("p2_l")
+    fp2.add_trace(go.Bar(x=xq_p, y=[round(float(v), 1) for v in data.get("bip_n")], name=l2[0], marker_color="#1B3A6B", hovertemplate="%{y:.1f} %"))
+    for idx_s, key_s, col_s in ((1, "kp", "#D97706"), (2, "ks", "#059669"), (3, "aus", "#7C3AED"), (4, "binv", "#0284C7"), (5, "exp", "#DC2626"), (6, "imp", "#64748B")):
+        fp2.add_trace(go.Scatter(x=xq_p, y=[round(float(v), 1) for v in data.get(key_s)], name=l2[idx_s], mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0), hovertemplate="%{y:.1f} %"))
+    save_dash_plotly(fp2, t.get("p2_t"), t.get("p2_s"), "src_destatis", "02_bip_verwendung")
+
+    # 3. Auftragseingänge (Interaktiv)
+    fp3 = go.Figure()
+    l3 = t.get("p3_l")
+    s_ai, s_ab = data.get("s_ai"), data.get("s_ab")
+    fp3.add_trace(go.Scatter(x=list(s_ai.index), y=[round(float(v), 1) for v in s_ai.values], name=l3[0], mode="lines+markers", marker=dict(size=6), line=dict(color="#1B3A6B", width=2.4), hovertemplate="%{y:.1f} %"))
+    fp3.add_trace(go.Scatter(x=list(s_ab.index), y=[round(float(v), 1) for v in s_ab.values], name=l3[1], mode="lines+markers", marker=dict(size=6), line=dict(color="#D97706", width=2.2), hovertemplate="%{y:.1f} %"))
+    save_dash_plotly(fp3, t.get("p3_t"), t.get("p3_s"), "src_bbk", "03_auftragseingaenge")
+
+    # 4. Produktion & Einzelhandelsumsätze (Interaktiv)
+    fp4 = go.Figure()
+    l4 = t.get("p4_l")
+    for idx_s, key_s, col_s in ((0, "s_pi", "#1B3A6B"), (1, "s_pb", "#D97706"), (2, "s_eh", "#059669")):
+        ser_p = data.get(key_s)
+        fp4.add_trace(go.Scatter(x=list(ser_p.index), y=[round(float(v), 1) for v in ser_p.values], name=l4[idx_s], mode="lines+markers", marker=dict(size=6), line=dict(color=col_s, width=2.2), hovertemplate="%{y:.1f} %"))
+    save_dash_plotly(fp4, t.get("p4_t"), t.get("p4_s"), "src_bbk", "04_produktion_einzelhandel")
+
+    # 5. Leistungsbilanzsaldo (Interaktiv)
+    fp5 = go.Figure()
+    s_lb = data.get("s_lb")
+    fp5.add_trace(go.Bar(x=list(s_lb.index), y=[round(float(v), 1) for v in s_lb.values], name=t.get("p5_l"), marker_color="#1B3A6B", hovertemplate="%{y:.1f} Mrd. €"))
+    save_dash_plotly(fp5, t.get("p5_t"), t.get("p5_s"), "src_bbk", "05_leistungsbilanz")
+
+    # 6. Arbeitslosigkeit und Inflation (Interaktiv)
+    fp6 = go.Figure()
+    l6 = t.get("p6_l")
+    s_al, s_hv = data.get("s_al"), data.get("s_hv")
+    fp6.add_trace(go.Scatter(x=list(s_al.index), y=[round(float(v), 1) for v in s_al.values], name=l6[0], mode="lines+markers", marker=dict(size=6), line=dict(color="#1B3A6B", width=2.4), hovertemplate="%{y:.1f} %"))
+    fp6.add_trace(go.Scatter(x=list(s_hv.index), y=[round(float(v), 1) for v in s_hv.values], name=l6[2], mode="lines+markers", marker=dict(size=6), line=dict(color="#D97706", width=2.4), hovertemplate="%{y:.1f} %"))
+    fp6.add_hline(y=3.0, line_dash="dot", line_color="#1B3A6B", annotation_text=l6[1], annotation_position="top left", annotation_font=dict(size=10.5, color="#1B3A6B"))
+    fp6.add_hline(y=2.0, line_dash="dot", line_color="#059669", annotation_text=l6[3], annotation_position="bottom left", annotation_font=dict(size=10.5, color="#059669"))
+    save_dash_plotly(fp6, t.get("p6_t"), t.get("p6_s"), "src_all", "06_arbeitslosigkeit_inflation")
 
 def main():
     df_y1 = get_destatis("81000-0001")
