@@ -69,12 +69,13 @@ def get_bbk(key, n=13, scale=1.0):
 def get_destatis(table):
     if not D_USER or not D_PASS:
         raise RuntimeError("DESTATIS_USER oder DESTATIS_PASS fehlt.")
-    p = {"username": D_USER, "password": D_PASS, "name": table, "area": "all", "compress": "false", "format": "ffcsv", "language": "de"}
-    r = requests.get(G_URL, params=p, timeout=40)
+    headers = {"username": D_USER, "password": D_PASS, "Content-Type": "application/x-www-form-urlencoded"}
+    data = {"name": table, "area": "all", "compress": "false", "format": "ffcsv", "language": "de"}
+    r = requests.post(G_URL, headers=headers, data=data, timeout=45)
     r.raise_for_status()
     lines = [ln for ln in r.text.splitlines() if ln.count(";") >= 4]
     if len(lines) < 5:
-        raise RuntimeError(f"Destatis Tabelle {table} lieferte keine gültigen Daten.")
+        raise RuntimeError(f"Destatis Tabelle {table} Antwort: {r.text[:300]}")
     df = pd.read_csv(io.StringIO("\n".join(lines)), sep=";", decimal=",", on_bad_lines="skip")
     text_cols = [c for c in df.columns if c not in ("ZEIT", "WERT")]
     df["_ROW"] = df.loc[:, text_cols].fillna("").astype(str).agg(" | ".join, axis=1)
