@@ -9,7 +9,7 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 ## Bruttoinlandsprodukt: Entstehung
 
-![Bruttoinlandsprodukt: Entstehung](/dashboard/01_bip_entstehung.png)
+<iframe src="/dashboard/01_bip_entstehung.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
 
 - [In Vollbild anzeigen](/dashboard/01_bip_entstehung.png)
 - *Erläuterung* - Veränderung des preisbereinigten Bruttoinlandsprodukts sowie ausgewählter Entstehungskomponenten gegenüber dem Vorjahr in Prozent (Originalwerte).
@@ -17,7 +17,7 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 ## Bruttoinlandsprodukt: Verwendung
 
-![Bruttoinlandsprodukt: Verwendung](/dashboard/02_bip_verwendung.png)
+<iframe src="/dashboard/02_bip_verwendung.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
 
 - [In Vollbild anzeigen](/dashboard/02_bip_verwendung.png)
 - *Erläuterung* - Veränderung des nominalen BIP sowie preisbereinigter Verwendungskomponenten gegenüber dem Vorjahr in Prozent (Originalwerte).
@@ -25,7 +25,7 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 ## Auftragseingänge
 
-![Auftragseingänge](/dashboard/03_auftragseingaenge.png)
+<iframe src="/dashboard/03_auftragseingaenge.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
 
 - [In Vollbild anzeigen](/dashboard/03_auftragseingaenge.png)
 - *Erläuterung* - Volumenindex der Auftragseingänge in der Industrie und im Bauhauptgewerbe, Veränderung gegenüber dem Vorjahr in Prozent.
@@ -33,7 +33,7 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 ## Produktion & Einzelhandelsumsätze
 
-![Produktion & Einzelhandelsumsätze](/dashboard/04_produktion_einzelhandel.png)
+<iframe src="/dashboard/04_produktion_einzelhandel.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
 
 - [In Vollbild anzeigen](/dashboard/04_produktion_einzelhandel.png)
 - *Erläuterung* - Preis- und kalenderbereinigte Veränderung gegenüber dem Vorjahr in Prozent.
@@ -41,7 +41,7 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 ## Leistungsbilanzsaldo
 
-![Leistungsbilanzsaldo](/dashboard/05_leistungsbilanz.png)
+<iframe src="/dashboard/05_leistungsbilanz.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
 
 - [In Vollbild anzeigen](/dashboard/05_leistungsbilanz.png)
 - *Erläuterung* - Monatlicher Leistungsbilanzsaldo Deutschlands in Milliarden Euro (Originalwerte).
@@ -49,8 +49,8 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 ## Arbeitslosigkeit und Inflation
 
-![Arbeitslosigkeit und Inflation](/dashboard/06_arbeitslosigkeit_inflation.png)
+<iframe src="/dashboard/06_arbeitslosigkeit_inflation.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
 
 - [In Vollbild anzeigen](/dashboard/06_arbeitslosigkeit_inflation.png)
 - *Erläuterung* - Arbeitslosenquote sowie Veränderung des Harmonisierten Verbraucherpreisindex (HVPI) gegenüber dem Vorjahr in Prozent (Originalwerte).
-- *Quelle* - Deutsche Bundesbank.
+- *Quelle* - Statistisches Bundesamt, Deutsche Bundesbank.
