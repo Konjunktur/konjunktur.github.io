@@ -47,9 +47,9 @@ TEXTS = {
         "p6_t": "Unemployment and Inflation", "p6_s": "Rate / change on previous year in % (unadjusted data)",
         "p6_l": ("Unemployment rate", "Full employment (3%)", "Inflation (HICP)", "ECB inflation target (2%)"),
         "unit_lb": "bn €",
-        "src_all": "Sources: Federal Statistical Office (incl. Federal Employment Agency data), Deutsche Bundesbank | As of: ",
+        "src_all": "Sources: Federal Statistical Office (incl. FEA data), Deutsche Bundesbank | As of: ",
         "src_destatis": "Source: Federal Statistical Office | As of: ",
-        "src_ba_destatis": "Source: Federal Statistical Office (Federal Employment Agency data) | As of: ",
+        "src_ba_destatis": "Source: Federal Statistical Office (FEA data) | As of: ",
         "src_bbk": "Source: Deutsche Bundesbank | As of: ",
         "date_fmt": "%Y-%m-%d", "comma": False, "sfx": "_en"
     }
