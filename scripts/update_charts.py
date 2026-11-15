@@ -66,10 +66,10 @@ def get_bbk(keys, n=13, scale=1.0):
         rows = []
         for ln in r.text.splitlines():
             parts = [p.strip().strip('"') for p in ln.split(";")]
-            if len(parts) >= 2 and re.match(r"^\d{4}-\d{2}$", parts):
+            if len(parts) >= 2 and re.match(r"^\d{4}-\d{2}$", parts[0]):
                 try:
-                    val = float(parts.replace(",", ".")) * scale
-                    rows.append((parts, val))
+                    val = float(parts[1].replace(",", ".")) * scale
+                    rows.append((parts[0], val))
                 except ValueError:
                     pass
         if rows:
@@ -124,16 +124,18 @@ def get_destatis(table, startyear="2021"):
     v_col = col_map.get("value") or col_map.get("wert")
     if not t_col or not v_col:
         raise RuntimeError(f"Unerwartete Spalten in {table}: {list(df.columns)}")
-    zeit_s = df[t_col].astype(str).str.strip()
+        zeit_s = df[t_col].astype(str).str.strip()
     for c in df.columns:
         s_code = df[c].astype(str).str.strip()
-        if s_code.str.match(r"^QUART0?[1-4]$").any():
-            zeit_s = zeit_s + "-Q" + s_code.str[-1:]
+        if s_code.str.contains(r"QUART0?[1-4]", regex=True).any():
+            q_num = s_code.str.extract(r"QUART0?([1-4])")[0]
+            zeit_s = zeit_s + "-Q" + q_num
             break
-        if s_code.str.match(r"^MONAT(0?[1-9]|1[0-2])$").any():
-            m_num = s_code.str.replace("MONAT", "", regex=False).str.zfill(2)
+        if s_code.str.contains(r"MONAT0?(?:[1-9]|1[0-2])", regex=True).any():
+            m_num = s_code.str.extract(r"MONAT0?([1-9]|1[0-2])")[0].str.zfill(2)
             zeit_s = zeit_s + "-" + m_num
             break
+
     df["ZEIT"] = zeit_s
     df["WERT"] = df[v_col]
     skip_cols = {"ZEIT", "WERT", t_col, v_col}
