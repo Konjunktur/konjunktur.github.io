@@ -37,8 +37,8 @@ TEXTS = {
         "p5_yr": "Spannungszahl,\nLinie unv. wirtschaftl. Aktivität",
         "x_m": "Monatswerte",
         "x_mq": "Monatswerte (Spannungszahl) / Quartalswerte (reales BIP)",
-        "src_ba": "Source: Federal Statistical Office (FEA data), own calculations | As of: ",
-        "src_ba_kug": "Source: Federal Statistical Office (FEA data), own calculations; *includes short-time work | As of: ",
+        "src_ba": "Quelle: Statistisches Bundesamt (BA-Daten), eigene Berechnungen | Stand: ",
+        "src_ba_kug": "Quelle: Statistisches Bundesamt (BA-Daten), eigene Berechnungen; *berücksichtigt Kurzarbeit | Stand: ",
         "src_all": "Quellen: Statistisches Bundesamt, eigene Berechnungen | Stand: ",
         "date_fmt": "%d.%m.%Y", "comma": True, "sfx": ""
     },
@@ -63,8 +63,8 @@ TEXTS = {
         "p5_yr": "Economic Tension Number,\nline of unch. economic activity",
         "x_m": "Monthly values",
         "x_mq": "Monthly values (Economic Tension Number) / Quarterly values (real GDP)",
-        "src_ba": "Source: Federal Statistical Office (Federal Employment Agency data), own calculations | As of: ",
-        "src_ba_kug": "Source: Federal Statistical Office (Federal Employment Agency data), own calculations; *includes short-time work | As of: ",
+        "src_ba": "Source: Federal Statistical Office (FEA data), own calculations | As of: ",
+        "src_ba_kug": "Source: Federal Statistical Office (FEA data), own calculations; *includes short-time work | As of: ",
         "src_all": "Sources: Federal Statistical Office, own calculations | As of: ",
         "date_fmt": "%Y-%m-%d", "comma": False, "sfx": "_en"
     }
