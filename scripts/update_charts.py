@@ -66,12 +66,15 @@ def get_bbk(keys, n=13, scale=1.0):
         rows = []
         for ln in r.text.splitlines():
             parts = [p.strip().strip('"') for p in ln.split(";")]
-            if len(parts) >= 2 and re.match(r"^\d{4}-\d{2}$", parts):
-                try:
-                    val = float(parts.replace(",", ".")) * scale
-                    rows.append((parts, val))
-                except ValueError:
-                    pass
+            if len(parts) >= 2:
+                p_time = parts.pop(0)
+                p_val = parts.pop(0)
+                if re.match(r"^\d{4}-\d{2}$", p_time):
+                    try:
+                        val = float(p_val.replace(",", ".")) * scale
+                        rows.append((p_time, val))
+                    except ValueError:
+                        pass
         if rows:
             df_s = pd.DataFrame(rows, columns=["t", "v"]).drop_duplicates(subset=["t"], keep="last")
             return pd.Series(df_s["v"].values, index=df_s["t"].values).tail(n)
@@ -115,11 +118,11 @@ def get_destatis(table, startyear="2021"):
     rows = [row for row in reader if len(row) >= 5]
     if len(rows) < 3:
         raise RuntimeError(f"Destatis Tabelle {table} zu wenig Zeilen: {raw_text[:300]}")
-    header = rows
+    header = [str(h).strip() for h in rows.pop(0)]
     width = len(header)
-    clean_rows = [row[:width] for row in rows[1:] if len(row) >= width]
+    clean_rows = [row[:width] for row in rows if len(row) >= width]
     df = pd.DataFrame(clean_rows, columns=header)
-    col_map = {c.lower().strip(): c for c in df.columns}
+    col_map = {c.lower(): c for c in df.columns}
     t_col = col_map.get("time") or col_map.get("zeit")
     v_col = col_map.get("value") or col_map.get("wert")
     if not t_col or not v_col:
