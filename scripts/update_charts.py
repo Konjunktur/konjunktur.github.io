@@ -83,8 +83,8 @@ def get_destatis(table):
     if len(lines) < 5:
         raise RuntimeError(f"Destatis Tabelle {table} Antwort: {raw_text[:300]}")
     df = pd.read_csv(io.StringIO("\n".join(lines)), sep=";", decimal=",", on_bad_lines="skip")
-    col_map = {c.lower(): c for c in df.columns}
-    t_col = col_map.get("zeit")
+    col_map = {c.lower().strip(): c for c in df.columns}
+    t_col = col_map.get("time") or col_map.get("zeit")
     v_col = col_map.get("value") or col_map.get("wert")
     if not t_col or not v_col:
         raise RuntimeError(f"Unerwartete Spalten in {table}: {list(df.columns)}")
