@@ -418,16 +418,14 @@ def verify_non_empty(name, arr):
 
 def main():
     df_y1 = get_destatis("81000-0001", "2021")
-    df_q1 = get_destatis("81000-0011", "2021")
+    df_q1 = get_destatis("81000-0013", "2021")
     df_y2 = get_destatis("81000-0002", "2021")
-    df_q2 = get_destatis("81000-0012", "2021")
+    df_q2 = get_destatis("81000-0014", "2021")
     df_y2_hh = get_destatis("81000-0019", "2021")
     df_q2_hh = get_destatis("81000-0020", "2021")
 
     yrs = tuple(sorted([z for z in df_y1["ZEIT"].astype(str).unique() if len(z) == 4 and z.isdigit()])[-5:])
     qtrs = tuple(sorted([z for z in df_q1["ZEIT"].astype(str).unique() if "Q" in z])[-14:])
-    if not qtrs:
-        print("[INFO 81000-0011 Zeilenbeispiel]:", df_q1.head(2).to_dict(orient="records"))
     print(f"[ZEITRAUM] Jahre: {yrs} | Quartale: {qtrs}")
 
     xl_bip = yrs + ("",) + tuple(f"Q{q[-1]} {q[2:4]}" for q in qtrs)
@@ -462,21 +460,31 @@ def main():
         imp = get_bip_combo(df_y2, df_q2, ["preisbereinigt", "Ursprungswerte", "Importe"], [])
 
     s_ai = get_bbk(["BBDE1.M.DE.Y.BAA1.A2P000000.G.C.I21.A", "BBDE1.M.DE.Y.BAA1.A2P000000.G.C.I15.A"], 13)
+    m_ind = list(s_ai.index)
+
     df_bau_ae = get_destatis("44111-0001", "2024")
-    bau_ae_vals = parse_destatis_series(df_bau_ae, ["Volumenindex", "Veränderung zum Vorjahresmonat", "kalender"], ["saison"], list(s_ai.index))
+    bau_ae_vals = parse_destatis_series(df_bau_ae, ["Volumenindex", "Veränderung zum Vorjahresmonat", "kalender"], ["saison"], m_ind)
     if all(np.isnan(v) for v in bau_ae_vals):
-        bau_ae_vals = parse_destatis_series(df_bau_ae, ["Volumenindex", "Veränderung zum Vorjahresmonat"], ["saison"], list(s_ai.index))
-    s_ab = pd.Series(bau_ae_vals, index=s_ai.index)
+        bau_ae_vals = parse_destatis_series(df_bau_ae, ["Volumenindex", "Veränderung zum Vorjahresmonat"], ["saison"], m_ind)
+    s_ab = pd.Series(bau_ae_vals, index=m_ind)
     s_ai, s_ab = align_series([s_ai, s_ab])
 
-    s_pi = get_bbk(["BBDE1.M.DE.Y.BPI1.A2P000000.G.C.I21.A", "BBDE1.M.DE.Y.BPI1.A2P000000.G.C.I15.A", "BBDE1.M.DE.Y.BPI1.A20000000.G.C.I21.A"], 13)
-    df_bau_pr = get_destatis("44111-0002", "2024")
-    bau_pr_vals = parse_destatis_series(df_bau_pr, ["Veränderung zum Vorjahresmonat", "kalender"], ["saison"], list(s_pi.index))
-    if all(np.isnan(v) for v in bau_pr_vals):
-        bau_pr_vals = parse_destatis_series(df_bau_pr, ["Veränderung zum Vorjahresmonat"], ["saison"], list(s_pi.index))
-    s_pb = pd.Series(bau_pr_vals, index=s_pi.index)
+    df_prod = get_destatis("42153-0001", "2024")
+    pi_vals = parse_destatis_series(df_prod, ["Verarbeitendes Gewerbe", "Veränderung zum Vorjahresmonat", "kalender"], ["saison", "ohne"], m_ind)
+    if all(np.isnan(v) for v in pi_vals):
+        pi_vals = parse_destatis_series(df_prod, ["Industrie", "Veränderung zum Vorjahresmonat", "kalender"], ["saison"], m_ind)
+    s_pi = pd.Series(pi_vals, index=m_ind)
 
-    s_eh = get_bbk(["BBDE1.M.DE.Y.BVA1.G47000000.G.C.I21.A", "BBDE1.M.DE.Y.BVA1.G47000000.G.C.I15.A"], 13)
+    pb_vals = parse_destatis_series(df_prod, ["Bauhauptgewerbe", "Veränderung zum Vorjahresmonat", "kalender"], ["saison"], m_ind)
+    if all(np.isnan(v) for v in pb_vals):
+        pb_vals = parse_destatis_series(df_prod, ["Baugewerbe", "Veränderung zum Vorjahresmonat", "kalender"], ["saison", "ohne"], m_ind)
+    s_pb = pd.Series(pb_vals, index=m_ind)
+
+    df_eh = get_destatis("45212-0001", "2024")
+    eh_vals = parse_destatis_series(df_eh, ["konstanten Preisen", "Veränderung zum Vorjahresmonat", "kalender"], ["saison"], m_ind)
+    if all(np.isnan(v) for v in eh_vals):
+        eh_vals = parse_destatis_series(df_eh, ["real", "Veränderung zum Vorjahresmonat"], ["saison"], m_ind)
+    s_eh = pd.Series(eh_vals, index=m_ind)
     s_pi, s_pb, s_eh = align_series([s_pi, s_pb, s_eh])
 
     s_lb = get_bbk(["BBFBOPV.M.N.DE.W1.S1.S1.T.B.CA._Z._Z._Z.EUR._T._X.N.ALL"], 13, 0.001)
@@ -499,9 +507,9 @@ def main():
         ("Nominales BIP", bip_n), ("Privater Konsum", kp), ("Konsum priv. Haushalte", kph),
         ("Ausrüstungen", aus), ("Bauten", binv), ("Exporte", exp), ("Importe", imp),
         ("Auftragseingang Ind.", s_ai.values), ("Auftragseingang Bau", s_ab.values),
-        ("Produktion Ind.", s_pi.values), ("Einzelhandel", s_eh.values),
-        ("Leistungsbilanz", s_lb.values), ("Arbeitslosenquote", s_al.values),
-        ("HVPI Inflation", s_hv.values)
+        ("Produktion Ind.", s_pi.values), ("Bauproduktion", s_pb.values),
+        ("Einzelhandel", s_eh.values), ("Leistungsbilanz", s_lb.values),
+        ("Arbeitslosenquote", s_al.values), ("HVPI Inflation", s_hv.values)
     ):
         verify_non_empty(nm, arr)
 
