@@ -13,48 +13,48 @@ Die Spannungszahl misst die Zahl der gemeldeten Stellen (Arbeitsnachfrage) minus
 
 ## Einfache Spannungszahl (Gesamtzeitraum)
 
-<iframe src="/spannungszahl/01_einfache_spannungszahl.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
+<iframe src="/spannungszahl/01_einfache_spannungszahl.html" style="width:100%; height:470px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
 * [In Vollbild anzeigen](/spannungszahl/01_einfache_spannungszahl.png)
-* *Erläuterung* – Veränderung der Differenz aus gemeldeten Arbeitsstellen und registrierten Arbeitslosen gegenüber dem jeweiligen Vorjahresmonat (Ursprungswerte, in Tausend). Werte oberhalb der Linie unveränderter wirtschaftlicher Aktivität zeigen eine konjunkturelle Belebung gegenüber dem Referenzmonat an.
-* *Quelle* – Deutsche Bundesbank (BA-Daten), eigene Berechnungen.
+* *Erläuterung* – Veränderung der Differenz aus gemeldeten Arbeitsstellen und registrierten Arbeitslosen gegenüber dem jeweiligen Vorjahresmonat (Ursprungswerte, in Tausend).
+* *Quelle* – Statistisches Bundesamt (BA-Daten), eigene Berechnungen.
 
 ---
 
 ## Einfache Spannungszahl (Aktueller 13-Monats-Verlauf)
 
-<iframe src="/spannungszahl/02_einfache_spannungszahl_zoom.html" style="width:100%; height:550px; border:none;" loading="lazy"></iframe>
+<iframe src="/spannungszahl/02_einfache_spannungszahl_zoom.html" style="width:100%; height:550px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
 * [In Vollbild anzeigen](/spannungszahl/02_einfache_spannungszahl_zoom.png)
 * *Erläuterung* – Detailansicht der letzten 13 Monate mit Linien unveränderter wirtschaftlicher Aktivität ausgehend vom Vorjahresmonat sowie ausgewählten Referenzmonaten.
-* *Quelle* – Deutsche Bundesbank (BA-Daten), eigene Berechnungen.
+* *Quelle* – Statistisches Bundesamt (BA-Daten), eigene Berechnungen.
 
 ---
 
 ## Erweiterte Spannungszahl (Gesamtzeitraum)
 
-<iframe src="/spannungszahl/03_erweiterte_spannungszahl.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
+<iframe src="/spannungszahl/03_erweiterte_spannungszahl.html" style="width:100%; height:470px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
 * [In Vollbild anzeigen](/spannungszahl/03_erweiterte_spannungszahl.png)
 * *Erläuterung* – Berücksichtigt neben den gemeldeten Arbeitsstellen und den registrierten Arbeitslosen zusätzlich die Zahl der konjunkturellen Kurzarbeiter (Ursprungswerte, in Tausend).
-* *Quelle* – Deutsche Bundesbank (BA-Daten), eigene Berechnungen.
+* *Quelle* – Statistisches Bundesamt (BA-Daten), eigene Berechnungen.
 
 ---
 
 ## Erweiterte Spannungszahl (Aktueller 13-Monats-Verlauf)
 
-<iframe src="/spannungszahl/04_erweiterte_spannungszahl_zoom.html" style="width:100%; height:470px; border:none;" loading="lazy"></iframe>
+<iframe src="/spannungszahl/04_erweiterte_spannungszahl_zoom.html" style="width:100%; height:550px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
 * [In Vollbild anzeigen](/spannungszahl/04_erweiterte_spannungszahl_zoom.png)
 * *Erläuterung* – Detailansicht der erweiterten Spannungszahl über die letzten 13 verfügbaren Berichtsmonate.
-* *Quelle* – Deutsche Bundesbank (BA-Daten), eigene Berechnungen.
+* *Quelle* – Statistisches Bundesamt (BA-Daten), eigene Berechnungen.
 
 ---
 
 ## Spannungszahl und reales BIP
 
-<iframe src="/spannungszahl/05_spannungszahl_bip.html" style="width:100%; height:500px; border:none;" loading="lazy"></iframe>
+<iframe src="/spannungszahl/05_spannungszahl_bip.html" style="width:100%; height:500px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
 * [In Vollbild anzeigen](/spannungszahl/05_spannungszahl_bip.png)
 * *Erläuterung* – Gegenüberstellung der einfachen und der erweiterten Spannungszahl (Monatswerte, rechte Achse) mit der Veränderungsrate des preisbereinigten Bruttoinlandsprodukts gegenüber dem Vorjahr (Quartalswerte, Ursprungswerte, linke Achse).
-* *Quellen* – Statistisches Bundesamt (Destatis), Deutsche Bundesbank (BA-Daten), eigene Berechnungen.
+* *Quellen* – Statistisches Bundesamt, eigene Berechnungen.
