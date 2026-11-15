@@ -1,4 +1,4 @@
-baseURL: "https://konjunktur.github.io"
+baseURL: "https://github.io"
 title: Thorsten Hild
 theme: PaperMod
 
@@ -14,14 +14,11 @@ languages:
     weight: 1
     menu:
       main:
-        - name: Konjunktur
+        - name: Übersicht
           url: /
           weight: 1
-        - name: Spannungszahl
-          url: /spannungszahl/
-          weight: 2
     params:
-      description: "Konjunktur-Dashboard mit aktuellen Wirtschaftsdaten für Deutschland."
+      description: "Aktuelle Wirtschaftsindikatoren auf Basis amtlicher Daten."
       displayFullLangName: true
       label:
         text: Thorsten Hild
@@ -33,14 +30,11 @@ languages:
     weight: 2
     menu:
       main:
-        - name: Economy
+        - name: Overview
           url: /en/
           weight: 1
-        - name: Economic Tension Number
-          url: /en/spannungszahl/
-          weight: 2
     params:
-      description: "Economic Dashboard with current macroeconomic indicators for Germany."
+      description: "Current economic indicators based on official data."
       displayFullLangName: true
       label:
         text: Thorsten Hild
