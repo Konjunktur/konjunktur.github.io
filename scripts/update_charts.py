@@ -73,9 +73,15 @@ def get_destatis(table):
     data = {"name": table, "area": "all", "compress": "false", "format": "ffcsv", "language": "de"}
     r = requests.post(G_URL, headers=headers, data=data, timeout=45)
     r.raise_for_status()
-    lines = [ln for ln in r.text.splitlines() if ln.count(";") >= 4]
+    if r.content[:2] == b"PK":
+        with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+            csv_name = next(n for n in zf.namelist() if n.endswith(".csv"))
+            raw_text = zf.read(csv_name).decode("utf-8", errors="replace")
+    else:
+        raw_text = r.text
+    lines = [ln for ln in raw_text.splitlines() if ln.count(";") >= 4]
     if len(lines) < 5:
-        raise RuntimeError(f"Destatis Tabelle {table} Antwort: {r.text[:300]}")
+        raise RuntimeError(f"Destatis Tabelle {table} Antwort: {raw_text[:300]}")
     df = pd.read_csv(io.StringIO("\n".join(lines)), sep=";", decimal=",", on_bad_lines="skip")
     text_cols = [c for c in df.columns if c not in ("ZEIT", "WERT")]
     df["_ROW"] = df.loc[:, text_cols].fillna("").astype(str).agg(" | ".join, axis=1)
