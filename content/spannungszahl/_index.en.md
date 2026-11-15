@@ -43,7 +43,7 @@ The Economic Tension Number measures the number of reported job vacancies (labor
 
 ## Extended Economic Tension Number (Current 13-Month Trend)
 
-<iframe src="/spannungszahl/04_erweiterte_spannungszahl_zoom_en.html" style="width:100%; height:550px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
+<iframe src="/spannungszahl/04_erweiterte_spannungszahl_zoom_en.html" style="width:100%; height:470px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
 * [Open in full screen](/spannungszahl/04_erweiterte_spannungszahl_zoom_en.png)
 * *Explanation* – Detailed view of the Extended Economic Tension Number over the most recent 13 available reporting months.
