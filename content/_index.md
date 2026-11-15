@@ -1,5 +1,5 @@
 ---
-title: "Wirtschaftsindikatoren"
+title: "Die deutsche Konjunktur in 6 Grafiken"
 description: "Aktuelle Wirtschaftsindikatoren auf Basis amtlicher Daten."
 ---
 
