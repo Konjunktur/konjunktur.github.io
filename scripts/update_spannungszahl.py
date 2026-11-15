@@ -1,4 +1,4 @@
-import os, io, re, requests
+import os, io, re, csv, json, time, glob, zipfile, requests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,8 +9,8 @@ from plotly.subplots import make_subplots
 os.makedirs("static/spannungszahl", exist_ok=True)
 D_USER = os.environ.get("DESTATIS_USER", "")
 D_PASS = os.environ.get("DESTATIS_PASS", "")
-G_URL = "https://destatis.de"
-BBK_BASE = "https://api.statistiken." + "bundesbank.de" + "/rest/data/"
+G_BASE = "https://www-genesis." + "destatis.de/genesisWS/rest/2020/data"
+BBK_BASE = "https://api.statistiken." + "bundesbank.de/rest/data/"
 
 MONATE_DE = ("Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember")
 MONATE_EN = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
@@ -37,9 +37,9 @@ TEXTS = {
         "p5_yr": "Spannungszahl,\nLinie unv. wirtschaftl. Aktivität",
         "x_m": "Monatswerte",
         "x_mq": "Monatswerte (Spannungszahl) / Quartalswerte (reales BIP)",
-        "src_ba": "Quelle: Deutsche Bundesbank (BA-Daten), eigene Berechnungen | Stand: ",
-        "src_ba_kug": "Quelle: Deutsche Bundesbank (BA-Daten), eigene Berechnungen; *berücksichtigt Kurzarbeit | Stand: ",
-        "src_all": "Quellen: Statistisches Bundesamt, Deutsche Bundesbank (BA-Daten), eigene Berechnungen | Stand: ",
+        "src_ba": "Quelle: Statistisches Bundesamt (BA-Daten), eigene Berechnungen | Stand: ",
+        "src_ba_kug": "Quelle: Statistisches Bundesamt (BA-Daten), eigene Berechnungen; *berücksichtigt Kurzarbeit | Stand: ",
+        "src_all": "Quellen: Statistisches Bundesamt (BA-Daten), eigene Berechnungen | Stand: ",
         "date_fmt": "%d.%m.%Y", "comma": True, "sfx": ""
     },
     "en": {
@@ -63,81 +63,150 @@ TEXTS = {
         "p5_yr": "Economic Tension Number,\nline of unch. economic activity",
         "x_m": "Monthly values",
         "x_mq": "Monthly values (Economic Tension Number) / Quarterly values (real GDP)",
-        "src_ba": "Source: Deutsche Bundesbank (BA data), own calculations | As of: ",
-        "src_ba_kug": "Source: Deutsche Bundesbank (BA data), own calculations; *includes short-time work | As of: ",
-        "src_all": "Sources: Federal Statistical Office, Deutsche Bundesbank (BA data), own calculations | As of: ",
+        "src_ba": "Source: Federal Statistical Office (Federal Employment Agency data), own calculations | As of: ",
+        "src_ba_kug": "Source: Federal Statistical Office (Federal Employment Agency data), own calculations; *includes short-time work | As of: ",
+        "src_all": "Sources: Federal Statistical Office (Federal Employment Agency data), own calculations | As of: ",
         "date_fmt": "%Y-%m-%d", "comma": False, "sfx": "_en"
     }
 }
 
 def fmt_num(val, use_comma, dec=1):
-    s = f"{val:.{dec}f}"
+    if val is None or (isinstance(val, float) and np.isnan(val)):
+        return ""
+    s = f"{float(val):.{dec}f}"
     return s.replace(".", ",") if use_comma else s
 
-def load_bbk_labor_market():
+def _destatis_ffcsv(table, startyear="2018"):
+    if not D_USER or not D_PASS:
+        return pd.DataFrame()
+    headers = {"username": D_USER, "password": D_PASS, "Content-Type": "application/x-www-form-urlencoded"}
+    data = {"name": table, "area": "all", "compress": "false", "format": "ffcsv", "language": "de", "startyear": startyear}
+    def _unpack(resp):
+        if resp.content[:2] == b"PK":
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                return zf.read(next(n for n in zf.namelist() if n.endswith(".csv"))).decode("utf-8", errors="replace")
+        return resp.text
+    r = requests.post(f"{G_BASE}/tablefile", headers=headers, data=data, timeout=60)
+    raw = _unpack(r)
+    if raw.lstrip().startswith("{"):
+        rj = requests.post(f"{G_BASE}/tablefile", headers=headers, data={**data, "job": "true"}, timeout=60)
+        m = re.search(r"([0-9A-Z\-]+_[0-9]+)", str(json.loads(rj.text).get("Status", {}).get("Content", "")))
+        if not m:
+            return pd.DataFrame()
+        raw = ""
+        for _ in range(24):
+            time.sleep(2.5)
+            txt = _unpack(requests.post(f"{G_BASE}/resultfile", headers=headers, data={"name": m.group(1), "area": "all", "compress": "false", "language": "de"}, timeout=60))
+            if not txt.lstrip().startswith("{"):
+                raw = txt
+                break
+    rows = [row for row in csv.reader(io.StringIO(raw), delimiter=";", quotechar='"') if len(row) >= 5]
+    if len(rows) < 3:
+        return pd.DataFrame()
+    hdr = [str(h).strip() for h in rows.pop(0)]
+    df = pd.DataFrame([row[:len(hdr)] for row in rows if len(row) >= len(hdr)], columns=hdr)
+    col_map = {c.lower(): c for c in df.columns}
+    t_col, v_col = col_map.get("time") or col_map.get("zeit"), col_map.get("value") or col_map.get("wert")
+    zeit_s = df[t_col].astype(str).str.strip()
+    for c in df.columns:
+        if c in (t_col, v_col) or "label" in c.lower():
+            continue
+        s_code = df[c].astype(str).str.strip()
+        if s_code.str.match(r"^QUART0?[1-4]$", case=False).any():
+            q_ext = s_code.str.extract(r"([1-4])", expand=False)
+            zeit_s = pd.Series(np.where(q_ext.notna(), zeit_s + "-Q" + q_ext.fillna(""), zeit_s), index=df.index)
+            break
+        if s_code.str.match(r"^MONAT0?(?:[1-9]|1[0-2])$", case=False).any():
+            m_ext = s_code.str.extract(r"([0-9]+)", expand=False).str.zfill(2)
+            zeit_s = pd.Series(np.where(m_ext.notna(), zeit_s + "-" + m_ext.fillna(""), zeit_s), index=df.index)
+            break
+    df["ZEIT"], df["WERT"] = zeit_s, df[v_col]
+    code_cols = [c for c in df.columns if c.endswith("_code") and c not in {"statistics_code", "time_code"}]
+    df["_CODES"] = df.loc[:, code_cols].fillna("").astype(str).apply(lambda r: set(x.strip() for x in r if x.strip()), axis=1)
+    return df
+
+def load_labor_market():
     s_alo = pd.Series(dtype=float)
     s_ste = pd.Series(dtype=float)
     s_kug = pd.Series(dtype=float)
 
     u = f"{BBK_BASE}BBDL1/M.DE.N.?format=csv&lang=de"
     r = requests.get(u, timeout=45)
-    if r.status_code != 200 or len(r.text) < 500:
-        return s_ste, s_alo, s_kug
+    if r.status_code == 200 and len(r.text) >= 500:
+        first_line = next(iter(r.text.splitlines()), "")
+        sep = ";" if first_line.count(";") >= first_line.count(",") else ","
+        df = pd.read_csv(io.StringIO(r.text), sep=sep, low_memory=False)
+        time_col = next(iter(df.columns))
+        is_date = df[time_col].astype(str).str.match(r"^(19\d{2}|20\d{2})-\d{2}")
+        meta_df = df.loc[~is_date]
+        data_df = df.loc[is_date]
+        yms = data_df[time_col].astype(str).str.slice(0, 7).values
 
-    first_line = next(iter(r.text.splitlines()), "")
-    sep = ";" if first_line.count(";") >= first_line.count(",") else ","
-    df = pd.read_csv(io.StringIO(r.text), sep=sep, low_memory=False)
-    time_col = next(iter(df.columns))
-    is_date = df[time_col].astype(str).str.match(r"^(19\d{2}|20\d{2})-\d{2}")
-    meta_df = df.loc[~is_date]
-    data_df = df.loc[is_date]
-    yms = data_df[time_col].astype(str).str.slice(0, 7).values
+        for col in df.columns[1:]:
+            if str(col).endswith("_FLAGS"):
+                continue
+            desc = " | ".join(str(x).strip() for x in meta_df[col].dropna().tolist()[:8])
+            cl = f"{col} | {desc}".lower()
+            if any(ex in cl for ex in ("quote", "%", "saisonbereinigt", "kalenderbereinigt", "männer", "frauen", "ausländer", "zugang", "abgang", "anzeige", "index", "geringfügig", "beschäftigte", "sozialversicherungspflichtig", "unterbeschäftigung")):
+                continue
+            vals = pd.to_numeric(data_df[col].astype(str).str.replace(",", "."), errors="coerce")
+            valid = vals.notna()
+            if valid.sum() < 36:
+                continue
+            nums = vals.loc[valid].values
+            scale = 0.001 if np.nanmedian(nums) > 20000 else 1.0
+            ser = pd.Series(nums * scale, index=yms[valid]).groupby(level=0).last().sort_index()
+            if "arbeitslose" in cl and ("insgesamt" in cl or "deutschland" in cl):
+                if s_alo.empty or ser.index[-1] > s_alo.index[-1]:
+                    s_alo = ser
+            elif ("gemeldete arbeitsstellen" in cl or "offene stellen" in cl) and ("insgesamt" in cl or "deutschland" in cl):
+                if s_ste.empty or ser.index[-1] > s_ste.index[-1]:
+                    s_ste = ser
+            elif "kurzarbeiter" in cl and ("deutschland" in cl or "insgesamt" in cl):
+                if s_kug.empty or ser.index[-1] > s_kug.index[-1]:
+                    s_kug = ser
 
-    for col in df.columns[1:]:
-        if str(col).endswith("_FLAGS"):
-            continue
-        desc = " | ".join(str(x).strip() for x in meta_df[col].dropna().tolist()[:8])
-        cl = f"{col} | {desc}".lower()
-        if any(ex in cl for ex in ("quote", "%", "saisonbereinigt", "kalenderbereinigt", "männer", "frauen", "ausländer", "zugang", "abgang", "anzeige", "index", "geringfügig", "beschäftigte", "sozialversicherungspflichtig", "unterbeschäftigung")):
-            continue
-        vals = pd.to_numeric(data_df[col].astype(str).str.replace(",", "."), errors="coerce")
-        valid = vals.notna()
-        if valid.sum() < 36:
-            continue
-        nums = vals.loc[valid].values
-        scale = 0.001 if np.nanmedian(nums) > 20000 else 1.0
-        ser = pd.Series(nums * scale, index=yms[valid]).groupby(level=0).last().sort_index()
-
-        if "arbeitslose" in cl and ("insgesamt" in cl or "deutschland" in cl):
-            if s_alo.empty or ser.index[-1] > s_alo.index[-1]:
-                s_alo = ser
-        elif ("gemeldete arbeitsstellen" in cl or "offene stellen" in cl) and ("insgesamt" in cl or "deutschland" in cl):
-            if s_ste.empty or ser.index[-1] > s_ste.index[-1]:
-                s_ste = ser
-        elif "kurzarbeiter" in cl and ("deutschland" in cl or "insgesamt" in cl):
-            if s_kug.empty or ser.index[-1] > s_kug.index[-1]:
-                s_kug = ser
+    try:
+        df_ba = _destatis_ffcsv("13211-0002", "2022")
+        if not df_ba.empty:
+            for code_v, target_s in (("ERW007", "ste"), ("ERW006", "alo"), ("ERW064", "kug")):
+                sub = df_ba[df_ba["_CODES"].apply(lambda s: {"DF", code_v}.issubset(s))].copy()
+                sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
+                sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first").sort_values("ZEIT")
+                if not sub.empty:
+                    vals = sub["V"].values
+                    scale = 0.001 if np.nanmedian(vals) > 20000 else 1.0
+                    s_new = pd.Series(vals * scale, index=sub["ZEIT"].astype(str).str.strip().values)
+                    if target_s == "ste":
+                        s_ste = s_new.combine_first(s_ste).sort_index()
+                    elif target_s == "alo":
+                        s_alo = s_new.combine_first(s_alo).sort_index()
+                    else:
+                        s_kug = s_new.combine_first(s_kug).sort_index()
+    except Exception:
+        pass
 
     return s_ste, s_alo, s_kug
 
 def get_destatis_bip_q():
-    if not D_USER or not D_PASS:
-        return pd.Series(dtype=float)
-    p = {"username": D_USER, "password": D_PASS, "name": "81000-0011", "area": "all", "compress": "false", "format": "ffcsv", "language": "de"}
     try:
-        r = requests.get(G_URL, params=p, timeout=35)
-        lines = [ln for ln in r.text.splitlines() if ln.count(";") >= 4]
-        df = pd.read_csv(io.StringIO("\n".join(lines)), sep=";", decimal=",", on_bad_lines="skip")
-        text_cols = [c for c in df.columns if c not in ("ZEIT", "WERT")]
-        df["_ROW"] = df.loc[:, text_cols].fillna("").astype(str).agg(" | ".join, axis=1)
-        sub = df[df["_ROW"].str.contains("Ursprungswerte", case=False, na=False)]
-        sub = sub[sub["_ROW"].str.contains("Vorjahr", case=False, na=False)]
-        sub = sub[sub["_ROW"].str.contains("preisbereinigt", case=False, na=False)]
-        for ex in ("kalender", "saison", "X-13", "Vorquartal", "Bruttowertschöpfung", "Gewerbe", "Bau", "Handel", "Dienst"):
-            sub = sub[~sub["_ROW"].str.contains(ex, case=False, na=False)]
+        df = _destatis_ffcsv("81000-0002", "2018")
+        if df.empty:
+            return pd.Series(dtype=float)
+        req = {"DG", "WERTORG", "VGR014", "VGRPKM"}
+        sub = df[df["_CODES"].apply(lambda s: req.issubset(s))].copy()
         sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
-        sub = sub.dropna(subset=["V"])
-        return pd.Series(sub["V"].values, index=sub["ZEIT"].astype(str).str.strip().values).sort_index()
+        sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first").sort_values("ZEIT")
+        idx_map = dict(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"]))
+        out = {}
+        for z, vc in idx_map.items():
+            if "-Q" not in z:
+                continue
+            prev_z = f"{int(z[:4]) - 1}{z[4:]}"
+            vp = idx_map.get(prev_z, np.nan)
+            if not np.isnan(vp) and vp != 0:
+                out[z] = round((vc / vp - 1.0) * 100.0, 1)
+        return pd.Series(out).sort_index()
     except Exception:
         return pd.Series(dtype=float)
 
@@ -187,10 +256,34 @@ def line_unv(diff_series, anchor_ym, months):
             out[ym] = d_t0 - float(diff_series.loc[vj])
     return pd.Series(out)
 
+def save_sz_plotly(fig_p, title_p, src_text, now_str, fname_p, sfx, height_p=460, top_m=95):
+    fig_p.update_layout(
+        title=dict(text=f"<b>{title_p}</b>", x=0.03, y=0.96, yanchor="top", font=dict(size=16, color="#0F172A", family="DejaVu Sans, sans-serif")),
+        plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
+        hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
+        legend=dict(orientation="v", x=0.0, y=1.01, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.5, color="#1E293B")),
+        margin=dict(l=52, r=24, t=top_m, b=95), height=height_p,
+        annotations=[
+            dict(text=f"{src_text}{now_str}", x=0.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"),
+            dict(text="T.H.", x=1.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")
+        ]
+    )
+    fig_p.update_xaxes(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.5, color="#475569"))
+    fig_p.update_yaxes(fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, tickfont=dict(size=10.5, color="#475569"))
+    out_path = f"static/spannungszahl/{fname_p}{sfx}.html"
+    fig_p.write_html(out_path, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
+    with open(out_path, "r", encoding="utf-8") as fh:
+        html_s = fh.read().replace("<body>", '<body style="margin:0;padding:0;overflow:hidden;">')
+    with open(out_path, "w", encoding="utf-8") as fh:
+        fh.write(html_s)
+
 def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     t = TEXTS[lang]
+    use_c = t["comma"]
     plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
     now_str = datetime.now().strftime(t["date_fmt"])
+    fmt_arr = lambda seq: [fmt_num(v, use_c) for v in seq]
+
     months_all = [ym for ym in sz_einf.index if ym >= "2019-01"]
     if len(months_all) < 2:
         months_all = list(sz_einf.index)
@@ -205,7 +298,7 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
         plt.savefig(f"static/spannungszahl/{fname}{t['sfx']}.png", dpi=300)
         plt.close()
 
-       # 1. Einfache Spannungszahl (Gesamt)
+    # 1. Einfache Spannungszahl (Gesamt)
     fig, ax = plt.subplots(figsize=(8.0, 5.4), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.09, right=0.95, top=0.77, bottom=0.25)
     ymin_1 = min(-1200, int(np.floor((min(y_einf) - 300) / 300.0) * 300))
@@ -213,101 +306,104 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     style_sz_ax(fig, ax, t["p1_t"], ymin_1, ymax_1, range(ymin_1, ymax_1 + 300, 300), t["x_m"], xlabel_y=-0.31)
     l1_a, l1_b = t["p1_l"]
     ax.plot(x_all, y_einf, color="#1B3A6B", lw=2.3, label=l1_a, zorder=3)
-
-    lu1 = line_unv(d_einf, vj_anchor, months_all)
-    if not lu1.empty:
-        lu1_x = [months_all.index(vj_anchor)] + [months_all.index(k) for k in lu1.index if k != vj_anchor]
-        lu1_y = [y_einf[months_all.index(vj_anchor)]] + [lu1.loc[k] for k in lu1.index if k != vj_anchor]
-        ax.plot(lu1_x, lu1_y, color="#D97706", ls="--", lw=1.9, label=l1_b, zorder=4)
-
-    y_arr = np.array(y_einf, dtype=float)
-    idx_max = int(np.flatnonzero(np.isclose(y_arr, np.nanmax(y_arr))).max())
-    idx_min = int(np.flatnonzero(np.isclose(y_arr, np.nanmin(y_arr))).max())
-    ym_max, ym_min = months_all[idx_max], months_all[idx_min]
-
-    if lang == "de":
-        lbl_max = f"Oberer Wendepunkt\nder Konjunktur,\n{t['m'][int(ym_max[5:7]) - 1]} {ym_max[:4]}"
-        lbl_min = f"Unterer Wendepunkt\nder Konjunktur,\n{t['m'][int(ym_min[5:7]) - 1]} {ym_min[:4]}"
-    else:
-        lbl_max = f"Upper turning point\nof business cycle,\n{t['m'][int(ym_max[5:7]) - 1]} {ym_max[:4]}"
-        lbl_min = f"Lower turning point\nof business cycle,\n{t['m'][int(ym_min[5:7]) - 1]} {ym_min[:4]}"
-
-    ax.annotate(lbl_max, xy=(idx_max, y_einf[idx_max]),
-                xytext=(min(len(months_all) - 12, idx_max + 3), y_einf[idx_max] + 150),
-                ha="left", va="bottom", fontsize=7.5, color="#1B3A6B",
-                arrowprops=dict(arrowstyle="->", color="#1B3A6B", lw=1.2))
-    ax.annotate(lbl_min, xy=(idx_min, y_einf[idx_min]),
-                xytext=(min(len(months_all) - 12, idx_min + 3), y_einf[idx_min] - 150),
-                ha="left", va="top", fontsize=7.5, color="#1B3A6B",
-                arrowprops=dict(arrowstyle="->", color="#1B3A6B", lw=1.2))
-
+    s_unv1 = line_unv(d_einf, vj_anchor, months_all)
+    if not s_unv1.empty:
+        xu1 = [months_all.index(ym) for ym in s_unv1.index]
+        ax.plot(xu1, s_unv1.values, color="#D97706", lw=1.7, ls="--", label=l1_b, zorder=4)
     draw_year_groups(ax, months_all, t["m"], step=3, year_y=-0.24)
-    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.8)
+    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.6)
     save_fig(fig, t["src_ba"], "01_einfache_spannungszahl")
 
-    # 2. Einfache Spannungszahl Zoom (13 Monate + mehrere Referenzlinien)
+    fp1 = go.Figure()
+    fp1.add_trace(go.Scatter(x=months_all, y=[round(v, 1) for v in y_einf], customdata=fmt_arr(y_einf), name=l1_a, mode="lines", line=dict(color="#1B3A6B", width=2.3), hovertemplate=f"{l1_a}: <b>%{{customdata}}</b><extra></extra>"))
+    if not s_unv1.empty:
+        yu1 = [round(float(v), 1) for v in s_unv1.values]
+        fp1.add_trace(go.Scatter(x=list(s_unv1.index), y=yu1, customdata=fmt_arr(yu1), name=l1_b, mode="lines", line=dict(color="#D97706", width=1.8, dash="dash"), hovertemplate=f"{l1_b}: <b>%{{customdata}}</b><extra></extra>"))
+    save_sz_plotly(fp1, t["p1_t"], t["src_ba"], now_str, "01_einfache_spannungszahl", t["sfx"], height_p=460, top_m=105)
+
+    # 2. Einfache Spannungszahl (Zoom 13 Monate)
     months_z = months_all[-13:]
-    first_z = next(iter(months_z))
     xz = np.arange(len(months_z))
-    yz_einf = [float(sz_einf.loc[ym]) for ym in months_z]
-    fig, ax = plt.subplots(figsize=(8.0, 6.2), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.95, top=0.66, bottom=0.28)
-    ymin_z = int(np.floor((min(yz_einf) - 120) / 100.0) * 100)
-    ymax_z = max(100, int(np.ceil((max(yz_einf) + 120) / 100.0) * 100))
-    style_sz_ax(fig, ax, t["p2_t"], ymin_z, ymax_z, range(ymin_z, ymax_z + 100, 100), t["x_m"], xlabel_y=-0.50)
-    ax.plot(xz, yz_einf, color="#1B3A6B", lw=2.4, label=t["p2_l1"], zorder=4)
-    lu_vj = line_unv(d_einf, first_z, months_z)
-    if not lu_vj.empty:
-        ax.plot(xz, [lu_vj.loc[ym] for ym in months_z], color="#D97706", ls="--", lw=1.9, label=t["p2_l_vj"], zorder=3)
-    extra_cols = ("#059669", "#7C3AED", "#0284C7", "#B45309", "#DC2626")
-    c_i = 0
-    for ym in months_z[1:-1]:
-        m_num = int(ym[5:7])
-        if m_num in (1, 3, 6, 9, 12):
-            lu_e = line_unv(d_einf, ym, months_z)
-            if not lu_e.empty:
-                lbl = f"{t['p2_l_prefix']}{t['m'][m_num - 1]} {ym[:4]})"
-                ax.plot([months_z.index(k) for k in lu_e.index], lu_e.values, color=extra_cols[c_i % len(extra_cols)], ls=":", lw=1.8, label=lbl, zorder=3)
-                c_i += 1
-    draw_year_groups(ax, months_z, t["m"], step=1, year_y=-0.43)
-    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.5)
+    yz = [float(sz_einf.loc[ym]) for ym in months_z]
+    fig, ax = plt.subplots(figsize=(8.0, 5.8), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.09, right=0.95, top=0.70, bottom=0.25)
+    ymin_z = int(np.floor((min(yz) - 150) / 100.0) * 100)
+    ymax_z = int(np.ceil((max(yz) + 150) / 100.0) * 100)
+    style_sz_ax(fig, ax, t["p2_t"], ymin_z, ymax_z, range(ymin_z, ymax_z + 100, 100), t["x_m"], xlabel_y=-0.31)
+    ax.plot(xz, yz, color="#1B3A6B", lw=2.4, marker="o", ms=3.5, label=t["p2_l1"], zorder=4)
+    fp2 = go.Figure()
+    fp2.add_trace(go.Scatter(x=months_z, y=[round(v, 1) for v in yz], customdata=fmt_arr(yz), name=t["p2_l1"], mode="lines+markers", marker=dict(size=5), line=dict(color="#1B3A6B", width=2.4), hovertemplate=f"{t['p2_l1']}: <b>%{{customdata}}</b><extra></extra>"))
+
+    anchors_z = [
+        (months_z[0], t["p2_l_vj"], "#D97706", "--"),
+        (months_z[max(0, len(months_z) - 7)], f"{t['p2_l_prefix']}{t['m'][int(months_z[max(0, len(months_z) - 7)][5:7]) - 1]} {months_z[max(0, len(months_z) - 7)][:4]})", "#059669", ":"),
+        (months_z[max(0, len(months_z) - 4)], f"{t['p2_l_prefix']}{t['m'][int(months_z[max(0, len(months_z) - 4)][5:7]) - 1]} {months_z[max(0, len(months_z) - 4)][:4]})", "#7C3AED", "-.")
+    ]
+    for anc_ym, anc_lbl, anc_col, anc_ls in anchors_z:
+        su = line_unv(d_einf, anc_ym, months_z)
+        if len(su) >= 2:
+            xsu = [months_z.index(ym) for ym in su.index]
+            ax.plot(xsu, su.values, color=anc_col, lw=1.7, ls=anc_ls, label=anc_lbl, zorder=3)
+            ysu = [round(float(v), 1) for v in su.values]
+            p_dash = "dash" if anc_ls == "--" else ("dot" if anc_ls == ":" else "dashdot")
+            fp2.add_trace(go.Scatter(x=list(su.index), y=ysu, customdata=fmt_arr(ysu), name=anc_lbl, mode="lines", line=dict(color=anc_col, width=1.8, dash=p_dash), hovertemplate=f"{anc_lbl}: <b>%{{customdata}}</b><extra></extra>"))
+
+    draw_year_groups(ax, months_z, t["m"], step=1, year_y=-0.24)
+    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.3)
     save_fig(fig, t["src_ba"], "02_einfache_spannungszahl_zoom")
+    save_sz_plotly(fp2, t["p2_t"], t["src_ba"], now_str, "02_einfache_spannungszahl_zoom", t["sfx"], height_p=540, top_m=150)
 
     # 3. Erweiterte Spannungszahl (Gesamt)
+    months_erw = [ym for ym in sz_erw.index if ym >= "2019-01"]
+    if len(months_erw) < 2:
+        months_erw = list(sz_erw.index)
+    x_erw = np.arange(len(months_erw))
+    y_erw_v = [float(sz_erw.loc[ym]) for ym in months_erw]
+    vj_erw = months_erw[max(0, len(months_erw) - 13)]
     fig, ax = plt.subplots(figsize=(8.0, 5.4), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.09, right=0.95, top=0.77, bottom=0.25)
-    style_sz_ax(fig, ax, t["p3_t"], -8000, 4000, range(-8000, 6000, 2000), t["x_m"], xlabel_y=-0.31)
+    ymin_3 = min(-8000, int(np.floor((min(y_erw_v) - 500) / 1000.0) * 1000))
+    ymax_3 = max(4000, int(np.ceil((max(y_erw_v) + 500) / 1000.0) * 1000))
+    style_sz_ax(fig, ax, t["p3_t"], ymin_3, ymax_3, range(ymin_3, ymax_3 + 1000, 1000), t["x_m"], xlabel_y=-0.31)
     l3_a, l3_b = t["p3_l"]
-    ax.plot(x_all, y_erw, color="#1B3A6B", lw=2.3, label=l3_a, zorder=3)
-    months_erw_valid = [ym for ym in months_all if ym in sz_erw.index]
-    if len(months_erw_valid) >= 13:
-        erw_anchor = months_erw_valid[-13]
-        lu3 = line_unv(d_erw, erw_anchor, months_erw_valid)
-        if not lu3.empty:
-            lu3_x = [months_all.index(erw_anchor)] + [months_all.index(k) for k in lu3.index if k != erw_anchor]
-            lu3_y = [float(sz_erw.loc[erw_anchor])] + [lu3.loc[k] for k in lu3.index if k != erw_anchor]
-            ax.plot(lu3_x, lu3_y, color="#D97706", ls="--", lw=1.9, label=l3_b, zorder=4)
-    draw_year_groups(ax, months_all, t["m"], step=3, year_y=-0.24)
-    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.8)
+    ax.plot(x_erw, y_erw_v, color="#D97706", lw=2.3, label=l3_a, zorder=3)
+    s_unv3 = line_unv(d_erw, vj_erw, months_erw)
+    if not s_unv3.empty:
+        xu3 = [months_erw.index(ym) for ym in s_unv3.index]
+        ax.plot(xu3, s_unv3.values, color="#1B3A6B", lw=1.7, ls="--", label=l3_b, zorder=4)
+    draw_year_groups(ax, months_erw, t["m"], step=3, year_y=-0.24)
+    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.6)
     save_fig(fig, t["src_ba_kug"], "03_erweiterte_spannungszahl")
 
-    # 4. Erweiterte Spannungszahl Zoom (letzte 13 verfügbare Kurzarbeits-Monate)
-    months_z4 = months_erw_valid[-13:] if len(months_erw_valid) >= 13 else months_z
-    first_z4 = next(iter(months_z4))
-    xz4 = np.arange(len(months_z4))
-    yz_erw = [float(sz_erw.loc[ym]) for ym in months_z4]
+    fp3 = go.Figure()
+    fp3.add_trace(go.Scatter(x=months_erw, y=[round(v, 1) for v in y_erw_v], customdata=fmt_arr(y_erw_v), name=l3_a, mode="lines", line=dict(color="#D97706", width=2.3), hovertemplate=f"{l3_a}: <b>%{{customdata}}</b><extra></extra>"))
+    if not s_unv3.empty:
+        yu3 = [round(float(v), 1) for v in s_unv3.values]
+        fp3.add_trace(go.Scatter(x=list(s_unv3.index), y=yu3, customdata=fmt_arr(yu3), name=l3_b, mode="lines", line=dict(color="#1B3A6B", width=1.8, dash="dash"), hovertemplate=f"{l3_b}: <b>%{{customdata}}</b><extra></extra>"))
+    save_sz_plotly(fp3, t["p3_t"], t["src_ba_kug"], now_str, "03_erweiterte_spannungszahl", t["sfx"], height_p=460, top_m=105)
+
+    # 4. Erweiterte Spannungszahl (Zoom 13 Monate)
+    months_ez = months_erw[-13:]
+    xez = np.arange(len(months_ez))
+    yez = [float(sz_erw.loc[ym]) for ym in months_ez]
     fig, ax = plt.subplots(figsize=(8.0, 5.4), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.95, top=0.76, bottom=0.28)
-    ymin_4 = min(-400, int(np.floor((min(yz_erw) - 100) / 100.0) * 100))
-    ymax_4 = max(400, int(np.ceil((max(yz_erw) + 100) / 100.0) * 100))
-    style_sz_ax(fig, ax, t["p4_t"], ymin_4, ymax_4, range(ymin_4, ymax_4 + 100, 100), t["x_m"], xlabel_y=-0.50)
-    ax.plot(xz4, yz_erw, color="#1B3A6B", lw=2.3, label=l3_a, zorder=4)
-    lu4 = line_unv(d_erw, first_z4, months_z4)
-    if not lu4.empty:
-        ax.plot(xz4, [lu4.loc[ym] for ym in months_z4], color="#D97706", ls="--", lw=1.9, label=l3_b, zorder=3)
-    draw_year_groups(ax, months_z4, t["m"], step=1, year_y=-0.43)
-    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.8)
+    plt.subplots_adjust(left=0.09, right=0.95, top=0.77, bottom=0.25)
+    ymin_4 = int(np.floor((min(yez) - 150) / 100.0) * 100)
+    ymax_4 = int(np.ceil((max(yez) + 150) / 100.0) * 100)
+    style_sz_ax(fig, ax, t["p4_t"], ymin_4, ymax_4, range(ymin_4, ymax_4 + 100, 100), t["x_m"], xlabel_y=-0.31)
+    ax.plot(xez, yez, color="#D97706", lw=2.4, marker="o", ms=3.5, label=l3_a, zorder=4)
+    su4 = line_unv(d_erw, months_ez[0], months_ez)
+    fp4 = go.Figure()
+    fp4.add_trace(go.Scatter(x=months_ez, y=[round(v, 1) for v in yez], customdata=fmt_arr(yez), name=l3_a, mode="lines+markers", marker=dict(size=5), line=dict(color="#D97706", width=2.4), hovertemplate=f"{l3_a}: <b>%{{customdata}}</b><extra></extra>"))
+    if len(su4) >= 2:
+        xsu4 = [months_ez.index(ym) for ym in su4.index]
+        ax.plot(xsu4, su4.values, color="#1B3A6B", lw=1.7, ls="--", label=l3_b, zorder=3)
+        ysu4 = [round(float(v), 1) for v in su4.values]
+        fp4.add_trace(go.Scatter(x=list(su4.index), y=ysu4, customdata=fmt_arr(ysu4), name=l3_b, mode="lines", line=dict(color="#1B3A6B", width=1.8, dash="dash"), hovertemplate=f"{l3_b}: <b>%{{customdata}}</b><extra></extra>"))
+    draw_year_groups(ax, months_ez, t["m"], step=1, year_y=-0.24)
+    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.6)
     save_fig(fig, t["src_ba_kug"], "04_erweiterte_spannungszahl_zoom")
+    save_sz_plotly(fp4, t["p4_t"], t["src_ba_kug"], now_str, "04_erweiterte_spannungszahl_zoom", t["sfx"], height_p=460, top_m=105)
 
     # 5. Spannungszahl und reales BIP (Dual-Achse)
     fig, ax1 = plt.subplots(figsize=(8.0, 5.5), dpi=300, facecolor="white")
@@ -324,13 +420,14 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
 
     l5_bip, l5_einf, l5_erw = t["p5_l"]
     q_to_m = {"Q1": "02", "Q2": "05", "Q3": "08", "Q4": "11"}
-    bx, by = [], []
+    bx, by, b_months = [], [], []
     for k, v in bip_q.items():
         m_part = q_to_m.get(k[-2:], "")
         ym_key = f"{k[:4]}-{m_part}"
         if ym_key in months_all:
             bx.append(months_all.index(ym_key))
             by.append(float(v))
+            b_months.append(ym_key)
     p_bip = ax1.plot(bx, by, color="#059669", lw=2.2, label=l5_bip, zorder=4)
     for xi_b, yi_b in zip(bx, by):
         off = 0.7 if yi_b >= 0 else -1.2
@@ -341,65 +438,32 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     lines = p_bip + p_einf + p_erw
     ax1.legend(lines, [l.get_label() for l in lines], loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.6)
     save_fig(fig, t["src_all"], "05_spannungszahl_bip")
-        
-        # Interaktive Plotly-Charts (Hover-Werte, Smartphone-optimiert)
-    def save_plotly(fig_p, title_p, src_p, fname_p, height_p=480, top_m=105):
-        x_lbl = t.get("x_m") if fname_p != "05_spannungszahl_bip" else t.get("x_mq")
-        fig_p.update_layout(
-            title=dict(text=f"<b>{title_p}</b>", x=0.03, y=0.96, font=dict(size=16, color="#0F172A", family="DejaVu Sans, sans-serif")),
-            plot_bgcolor="#F8FAFC", paper_bgcolor="white",
-            hovermode="x unified",
-            dragmode=False,
-            hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=12, color="#0F172A"), namelength=0),
-            legend=dict(orientation="v", x=0.0, y=1.02, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=11, color="#1E293B")),
-            margin=dict(l=46, r=16, t=top_m, b=95),
-            height=height_p,
-            annotations=[
-                dict(text=x_lbl, x=0.5, y=-0.17, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#475569"), xanchor="center"),
-                dict(text=f"{src_p}{now_str}", x=0.0, y=-0.26, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"),
-                dict(text="T.H.", x=1.0, y=-0.26, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")
-            ]
-        )
-        fig_p.update_xaxes(fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.5, color="#475569"))
-        fig_p.update_yaxes(fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, tickfont=dict(size=10.5, color="#475569"))
-        fig_p.write_html(f"static/spannungszahl/{fname_p}{t.get('sfx')}.html", include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
+
+    fp5 = make_subplots(specs=[[{"secondary_y": True}]])
+    fp5.add_trace(go.Scatter(x=b_months, y=[round(v, 1) for v in by], customdata=fmt_arr(by), name=l5_bip, mode="lines+markers", marker=dict(size=6), line=dict(color="#059669", width=2.3), connectgaps=True, hovertemplate=f"{l5_bip}: <b>%{{customdata}} %</b><extra></extra>"), secondary_y=False)
+    fp5.add_trace(go.Scatter(x=months_all, y=[round(v, 1) for v in y_einf], customdata=fmt_arr(y_einf), name=l5_einf, mode="lines", line=dict(color="#1B3A6B", width=2.1), hovertemplate=f"{l5_einf}: <b>%{{customdata}}</b><extra></extra>"), secondary_y=True)
+    y_erw_clean = [None if np.isnan(v) else round(float(v), 1) for v in y_erw]
+    fp5.add_trace(go.Scatter(x=months_all, y=y_erw_clean, customdata=fmt_arr(y_erw_clean), name=l5_erw, mode="lines", line=dict(color="#D97706", width=2.1), hovertemplate=f"{l5_erw}: <b>%{{customdata}}</b><extra></extra>"), secondary_y=True)
+    fp5.update_yaxes(title_text=t["p5_yl"].replace("\n", " "), range=[-12, 12], dtick=4, fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, secondary_y=False)
+    fp5.update_yaxes(title_text=t["p5_yr"].replace("\n", " "), range=[-8000, 8000], dtick=2000, fixedrange=True, showgrid=False, secondary_y=True)
+    save_sz_plotly(fp5, t["p5_t"], t["src_all"], now_str, "05_spannungszahl_bip", t["sfx"], height_p=490, top_m=125)
 
 def main():
-    s_stellen, s_alo, s_kug = load_bbk_labor_market()
+    s_stellen, s_alo, s_kug = load_labor_market()
     common = s_stellen.index.intersection(s_alo.index)
-    print(f"[BBK MERGE] Gemeinsame Monate: {len(common)}")
+    print(f"[DESTATIS/BA MERGE] Gemeinsame Monate: {len(common)}")
 
-    if len(common) >= 24:
-        d_einf = s_stellen.loc[common] - s_alo.loc[common]
-        sz_einf = (d_einf - d_einf.shift(12)).dropna()
+    d_einf = s_stellen.loc[common] - s_alo.loc[common]
+    sz_einf = (d_einf - d_einf.shift(12)).dropna()
 
-        common_erw = common.intersection(s_kug.index)
-        d_erw = s_stellen.loc[common_erw] - (s_alo.loc[common_erw] + s_kug.loc[common_erw])
-        sz_erw = (d_erw - d_erw.shift(12)).dropna()
-        print(f"[RESULT] Einfache SZ bis {sz_einf.index[-1]} ({sz_einf.values[-1]:.1f}) | Erweiterte SZ bis {sz_erw.index[-1]} ({sz_erw.values[-1]:.1f})")
-    else:
-        idx = pd.period_range("2018-01", "2026-10", freq="M").astype(str)
-        d_einf = pd.Series(np.linspace(-1500, -2100, len(idx)), index=idx)
-        d_erw = d_einf.copy()
-        sz_einf = (d_einf - d_einf.shift(12)).dropna()
-        sz_erw = sz_einf.copy()
+    common_erw = common.intersection(s_kug.index)
+    d_erw = s_stellen.loc[common_erw] - (s_alo.loc[common_erw] + s_kug.loc[common_erw])
+    sz_erw = (d_erw - d_erw.shift(12)).dropna()
+    print(f"[RESULT] Einfache SZ bis {sz_einf.index[-1]} ({sz_einf.values[-1]:.1f}) | Erweiterte SZ bis {sz_erw.index[-1]} ({sz_erw.values[-1]:.1f})")
 
     bip_q = get_destatis_bip_q()
-    if bip_q.empty:
-        bip_q = pd.Series({
-            "2019-Q1": 1.2, "2019-Q2": 0.1, "2019-Q3": 2.0, "2019-Q4": 0.7,
-            "2020-Q1": -1.5, "2020-Q2": -10.8, "2020-Q3": -3.1, "2020-Q4": -1.1,
-            "2021-Q1": -0.7, "2021-Q2": 12.0, "2021-Q3": 2.8, "2021-Q4": 2.4,
-            "2022-Q1": 4.0, "2022-Q2": 1.5, "2022-Q3": 1.6, "2022-Q4": 0.2,
-            "2023-Q1": 0.0, "2023-Q2": -1.1, "2023-Q3": -1.3, "2023-Q4": -1.0,
-            "2024-Q1": -1.1, "2024-Q2": -0.3, "2024-Q3": 0.2, "2024-Q4": -0.4,
-            "2025-Q1": 0.1, "2025-Q2": 0.0, "2025-Q3": 0.3, "2025-Q4": 0.5,
-            "2026-Q1": 0.8, "2026-Q2": 1.0, "2026-Q3": 1.3
-        })
-
     build_charts_for_lang("de", d_einf, d_erw, sz_einf, sz_erw, bip_q)
     build_charts_for_lang("en", d_einf, d_erw, sz_einf, sz_erw, bip_q)
 
 if __name__ == "__main__":
     main()
-
