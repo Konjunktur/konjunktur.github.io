@@ -49,7 +49,8 @@ TEXTS = {
 
 def get_bbk(key, n=13, scale=1.0):
     flow, k = key.split(".", 1)
-    url = "https://bundesbank.de" + flow + "/" + k + "?format=csv&lang=de"
+    url = "https://api.statistiken." + "bundesbank.de" + "/rest/data/" + flow + "/" + k + "?format=csv&lang=de"
+ 
     try:
         r = requests.get(url, timeout=15)
         if r.status_code != 200 or ";" not in r.text:
@@ -235,7 +236,7 @@ def build_for_lang(lang, data):
     save_single(draw_p5, t, data, "05_leistungsbilanz", "src_bbk")
     save_single(draw_p6, t, data, "06_arbeitslosigkeit_inflation", "src_bbk")
 
-        # Interaktive Plotly-Charts für die 6 Dashboard-Grafiken (Desktop & Smartphone optimiert)
+    # Interaktive Plotly-Charts für die 6 Dashboard-Grafiken (Desktop & Smartphone optimiert)
     now_str_p = datetime.now().strftime(t.get("date_fmt"))
     def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p):
         fig_p.update_layout(
