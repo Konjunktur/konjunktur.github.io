@@ -41,7 +41,7 @@ def fmt_val(val, use_comma):
     return s.replace(".", ",") if use_comma else s
 
 def fetch_bundesbank_caputil():
-    base = "https://bundesbank.de" + "/rest/data/"
+    base = "https://api.statistiken." + "bundesbank.de/rest/data/"
     urls = [
         base + "BBXS1/Q.DE.Y.EUBUCS.MANU.MAN013.TT.PCT.I00?format=sdmx_csv",
         base + "BBXS1/Q.DE..EUBUCS.MANU.MAN013.TT.PCT.I00?format=sdmx_csv",
