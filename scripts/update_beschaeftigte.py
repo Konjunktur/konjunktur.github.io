@@ -1,4 +1,5 @@
 import os, io, re, csv, json, time, zipfile, requests
+from operator import itemgetter
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -47,7 +48,6 @@ TEXTS = {
         "total_name": "Verarbeitendes Gewerbe insgesamt",
         "title_prefix": "Beschäftigte",
         "sub": "Tätige Personen in Betrieben mit 20 und mehr tätigen Personen (Ursprungswerte)",
-        "leg": "Beschäftigte (Ursprungswerte)",
         "xlabel": "Monatswerte",
         "diff_title": "Differenz",
         "diff_unit": "Beschäftigte",
@@ -62,7 +62,6 @@ TEXTS = {
         "total_name": "Manufacturing total",
         "title_prefix": "Employees",
         "sub": "Persons employed in local units with 20 or more persons employed (unadjusted data)",
-        "leg": "Employees (unadjusted data)",
         "xlabel": "Monthly values",
         "diff_title": "Change",
         "diff_unit": "employees",
@@ -165,7 +164,7 @@ def detect_peaks_and_lows(y_vals):
         elif y_vals[i] == min(win) and y_vals[i] < y_vals[i - 1] and y_vals[i] <= y_vals[i + 1]:
             pts.add(i)
     sorted_pts = sorted(pts)
-    filtered = [sorted_pts[0]]
+    filtered = [next(iter(sorted_pts))]
     min_gap = max(8, n // 10)
     for idx in sorted_pts[1:-1]:
         if idx - filtered[-1] >= min_gap and (n - 1 - idx) >= min_gap:
@@ -173,7 +172,6 @@ def detect_peaks_and_lows(y_vals):
     if sorted_pts[-1] != filtered[-1]:
         filtered.append(sorted_pts[-1])
     return filtered
-
 
 def draw_year_groups(ax, months, m_names, step=4, year_y=-0.30):
     ticks, labels = [], []
@@ -222,8 +220,8 @@ def render_series_charts(lang, slug, code, title_name, ser):
     latest_val = y_vals[-1]
     ref_2019_ym = f"2019-{latest_ym[5:7]}"
     has_ref = ref_2019_ym in s_clean.index
-    ref_2019_val = float(s_clean.loc[ref_2019_ym]) if has_ref else y_vals
-    ref_used_ym = ref_2019_ym if has_ref else months
+    ref_2019_val = float(s_clean.loc[ref_2019_ym]) if has_ref else next(iter(y_vals))
+    ref_used_ym = ref_2019_ym if has_ref else next(iter(months))
 
     diff_abs = latest_val - ref_2019_val
     diff_pct = ((latest_val / ref_2019_val) - 1.0) * 100.0 if ref_2019_val != 0 else 0.0
@@ -242,24 +240,18 @@ def render_series_charts(lang, slug, code, title_name, ser):
     ymax = ymax_raw + span * 0.30
 
     corner = choose_box_corner(y_vals, ymin, ymax)
-    mpl_pos = {
-        "bl": (0.02, 0.05, "left", "bottom"),
-        "tl": (0.02, 0.95, "left", "top"),
-        "br": (0.98, 0.05, "right", "bottom"),
-        "tr": (0.98, 0.95, "right", "top"),
-    }[corner]
-    plotly_pos = {
+    box_pos = {
         "bl": (0.02, 0.05, "left", "bottom"),
         "tl": (0.02, 0.95, "left", "top"),
         "br": (0.98, 0.05, "right", "bottom"),
         "tr": (0.98, 0.95, "right", "top"),
     }[corner]
 
-    # 1. Statisches PNG
-    fig, ax = plt.subplots(figsize=(8.2, 5.6), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.11, right=0.95, top=0.77, bottom=0.28)
-    fig.suptitle(full_title, x=0.11, y=0.96, ha="left", fontsize=11.5, fontweight="bold", color="#0F172A")
-    fig.text(0.11, 0.915, t["sub"], ha="left", fontsize=8.0, color="#64748B")
+    # 1. Statisches PNG (kompakt ohne Legende)
+    fig, ax = plt.subplots(figsize=(8.2, 5.2), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.11, right=0.95, top=0.84, bottom=0.29)
+    fig.suptitle(full_title, x=0.11, y=0.955, ha="left", fontsize=11.5, fontweight="bold", color="#0F172A")
+    fig.text(0.11, 0.905, t["sub"], ha="left", fontsize=8.0, color="#64748B")
 
     ax.set_facecolor("#F8FAFC")
     ax.set_ylim(ymin, ymax)
@@ -273,7 +265,7 @@ def render_series_charts(lang, slug, code, title_name, ser):
         ax.spines[s].set_visible(False)
     ax.spines["bottom"].set_color("#94A3B8")
 
-    ax.plot(x_idx, y_vals, color="#1B3A6B", lw=2.3, label=t["leg"], zorder=3)
+    ax.plot(x_idx, y_vals, color="#1B3A6B", lw=2.3, zorder=3)
     ax.scatter([x_idx[i] for i in key_indices], [y_vals[i] for i in key_indices], color="#1B3A6B", s=22, zorder=4)
 
     for idx_k in key_indices:
@@ -281,13 +273,13 @@ def render_series_charts(lang, slug, code, title_name, ser):
         if idx_k == len(y_vals) - 1:
             ax.text(x_idx[idx_k] + 0.8, yv, fmt_int(yv, use_c), fontsize=7.5, fontweight="bold", color="#1B3A6B", ha="left", va="center", zorder=5)
             continue
-        is_peak = (idx_k == 0 and y_vals <= yv) or (0 < idx_k < len(y_vals) - 1 and yv >= y_vals[idx_k - 1] and yv >= y_vals[idx_k + 1])
+        is_peak = (idx_k == 0 and y_vals[1] <= yv) or (0 < idx_k < len(y_vals) - 1 and yv >= y_vals[idx_k - 1] and yv >= y_vals[idx_k + 1])
         dy = span * 0.048 if is_peak else -span * 0.058
         va = "bottom" if is_peak else "top"
         ha = "left" if idx_k == 0 else "center"
         ax.text(x_idx[idx_k], yv + dy, fmt_int(yv, use_c), fontsize=7.3, fontweight="bold", color="#0F172A", ha=ha, va=va, zorder=5)
 
-    bx_m, by_m, ha_m, va_m = mpl_pos
+    bx_m, by_m, ha_m, va_m = box_pos
     ax.text(
         bx_m, by_m, f"{diff_line_1}\n{diff_line_2}",
         transform=ax.transAxes, ha=ha_m, va=va_m, fontsize=7.8, fontweight="bold", color="#0F172A",
@@ -296,25 +288,24 @@ def render_series_charts(lang, slug, code, title_name, ser):
 
     draw_year_groups(ax, months, t["m"], step=4, year_y=-0.30)
     ax.text(0.5, -0.37, t["xlabel"], transform=ax.transAxes, ha="center", va="top", fontsize=8.3, color="#475569")
-    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.8)
     fig.text(0.11, 0.015, f"{t['src']}{now_str}", fontsize=7.2, color="#64748B")
     fig.text(0.95, 0.015, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
     plt.savefig(f"static/beschaeftigte/{slug}{t['sfx']}.png", dpi=300)
     plt.close()
 
-    # 2. Interaktives HTML (ohne Scrollbalken)
+    # 2. Interaktives HTML (kompakt ohne Legende & ohne Scrollbalken)
     fp = go.Figure()
     custom_y = [fmt_int(v, use_c) for v in y_vals]
     fp.add_trace(go.Scatter(
         x=months, y=[round(v) for v in y_vals], customdata=custom_y,
-        name=t["leg"], mode="lines", line=dict(color="#1B3A6B", width=2.4),
+        name=t["title_prefix"], mode="lines", line=dict(color="#1B3A6B", width=2.4), showlegend=False,
         hovertemplate=f"{t['title_prefix']}: <b>%{{customdata}}</b><extra></extra>"
     ))
     pos_list = []
     for i in key_indices:
         if i == len(y_vals) - 1:
             pos_list.append("middle right" if y_vals[-2] > y_vals[-1] else "top center")
-        elif (i == 0 and y_vals <= y_vals[i]) or (0 < i < len(y_vals) - 1 and y_vals[i] >= y_vals[i - 1]):
+        elif (i == 0 and y_vals[1] <= y_vals[i]) or (0 < i < len(y_vals) - 1 and y_vals[i] >= y_vals[i - 1]):
             pos_list.append("top center")
         else:
             pos_list.append("bottom center")
@@ -330,19 +321,17 @@ def render_series_charts(lang, slug, code, title_name, ser):
         showlegend=False, hoverinfo="skip"
     ))
 
-    bx_p, by_p, xa_p, ya_p = plotly_pos
     t_vals = [m for m in months if m.endswith("-01") or m.endswith("-07")]
     fp.update_layout(
         title=dict(text=f"<b>{full_title}</b><br><span style='font-size:11.5px;color:#475569;'>{t['sub']}</span>", x=0.03, y=0.96, yanchor="top", font=dict(size=15, color="#0F172A", family="DejaVu Sans, sans-serif")),
-        plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
+        plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False, showlegend=False,
         hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
-        legend=dict(orientation="v", x=0.0, y=1.01, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.5, color="#1E293B")),
-        margin=dict(l=64, r=42, t=115, b=95), height=470,
+        margin=dict(l=64, r=42, t=72, b=95), height=430,
         annotations=[
             dict(
                 text=f"<b>{diff_line_1}</b><br><b>{diff_line_2}</b>",
-                x=bx_p, y=by_p, xref="paper", yref="paper", showarrow=False, align="left",
-                xanchor=xa_p, yanchor=ya_p,
+                x=bx_m, y=by_m, xref="paper", yref="paper", showarrow=False, align="left",
+                xanchor=ha_m, yanchor=ya_m,
                 font=dict(size=11, color="#0F172A"),
                 bgcolor="white", bordercolor="#CBD5E1", borderwidth=1, borderpad=6
             ),
@@ -367,7 +356,7 @@ def main():
 
     ranked_wz = sorted(
         [(code, de_lbl, en_lbl, float(latest_row.get(code, 0.0))) for code, de_lbl, en_lbl in WZ_META if code in piv.columns],
-        key=lambda item: item[3],
+        key=itemgetter(3),
         reverse=True
     )
 
