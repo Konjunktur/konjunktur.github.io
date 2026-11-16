@@ -41,36 +41,45 @@ def fmt_val(val, use_comma):
     return s.replace(".", ",") if use_comma else s
 
 def fetch_bundesbank_caputil():
-    keys = [
-        "Q.DE.N.EUBUCS.MANU.MAN013.TT.PCT.I00",
-        "Q.DE.Y.EUBUCS.MANU.MAN013.TT.PCT.I00",
+    base = "https://bundesbank.de" + "/rest/data/"
+    urls = [
+        base + "BBXS1/Q.DE..EUBUCS.MANU.MAN013...?format=sdmx_csv",
+        base + "BBDE1/Q.DE..BAA1.A2P000000...?format=sdmx_csv",
     ]
     raw_txt = ""
-    for k in keys:
-        url = "https://bundesbank.de" + "/rest/download/BBXS1/" + k + "?format=csv&lang=de"
-        r = requests.get(url, timeout=60)
+    for u in urls:
+        r = requests.get(u, timeout=60)
         if r.status_code == 200 and "-Q" in r.text:
             raw_txt = r.text
             break
     if not raw_txt:
-        raise RuntimeError("Bundesbank-Quartalsreihe BBXS1 für Kapazitätsauslastung konnte nicht geladen werden.")
+        raise RuntimeError("Bundesbank-Quartalsreihe für Kapazitätsauslastung konnte nicht geladen werden.")
+
+    rows = list(csv.reader(io.StringIO(raw_txt)))
+    hdr = [h.strip() for h in rows.pop(0)]
+    t_idx = hdr.index("TIME_PERIOD")
+    v_idx = hdr.index("OBS_VALUE")
+    adj_idx = hdr.index("BBK_STD_ADJUSTMENT") if "BBK_STD_ADJUSTMENT" in hdr else -1
 
     records = []
-    for row in csv.reader(io.StringIO(raw_txt), delimiter=";"):
-        if len(row) < 2:
+    for row in rows:
+        if len(row) <= max(t_idx, v_idx):
             continue
-        tp = row[0].strip()
+        if adj_idx >= 0 and row[adj_idx].strip() not in ("N", "Y"):
+            continue
+        tp = row[t_idx].strip()
         if "-Q" not in tp:
             continue
-        val_str = row[1].strip().replace(",", ".")
+        val_str = row[v_idx].strip().replace(",", ".")
         if val_str in ("", ".", "NaN", "nan"):
             continue
         try:
-            records.append((tp, float(val_str)))
+            adj_prio = 0 if (adj_idx >= 0 and row[adj_idx].strip() == "N") else 1
+            records.append((tp, adj_prio, float(val_str)))
         except ValueError:
             continue
 
-    df = pd.DataFrame(records, columns=["Q", "V"]).drop_duplicates(subset=["Q"], keep="last").sort_values("Q")
+    df = pd.DataFrame(records, columns=["Q", "PRIO", "V"]).sort_values(["Q", "PRIO"]).drop_duplicates(subset=["Q"], keep="first")
     return df.set_index("Q")["V"]
 
 def render_caputil_charts(lang, ser):
