@@ -47,7 +47,7 @@ def fetch_bundesbank_caputil():
     ]
     raw_txt = ""
     for k in keys:
-        url = f"https://bundesbank.de{k}?format=csv&lang=de"
+        url = "https://bundesbank.de" + "/rest/download/BBXS1/" + k + "?format=csv&lang=de"
         r = requests.get(url, timeout=60)
         if r.status_code == 200 and "-Q" in r.text:
             raw_txt = r.text
