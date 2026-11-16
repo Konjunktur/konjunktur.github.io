@@ -292,13 +292,22 @@ def align_series(series_list):
     all_idx = sorted(set().union(*(s.index for s in series_list if not s.empty)))[-13:]
     return [s.reindex(all_idx) for s in series_list]
 
+def valid_times(df, req_codes, pattern):
+    if df.empty or "ZEIT" not in df.columns:
+        return []
+    req_set = set(req_codes)
+    sub = df[df["_CODES"].apply(lambda s: req_set.issubset(s))].copy()
+    sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
+    sub = sub.dropna(subset=["V"])
+    return sorted([z for z in sub["ZEIT"].astype(str).str.strip().unique() if re.match(pattern, z)])
+
 def main():
     df_y1, df_q1 = get_destatis("81000-0001", "2020"), get_destatis("81000-0002", "2020")
     df_y1_br, df_q1_br = get_destatis("81000-0013", "2020"), get_destatis("81000-0014", "2020")
     df_y2, df_q2 = get_destatis("81000-0019", "2020"), get_destatis("81000-0020", "2020")
 
-    yrs = tuple(sorted([z for z in df_y1["ZEIT"].astype(str).unique() if len(z) == 4 and z.isdigit()])[-5:])
-    qtrs = tuple(sorted([z for z in df_q1["ZEIT"].astype(str).unique() if "-Q" in z])[-14:])
+    yrs = tuple(sorted(set(valid_times(df_y1, ["DG", "VGR014", "VGRPKM"], r"^\d{4}$") + valid_times(df_y2, ["DG", "VGR014", "VGRJPM"], r"^\d{4}$")))[-5:])
+    qtrs = tuple(sorted(set(valid_times(df_q1, ["DG", "WERTORG", "VGR014", "VGRPKM"], r"^\d{4}-Q[1-4]$") + valid_times(df_q2, ["DG", "WERTORG", "VGR014", "VGRJPM"], r"^\d{4}-Q[1-4]$")))[-14:])
     xl_bip, xi = yrs + ("",) + tuple(f"Q{q[-1]} {q[2:4]}" for q in qtrs), np.arange(len(yrs) + 1 + len(qtrs))
 
     def get_bip_series(df_y, df_q, codes_y, codes_q, is_rate=False):
@@ -319,13 +328,8 @@ def main():
     exp = get_bip_series(df_y2, df_q2, ["DG", "EXP001", "VGRPKM"], ["DG", "WERTORG", "EXP001", "VGRPKM"])
     imp = get_bip_series(df_y2, df_q2, ["DG", "IMP001", "VGRPKM"], ["DG", "WERTORG", "IMP001", "VGRPKM"])
 
-    s_lb = get_bbk(["BBFBOPV.M.N.DE.W1.S1.S1.T.B.CA._Z._Z._Z.EUR._T._X.N.ALL"], 13, 0.001)
-    m_cur = list(s_lb.index)
-
+    # Grafik 3: Eigene, unabhängige 13-Monats-Achse für Auftragseingänge
     df_ind_ae = get_destatis("42151-0004", "2023")
-    m_ind = sorted([z for z in df_ind_ae["ZEIT"].astype(str).unique() if re.match(r"^\d{4}-\d{2}$", z)])[-13:] or m_cur
-    s_ai = pd.Series(extract_by_codes(df_ind_ae, ["DG", "WERTORG", "INSGESAMT", "WZ08-C", "AUF102"], m_ind), index=m_ind)
-
     df_bau_ae = pd.DataFrame()
     for bau_tbl in ("44111-0009", "44111-0010", "44111-0011"):
         try:
@@ -334,20 +338,39 @@ def main():
                 df_bau_ae = cand; break
         except Exception:
             pass
-    s_ab = pd.Series(extract_by_codes(df_bau_ae, ["DG", "WERTORG", "BTR-20UMTP", "BAUART", "AUF102"], m_ind), index=m_ind)
+    m_ae = sorted(set(
+        valid_times(df_ind_ae, ["DG", "WERTORG", "INSGESAMT", "WZ08-C", "AUF102"], r"^\d{4}-\d{2}$") +
+        valid_times(df_bau_ae, ["DG", "WERTORG", "BTR-20UMTP", "BAUART", "AUF102"], r"^\d{4}-\d{2}$")
+    ))[-13:]
+    s_ai = pd.Series(extract_by_codes(df_ind_ae, ["DG", "WERTORG", "INSGESAMT", "WZ08-C", "AUF102"], m_ae), index=m_ae)
+    s_ab = pd.Series(extract_by_codes(df_bau_ae, ["DG", "WERTORG", "BTR-20UMTP", "BAUART", "AUF102"], m_ae), index=m_ae)
     s_ai, s_ab = align_series([s_ai, s_ab])
 
+    # Grafik 4: Eigene, unabhängige 13-Monats-Achse für Produktion & Einzelhandel
     df_prod = get_destatis("42153-0001", "2023")
-    s_pi = pd.Series(extract_by_codes(df_prod, ["DG", "WERTORG", "WZ08-C", "PRO101"], m_ind), index=m_ind)
-    s_pb = pd.Series(extract_by_codes(df_prod, ["DG", "WERTORG", "WZ08-F", "PRO101"], m_ind), index=m_ind)
     df_eh = get_destatis("45212-0004", "2023")
-    s_eh = pd.Series(extract_by_codes(df_eh, ["DG", "REAL", "WZ08-47", "UMS103"], m_ind), index=m_ind)
+    m_pe = sorted(set(
+        valid_times(df_prod, ["DG", "WERTORG", "WZ08-C", "PRO101"], r"^\d{4}-\d{2}$") +
+        valid_times(df_prod, ["DG", "WERTORG", "WZ08-F", "PRO101"], r"^\d{4}-\d{2}$") +
+        valid_times(df_eh, ["DG", "REAL", "WZ08-47", "UMS103"], r"^\d{4}-\d{2}$")
+    ))[-13:]
+    s_pi = pd.Series(extract_by_codes(df_prod, ["DG", "WERTORG", "WZ08-C", "PRO101"], m_pe), index=m_pe)
+    s_pb = pd.Series(extract_by_codes(df_prod, ["DG", "WERTORG", "WZ08-F", "PRO101"], m_pe), index=m_pe)
+    s_eh = pd.Series(extract_by_codes(df_eh, ["DG", "REAL", "WZ08-47", "UMS103"], m_pe), index=m_pe)
     s_pi, s_pb, s_eh = align_series([s_pi, s_pb, s_eh])
 
+    # Grafik 5: Eigene, unabhängige 13-Monats-Achse für Leistungsbilanzsaldo
+    s_lb = get_bbk(["BBFBOPV.M.N.DE.W1.S1.S1.T.B.CA._Z._Z._Z.EUR._T._X.N.ALL"], 13, 0.001)
+
+    # Grafik 6: Eigene, unabhängige 13-Monats-Achse für Arbeitslosigkeit & Inflation
     df_al = get_destatis("13211-0002", "2023")
-    s_al = pd.Series(extract_by_codes(df_al, ["DF", "ERW112"], m_cur, is_rate=True), index=m_cur)
     df_hv = get_destatis("61121-0002", "2023")
-    s_hv = pd.Series(extract_by_codes(df_hv, ["DG", "VRM002"], m_cur, is_rate=True), index=m_cur)
+    m_al_hv = sorted(set(
+        valid_times(df_al, ["DF", "ERW112"], r"^\d{4}-\d{2}$") +
+        valid_times(df_hv, ["DG", "VRM002"], r"^\d{4}-\d{2}$")
+    ))[-13:]
+    s_al = pd.Series(extract_by_codes(df_al, ["DF", "ERW112"], m_al_hv, is_rate=True), index=m_al_hv)
+    s_hv = pd.Series(extract_by_codes(df_hv, ["DG", "VRM002"], m_al_hv, is_rate=True), index=m_al_hv)
 
     data = {"xi": xi, "xl_bip": xl_bip, "bip_r": bip_r, "pg": pg, "bau": bau, "hvg": hvg, "bip_n": bip_n, "kp": kp, "kph": kph, "aus": aus, "binv": binv, "exp": exp, "imp": imp, "s_ai": s_ai, "s_ab": s_ab, "s_pi": s_pi, "s_pb": s_pb, "s_eh": s_eh, "s_lb": s_lb, "s_al": s_al, "s_hv": s_hv}
     build_for_lang("de", data); build_for_lang("en", data)
