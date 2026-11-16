@@ -13,5 +13,5 @@ This dashboard displays current economic indicators. All charts update automatic
 - [**The Leading Indicator Economic Tension Number**](/en/spannungszahl/)  
   Leading business cycle indicator for Germany based on reported job vacancies, unemployment, and short-time work according to Claus Köhler.
 
-- [**Employees in Manufacturing by Economic Sector**](/en/beschaeftigte/)
+- [**Employees in Manufacturing by Economic Sector**](/en/beschaeftigte/)<br>
   Monthly automatically updated employment trends in German manufacturing by economic sector.
