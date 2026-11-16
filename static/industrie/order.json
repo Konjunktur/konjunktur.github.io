@@ -1,0 +1,152 @@
+[
+  {
+    "slug": "00_wz08_c_gesamt",
+    "code": "WZ08-C",
+    "de": "Verarbeitendes Gewerbe insgesamt",
+    "en": "Manufacturing total"
+  },
+  {
+    "slug": "01_wz08_28",
+    "code": "WZ08-28",
+    "de": "Maschinenbau",
+    "en": "Manufacture of machinery and equipment n.e.c."
+  },
+  {
+    "slug": "02_wz08_29",
+    "code": "WZ08-29",
+    "de": "Herstellung von Kraftwagen und Kraftwagenteilen",
+    "en": "Manufacture of motor vehicles, trailers and semi-trailers"
+  },
+  {
+    "slug": "03_wz08_10",
+    "code": "WZ08-10",
+    "de": "Herstellung von Nahrungs- und Futtermitteln",
+    "en": "Manufacture of food products"
+  },
+  {
+    "slug": "04_wz08_25",
+    "code": "WZ08-25",
+    "de": "Herstellung von Metallerzeugnissen",
+    "en": "Manufacture of fabricated metal products (except machinery and equipment)"
+  },
+  {
+    "slug": "05_wz08_27",
+    "code": "WZ08-27",
+    "de": "Herstellung von elektrischen Ausrüstungen",
+    "en": "Manufacture of electrical equipment"
+  },
+  {
+    "slug": "06_wz08_22",
+    "code": "WZ08-22",
+    "de": "Herstellung von Gummi- und Kunststoffwaren",
+    "en": "Manufacture of rubber and plastic products"
+  },
+  {
+    "slug": "07_wz08_20",
+    "code": "WZ08-20",
+    "de": "Herstellung von chemischen Erzeugnissen",
+    "en": "Manufacture of chemicals and chemical products"
+  },
+  {
+    "slug": "08_wz08_26",
+    "code": "WZ08-26",
+    "de": "Herstellung von DV-Geräten, elektronischen und optischen Erzeugnissen",
+    "en": "Manufacture of computer, electronic and optical products"
+  },
+  {
+    "slug": "09_wz08_24",
+    "code": "WZ08-24",
+    "de": "Metallerzeugung und -bearbeitung",
+    "en": "Manufacture of basic metals"
+  },
+  {
+    "slug": "10_wz08_33",
+    "code": "WZ08-33",
+    "de": "Reparatur und Installation von Maschinen und Ausrüstungen",
+    "en": "Repair and installation of machinery and equipment"
+  },
+  {
+    "slug": "11_wz08_30",
+    "code": "WZ08-30",
+    "de": "Sonstiger Fahrzeugbau",
+    "en": "Manufacture of other transport equipment"
+  },
+  {
+    "slug": "12_wz08_32",
+    "code": "WZ08-32",
+    "de": "Herstellung von sonstigen Waren",
+    "en": "Other manufacturing"
+  },
+  {
+    "slug": "13_wz08_23",
+    "code": "WZ08-23",
+    "de": "Herstellung von Glas und Glaswaren, Keramik, Verarbeitung von Steinen und Erden",
+    "en": "Manufacture of other non-metallic mineral products"
+  },
+  {
+    "slug": "14_wz08_21",
+    "code": "WZ08-21",
+    "de": "Herstellung von pharmazeutischen Erzeugnissen",
+    "en": "Manufacture of basic pharmaceutical products and pharmaceutical preparations"
+  },
+  {
+    "slug": "15_wz08_17",
+    "code": "WZ08-17",
+    "de": "Herstellung von Papier, Pappe und Waren daraus",
+    "en": "Manufacture of paper and paper products"
+  },
+  {
+    "slug": "16_wz08_31",
+    "code": "WZ08-31",
+    "de": "Herstellung von Möbeln",
+    "en": "Manufacture of furniture"
+  },
+  {
+    "slug": "17_wz08_16",
+    "code": "WZ08-16",
+    "de": "Herstellung von Holz-, Flecht-, Korb- und Korkwaren (ohne Möbel)",
+    "en": "Manufacture of wood and of products of wood and cork (except furniture)"
+  },
+  {
+    "slug": "18_wz08_11",
+    "code": "WZ08-11",
+    "de": "Getränkeherstellung",
+    "en": "Manufacture of beverages"
+  },
+  {
+    "slug": "19_wz08_18",
+    "code": "WZ08-18",
+    "de": "Herstellung von Druckerzeugnissen, Vervielfältigung von Ton-, Bild- und Datenträgern",
+    "en": "Printing and reproduction of recorded media"
+  },
+  {
+    "slug": "20_wz08_13",
+    "code": "WZ08-13",
+    "de": "Herstellung von Textilien",
+    "en": "Manufacture of textiles"
+  },
+  {
+    "slug": "21_wz08_14",
+    "code": "WZ08-14",
+    "de": "Herstellung von Bekleidung",
+    "en": "Manufacture of wearing apparel"
+  },
+  {
+    "slug": "22_wz08_19",
+    "code": "WZ08-19",
+    "de": "Kokerei und Mineralölverarbeitung",
+    "en": "Manufacture of coke and refined petroleum products"
+  },
+  {
+    "slug": "23_wz08_15",
+    "code": "WZ08-15",
+    "de": "Herstellung von Leder, Lederwaren und Schuhen",
+    "en": "Manufacture of leather and related products"
+  },
+  {
+    "slug": "24_wz08_12",
+    "code": "WZ08-12",
+    "de": "Tabakverarbeitung",
+    "en": "Manufacture of tobacco products"
+  }
+]
