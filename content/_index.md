@@ -12,3 +12,6 @@ Dieses Dashboard zeigt aktuelle Wirtschaftsindikatoren. Alle Grafiken aktualisie
 
 - [**Der Frühindikator Spannungszahl**](/spannungszahl/)  
   Konjunktur-Frühindikator für Deutschland auf Basis von gemeldeten Stellen, Arbeitslosen und Kurzarbeit nach Claus Köhler.
+
+- [**Beschäftigte im Verarbeitenden Gewerbe nach Wirtschaftszweigen**](/beschaeftigte/)
+  Monatlich automatisch aktualisierte Entwicklung der Beschäftigten in der deutschen Industrie nach Wirtschaftszweigen.
