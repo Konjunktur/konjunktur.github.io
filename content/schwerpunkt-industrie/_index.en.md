@@ -1,9 +1,9 @@
 ---
 title: "Focus: Industry / Manufacturing"
-description: "Monthly automatically updated analyses of German manufacturing by economic sector."
+description: "Monthly automatically updated data on German manufacturing by economic sector."
 ---
 
-In-depth, monthly automatically updated time series and sector comparisons for German manufacturing (Federal Statistical Office, Monthly Report in Manufacturing):
+In-depth, monthly automatically updated time series and sector comparisons for German manufacturing.
 
 - [**Employees in Manufacturing by Economic Sector**](/en/beschaeftigte/)<br>
   Employment trends since January 2019 by economic sector (sorted in descending order by current employment).
