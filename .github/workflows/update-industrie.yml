@@ -1,0 +1,36 @@
+name: Update Industrie Kennzahlen
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 7 18 * *'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy matplotlib plotly
+      - name: Run script
+        env:
+          DESTATIS_USER: ${{ secrets.DESTATIS_USER }}
+          DESTATIS_PASS: ${{ secrets.DESTATIS_PASS }}
+        run: python scripts/update_industrie_kennzahlen.py
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@://github.com"
+          git pull --rebase origin main || true
+          git add -A
+          git diff --cached --quiet || git commit -m "Update Industrie Kennzahlen charts"
+          git push
+      - name: Trigger Pages deployment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run "Deploy Hugo site to Pages" || true
