@@ -10,3 +10,6 @@ In-depth, monthly automatically updated time series and sector comparisons for G
 
 - [**Turnover, Hours Worked, Employees, Wages in Manufacturing by Economic Sector**](/en/industrie/)<br>
   Comparison of year-on-year changes in turnover, hours worked, employees, and gross wages and salaries per employee by economic sector.
+
+- [**Capacity Utilisation in Manufacturing**](/en/kapazitaetsauslastung/)<br>
+  Quarterly development of capacity utilisation since Q1 2019 compared to the long-term mean (Q1 1991 – Q4 2019).
