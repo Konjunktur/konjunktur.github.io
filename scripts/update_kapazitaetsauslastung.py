@@ -43,17 +43,21 @@ def fmt_val(val, use_comma):
 def fetch_bundesbank_caputil():
     base = "https://bundesbank.de" + "/rest/data/"
     urls = [
-        base + "BBXS1/Q.DE..EUBUCS.MANU.MAN013...?format=sdmx_csv",
-        base + "BBDE1/Q.DE..BAA1.A2P000000...?format=sdmx_csv",
+        base + "BBXS1/Q.DE.Y.EUBUCS.MANU.MAN013.TT.PCT.I00?format=sdmx_csv",
+        base + "BBXS1/Q.DE..EUBUCS.MANU.MAN013.TT.PCT.I00?format=sdmx_csv",
+        base + "BBDE1/Q.DE.Y.BAA1.A2P000000.G.C.I00.A?format=sdmx_csv",
+        base + "BBDE1/Q.DE..BAA1.A2P000000.G.C.I00.A?format=sdmx_csv",
     ]
     raw_txt = ""
+    errs = []
     for u in urls:
         r = requests.get(u, timeout=60)
         if r.status_code == 200 and "-Q" in r.text:
             raw_txt = r.text
             break
+        errs.append(f"{r.status_code}: {u}")
     if not raw_txt:
-        raise RuntimeError("Bundesbank-Quartalsreihe für Kapazitätsauslastung konnte nicht geladen werden.")
+        raise RuntimeError("Bundesbank-Quartalsreihe nicht geladen: " + " | ".join(errs))
 
     rows = list(csv.reader(io.StringIO(raw_txt)))
     hdr = [h.strip() for h in rows.pop(0)]
@@ -65,8 +69,6 @@ def fetch_bundesbank_caputil():
     for row in rows:
         if len(row) <= max(t_idx, v_idx):
             continue
-        if adj_idx >= 0 and row[adj_idx].strip() not in ("N", "Y"):
-            continue
         tp = row[t_idx].strip()
         if "-Q" not in tp:
             continue
@@ -74,7 +76,7 @@ def fetch_bundesbank_caputil():
         if val_str in ("", ".", "NaN", "nan"):
             continue
         try:
-            adj_prio = 0 if (adj_idx >= 0 and row[adj_idx].strip() == "N") else 1
+            adj_prio = 0 if (adj_idx >= 0 and row[adj_idx].strip() == "N") else (1 if (adj_idx >= 0 and row[adj_idx].strip() == "Y") else 2)
             records.append((tp, adj_prio, float(val_str)))
         except ValueError:
             continue
