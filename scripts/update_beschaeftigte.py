@@ -165,7 +165,7 @@ def detect_peaks_and_lows(y_vals):
         elif y_vals[i] == min(win) and y_vals[i] < y_vals[i - 1] and y_vals[i] <= y_vals[i + 1]:
             pts.add(i)
     sorted_pts = sorted(pts)
-    filtered = [sorted_pts]
+    filtered = [sorted_pts[0]]
     min_gap = max(8, n // 10)
     for idx in sorted_pts[1:-1]:
         if idx - filtered[-1] >= min_gap and (n - 1 - idx) >= min_gap:
@@ -173,6 +173,7 @@ def detect_peaks_and_lows(y_vals):
     if sorted_pts[-1] != filtered[-1]:
         filtered.append(sorted_pts[-1])
     return filtered
+
 
 def draw_year_groups(ax, months, m_names, step=4, year_y=-0.30):
     ticks, labels = [], []
@@ -366,7 +367,7 @@ def main():
 
     ranked_wz = sorted(
         [(code, de_lbl, en_lbl, float(latest_row.get(code, 0.0))) for code, de_lbl, en_lbl in WZ_META if code in piv.columns],
-        key=lambda item: item,
+        key=lambda item: item[3],
         reverse=True
     )
 
