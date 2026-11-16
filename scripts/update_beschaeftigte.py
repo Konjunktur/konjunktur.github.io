@@ -331,7 +331,7 @@ def render_series_charts(lang, slug, code, title_name, ser):
             dict(
                 text=f"<b>{diff_line_1}</b><br><b>{diff_line_2}</b>",
                 x=bx_m, y=by_m, xref="paper", yref="paper", showarrow=False, align="left",
-                xanchor=ha_m, yanchor=ya_m,
+                xanchor=ha_m, yanchor=va_m,
                 font=dict(size=11, color="#0F172A"),
                 bgcolor="white", bordercolor="#CBD5E1", borderwidth=1, borderpad=6
             ),
