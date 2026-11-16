@@ -1,0 +1,24 @@
+{{ define "main" }}
+<article class="markdown book-article">
+  <h1>{{ .Title }}</h1>
+  {{ .Content }}
+
+  {{- $isEn := eq .Lang "en" -}}
+  {{- $items := resources.Get "beschaeftigte/order.json" -}}
+  {{- $orderPath := "static/beschaeftigte/order.json" -}}
+  {{- if fileExists $orderPath -}}
+    {{- $data := os.ReadFile $orderPath | transform.Unmarshal -}}
+    {{- range $data -}}
+      {{- $title := cond $isEn .en .de -}}
+      {{- $sfx := cond $isEn "_en" "" -}}
+      {{- $fullLink := cond $isEn "Open in full screen" "In Vollbild anzeigen" -}}
+      <hr>
+      <h2>{{ $title }} ({{ .code }})</h2>
+      <iframe src="/beschaeftigte/{{ .slug }}{{ $sfx }}.html" style="width:100%; height:475px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
+      <ul>
+        <li><a href="/beschaeftigte/{{ .slug }}{{ $sfx }}.png">{{ $fullLink }}</a></li>
+      </ul>
+    {{- end -}}
+  {{- end -}}
+</article>
+{{ end }}
