@@ -38,9 +38,7 @@ languages:
       displayFullLangName: true
       label:
         text: Thorsten Hild
-        icon: red-icon.svg
-        iconHeight: 18
-
+        
 params:
   author: Thorsten Hild
   defaultTheme: light
@@ -53,9 +51,7 @@ params:
   displayFullLangName: true
   label:
     text: Thorsten Hild
-    icon: favicon.ico
-    iconHeight: 18
-
+    
 markup:
   goldmark:
     renderer:
