@@ -168,9 +168,11 @@ def load_labor_market():
 
     try:
         df_ba = _destatis_ffcsv("13211-0002", "2022")
+        if not df_ba.empty and "2_variable_attribute_label" in df_ba.columns:
+            df_ba = df_ba[df_ba["2_variable_attribute_label"].astype(str).str.strip() == "Insgesamt"].copy()
         if not df_ba.empty:
             for code_v, target_s in (("ERW007", "ste"), ("ERW006", "alo"), ("ERW064", "kug")):
-                sub = df_ba[df_ba["_CODES"].apply(lambda s: {"DF", code_v}.issubset(s))].copy()
+                sub = df_ba[df_ba["_CODES"].apply(lambda s: code_v in s)].copy()
                 sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
                 sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first").sort_values("ZEIT")
                 if not sub.empty:
