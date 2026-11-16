@@ -22,9 +22,7 @@ languages:
       displayFullLangName: true
       label:
         text: Thorsten Hild
-        icon: red-icon.svg
-        iconHeight: 18
-
+        
   en:
     languageName: "EN"
     weight: 2
