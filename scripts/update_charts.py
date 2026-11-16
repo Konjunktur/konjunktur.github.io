@@ -328,7 +328,6 @@ def main():
     exp = get_bip_series(df_y2, df_q2, ["DG", "EXP001", "VGRPKM"], ["DG", "WERTORG", "EXP001", "VGRPKM"])
     imp = get_bip_series(df_y2, df_q2, ["DG", "IMP001", "VGRPKM"], ["DG", "WERTORG", "IMP001", "VGRPKM"])
 
-    # Grafik 3: Eigene, unabhängige 13-Monats-Achse für Auftragseingänge
     df_ind_ae = get_destatis("42151-0004", "2023")
     df_bau_ae = pd.DataFrame()
     for bau_tbl in ("44111-0009", "44111-0010", "44111-0011"):
@@ -346,7 +345,6 @@ def main():
     s_ab = pd.Series(extract_by_codes(df_bau_ae, ["DG", "WERTORG", "BTR-20UMTP", "BAUART", "AUF102"], m_ae), index=m_ae)
     s_ai, s_ab = align_series([s_ai, s_ab])
 
-    # Grafik 4: Eigene, unabhängige 13-Monats-Achse für Produktion & Einzelhandel
     df_prod = get_destatis("42153-0001", "2023")
     df_eh = get_destatis("45212-0004", "2023")
     m_pe = sorted(set(
@@ -359,17 +357,17 @@ def main():
     s_eh = pd.Series(extract_by_codes(df_eh, ["DG", "REAL", "WZ08-47", "UMS103"], m_pe), index=m_pe)
     s_pi, s_pb, s_eh = align_series([s_pi, s_pb, s_eh])
 
-    # Grafik 5: Eigene, unabhängige 13-Monats-Achse für Leistungsbilanzsaldo
     s_lb = get_bbk(["BBFBOPV.M.N.DE.W1.S1.S1.T.B.CA._Z._Z._Z.EUR._T._X.N.ALL"], 13, 0.001)
 
-    # Grafik 6: Eigene, unabhängige 13-Monats-Achse für Arbeitslosigkeit & Inflation
     df_al = get_destatis("13211-0002", "2023")
+    if "2_variable_attribute_label" in df_al.columns:
+        df_al = df_al[df_al["2_variable_attribute_label"].astype(str).str.strip() == "Insgesamt"].copy()
     df_hv = get_destatis("61121-0002", "2023")
     m_al_hv = sorted(set(
-        valid_times(df_al, ["DF", "ERW112"], r"^\d{4}-\d{2}$") +
+        valid_times(df_al, ["ERW112"], r"^\d{4}-\d{2}$") +
         valid_times(df_hv, ["DG", "VRM002"], r"^\d{4}-\d{2}$")
     ))[-13:]
-    s_al = pd.Series(extract_by_codes(df_al, ["DF", "ERW112"], m_al_hv, is_rate=True), index=m_al_hv)
+    s_al = pd.Series(extract_by_codes(df_al, ["ERW112"], m_al_hv, is_rate=True), index=m_al_hv)
     s_hv = pd.Series(extract_by_codes(df_hv, ["DG", "VRM002"], m_al_hv, is_rate=True), index=m_al_hv)
 
     data = {"xi": xi, "xl_bip": xl_bip, "bip_r": bip_r, "pg": pg, "bau": bau, "hvg": hvg, "bip_n": bip_n, "kp": kp, "kph": kph, "aus": aus, "binv": binv, "exp": exp, "imp": imp, "s_ai": s_ai, "s_ab": s_ab, "s_pi": s_pi, "s_pb": s_pb, "s_eh": s_eh, "s_lb": s_lb, "s_al": s_al, "s_hv": s_hv}
