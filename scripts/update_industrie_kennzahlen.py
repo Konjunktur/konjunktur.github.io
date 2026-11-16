@@ -46,7 +46,7 @@ TEXTS = {
     "de": {
         "m": MONATE_DE,
         "total_name": "Verarbeitendes Gewerbe insgesamt",
-        "title_sub": "Umsatz, Arbeitsstunden, Beschäftigte, Löhne",
+        "title_sub": "Umsatz, Arbeitsstunden, Beschäftigte, Löhne – Veränderung gegenüber Vorjahr in %",
         "leg": (
             "Umsatz (linke Skala)",
             "Geleistete Arbeitsstunden (linke Skala)",
@@ -63,7 +63,7 @@ TEXTS = {
     "en": {
         "m": MONATE_EN,
         "total_name": "Manufacturing total",
-        "title_sub": "Turnover, Hours Worked, Employees, Wages",
+        "title_sub": "Turnover, Hours Worked, Employees, Wages – Year-on-year change in %",
         "leg": (
             "Turnover (left scale)",
             "Hours worked (left scale)",
@@ -166,19 +166,12 @@ def fetch_42111_0004_multi():
 def nice_sym_range(vals):
     clean = [abs(float(v)) for v in vals if v is not None and not np.isnan(v)]
     m = max(clean) if clean else 10.0
-    m = max(m * 1.18, 2.0)
-    if m <= 4:
-        step = 1.0
-    elif m <= 10:
-        step = 2.0
-    elif m <= 25:
-        step = 5.0
-    elif m <= 50:
-        step = 10.0
-    elif m <= 100:
-        step = 20.0
-    else:
-        step = 25.0
+    m = max(m * 1.15, 2.0)
+    for step in (1.0, 2.0, 5.0, 10.0, 20.0, 25.0, 50.0, 100.0, 150.0, 200.0):
+        lim = np.ceil(m / step) * step
+        if lim / step <= 6:
+            return -lim, lim, step
+    step = 250.0
     lim = np.ceil(m / step) * step
     return -lim, lim, step
 
@@ -218,10 +211,10 @@ def render_multi_charts(lang, slug, code, title_name, s_ums, s_hrs, s_wag, s_emp
     full_title = f"{title_name} ({code})"
 
     # 1. Statisches PNG
-    fig, ax1 = plt.subplots(figsize=(8.2, 5.6), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.11, right=0.88, top=0.75, bottom=0.28)
+    fig, ax1 = plt.subplots(figsize=(8.2, 5.8), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.11, right=0.88, top=0.72, bottom=0.27)
     fig.suptitle(full_title, x=0.11, y=0.96, ha="left", fontsize=11.5, fontweight="bold", color="#0F172A")
-    fig.text(0.11, 0.915, t["title_sub"], ha="left", fontsize=8.5, color="#475569")
+    fig.text(0.11, 0.915, t["title_sub"], ha="left", fontsize=8.3, color="#475569")
 
     ax1.set_facecolor("#F8FAFC")
     ax1.set_ylim(l_min, l_max)
@@ -250,7 +243,6 @@ def render_multi_charts(lang, slug, code, title_name, s_ums, s_hrs, s_wag, s_emp
     l3, = ax1.plot(x_idx, v_wag, color=c_wag, lw=1.9, label=t["leg"][2], zorder=3)
     l4, = ax2.plot(x_idx, v_emp, color=c_emp, lw=2.2, label=t["leg"][3], zorder=4)
 
-    # Endwerte rechts an den Linien (mit automatischer Entzerrung gegen Überlappung)
     end_items = []
     for val, col, y0, y1 in (
         (v_ums[-1], c_ums, l_min, l_max),
@@ -277,13 +269,13 @@ def render_multi_charts(lang, slug, code, title_name, s_ums, s_hrs, s_wag, s_emp
 
     draw_year_groups(ax1, months, t["m"], step=4, year_y=-0.30)
     ax1.text(0.5, -0.37, t["xlabel"], transform=ax1.transAxes, ha="center", va="top", fontsize=8.3, color="#475569")
-    ax1.legend(handles=[l1, l2, l3, l4], loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=2, frameon=False, fontsize=7.4, columnspacing=1.2, handlelength=1.8)
+    ax1.legend(handles=[l1, l2, l3, l4], loc="lower left", bbox_to_anchor=(-0.01, 1.03), ncol=2, frameon=False, fontsize=7.4, columnspacing=1.2, handlelength=1.8)
     fig.text(0.11, 0.015, f"{t['src']}{now_str}", fontsize=7.2, color="#64748B")
     fig.text(0.88, 0.015, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
     plt.savefig(f"static/industrie/{slug}{t['sfx']}.png", dpi=300)
     plt.close()
 
-    # 2. Interaktives HTML (ohne Scrollbalken)
+    # 2. Interaktives HTML (ohne Scrollbalken, mit großzügigem Abstand unter dem Untertitel)
     fp = make_subplots(specs=[[{"secondary_y": True}]])
     for vals, name, col, sec_y in (
         (v_ums, t["leg"][0], c_ums, False),
@@ -306,11 +298,11 @@ def render_multi_charts(lang, slug, code, title_name, s_ums, s_hrs, s_wag, s_emp
         title=dict(text=f"<b>{full_title}</b><br><span style='font-size:11.5px;color:#475569;'>{t['title_sub']}</span>", x=0.03, y=0.96, yanchor="top", font=dict(size=15, color="#0F172A", family="DejaVu Sans, sans-serif")),
         plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
         hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
-        legend=dict(orientation="h", x=0.0, y=1.02, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10, color="#1E293B")),
-        margin=dict(l=58, r=58, t=125, b=95), height=500,
+        legend=dict(orientation="h", x=0.0, y=1.03, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10, color="#1E293B")),
+        margin=dict(l=58, r=58, t=155, b=95), height=530,
         annotations=[
-            dict(text=f"{t['src']}{now_str}", x=0.0, y=-0.28, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"),
-            dict(text="T.H.", x=1.0, y=-0.28, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")
+            dict(text=f"{t['src']}{now_str}", x=0.0, y=-0.27, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"),
+            dict(text="T.H.", x=1.0, y=-0.27, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")
         ]
     )
     fp.update_xaxes(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickmode="array", tickvals=t_vals, ticktext=t_vals, tickfont=dict(size=10.5, color="#475569"))
