@@ -348,11 +348,11 @@ def main():
     df_prod = get_destatis("42153-0001", "2023")
     df_eh = get_destatis("45212-0004", "2023")
     m_pe = sorted(set(
-        valid_times(df_prod, ["DG", "WERTORG", "WZ08-C", "PRO101"], r"^\d{4}-\d{2}$") +
+        valid_times(df_prod, ["DG", "WERTORG", "WZ08-B-20", "PRO101"], r"^\d{4}-\d{2}$") +
         valid_times(df_prod, ["DG", "WERTORG", "WZ08-F", "PRO101"], r"^\d{4}-\d{2}$") +
         valid_times(df_eh, ["DG", "REAL", "WZ08-47", "UMS103"], r"^\d{4}-\d{2}$")
     ))[-13:]
-    s_pi = pd.Series(extract_by_codes(df_prod, ["DG", "WERTORG", "WZ08-C", "PRO101"], m_pe), index=m_pe)
+    s_pi = pd.Series(extract_by_codes(df_prod, ["DG", "WERTORG", "WZ08-B-20", "PRO101"], m_pe), index=m_pe)
     s_pb = pd.Series(extract_by_codes(df_prod, ["DG", "WERTORG", "WZ08-F", "PRO101"], m_pe), index=m_pe)
     s_eh = pd.Series(extract_by_codes(df_eh, ["DG", "REAL", "WZ08-47", "UMS103"], m_pe), index=m_pe)
     s_pi, s_pb, s_eh = align_series([s_pi, s_pb, s_eh])
