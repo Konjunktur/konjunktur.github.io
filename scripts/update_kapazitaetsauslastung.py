@@ -59,7 +59,8 @@ def fetch_bundesbank_caputil():
     if not raw_txt:
         raise RuntimeError("Bundesbank-Quartalsreihe nicht geladen: " + " | ".join(errs))
 
-    rows = list(csv.reader(io.StringIO(raw_txt)))
+    sep = ";" if ";" in raw_txt.splitlines()[0] else ","
+    rows = list(csv.reader(io.StringIO(raw_txt), delimiter=sep))
     hdr = [h.strip() for h in rows.pop(0)]
     t_idx = hdr.index("TIME_PERIOD")
     v_idx = hdr.index("OBS_VALUE")
