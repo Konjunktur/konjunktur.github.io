@@ -13,3 +13,6 @@ In-depth, monthly automatically updated time series and sector comparisons for G
 
 - [**Capacity Utilisation in Manufacturing**](/en/kapazitaetsauslastung/)<br>
   Quarterly development of capacity utilisation since Q1 2019 compared to the long-term mean (Q1 1991 – Q4 2019).
+
+- [**Foreign Trade Total and by Selected Manufacturing Product Groups**](/en/aussenhandel-industrie/)<br>
+  Monthly development of exports, imports and trade balances overall and for motor vehicles, steel and chemicals (World and China).
