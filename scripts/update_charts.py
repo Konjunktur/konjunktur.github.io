@@ -195,12 +195,23 @@ def set_legend(ax, ncol=2):
         handles, labels = handles[-1:] + handles[:-1], labels[-1:] + labels[:-1]
     ax.legend(handles, labels, loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=ncol, frameon=False, fontsize=6.9)
 
-def mark_end(ax, x_vals, y_vals, col, use_comma, off=0.0):
-    valid = [(x, float(y)) for x, y in zip(x_vals, y_vals) if not np.isnan(y)]
-    if valid:
-        lx, ly = valid.pop()
-        ax.plot(lx, ly, marker="o", markersize=4.5, color=col, zorder=5)
-        ax.text(lx + 0.35, ly + off, fmt_num(ly, use_comma), fontsize=8, fontweight="bold", color=col, va="center")
+def mark_ends(ax, series_items, use_comma, y_span):
+    pts = []
+    for x_vals, y_vals, col in series_items:
+        valid = [(x, float(y)) for x, y in zip(x_vals, y_vals) if not np.isnan(y)]
+        if valid:
+            lx, ly = valid.pop()
+            pts.append([lx, ly, ly, col])
+    if not pts:
+        return
+    pts.sort(key=lambda z: z[1])
+    min_gap = y_span * 0.068
+    for i in range(1, len(pts)):
+        if pts[i][2] - pts[i - 1][2] < min_gap:
+            pts[i][2] = pts[i - 1][2] + min_gap
+    for lx, orig_y, text_y, col in pts:
+        ax.plot(lx, orig_y, marker="o", markersize=4.5, color=col, zorder=5)
+        ax.text(lx + 0.35, text_y, fmt_num(orig_y, use_comma), fontsize=8, fontweight="bold", color=col, va="center", zorder=6)
 
 def draw_bars_with_labels(ax, xi, vals, label, use_comma, y_span=18.0):
     bars = ax.bar(xi, vals, width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=label, zorder=2)
@@ -235,7 +246,7 @@ def draw_p3(ax, t, d):
     l3_0, l3_1 = t["p3_l"]
     ax.plot(xm, s_ai.values, color="#1B3A6B", lw=2.1, marker="o", ms=3, label=l3_0, zorder=3)
     ax.plot(xm, s_ab.values, color="#D97706", lw=2.0, marker="s", ms=3, label=l3_1, zorder=3)
-    mark_end(ax, xm, s_ai.values, "#1B3A6B", t["comma"], (yhi - ylo) * 0.025); mark_end(ax, xm, s_ab.values, "#D97706", t["comma"], -(yhi - ylo) * 0.025)
+    mark_ends(ax, [(xm, s_ai.values, "#1B3A6B"), (xm, s_ab.values, "#D97706")], t["comma"], yhi - ylo)
     ax.set_xticks(xm); ax.set_xticklabels(list(s_ai.index)); set_legend(ax, 1)
 
 def draw_p4(ax, t, d):
@@ -246,7 +257,7 @@ def draw_p4(ax, t, d):
     ax.plot(xm, s_pi.values, color="#1B3A6B", lw=2.1, marker="o", ms=3, label=l4_0, zorder=3)
     ax.plot(xm, s_pb.values, color="#D97706", lw=2.0, marker="s", ms=3, label=l4_1, zorder=3)
     ax.plot(xm, s_eh.values, color="#059669", lw=2.0, marker="^", ms=3.5, label=l4_2, zorder=3)
-    mark_end(ax, xm, s_pi.values, "#1B3A6B", t["comma"], -(yhi - ylo) * 0.02); mark_end(ax, xm, s_pb.values, "#D97706", t["comma"], (yhi - ylo) * 0.02); mark_end(ax, xm, s_eh.values, "#059669", t["comma"], (yhi - ylo) * 0.02)
+    mark_ends(ax, [(xm, s_pi.values, "#1B3A6B"), (xm, s_pb.values, "#D97706"), (xm, s_eh.values, "#059669")], t["comma"], yhi - ylo)
     ax.set_xticks(xm); ax.set_xticklabels(list(s_pi.index)); set_legend(ax, 2)
 
 def draw_p5(ax, t, d):
@@ -262,7 +273,7 @@ def draw_p6(ax, t, d):
     l6_0, l6_1, l6_2, l6_3 = t["p6_l"]
     ax.plot(xm, s_al.values, color="#1B3A6B", lw=2.2, marker="o", ms=3.2, label=l6_0, zorder=3); ax.axhline(3.0, color="#1B3A6B", ls=":", lw=1.3, label=l6_1, zorder=2)
     ax.plot(xm, s_hv.values, color="#D97706", lw=2.2, marker="s", ms=3.2, label=l6_2, zorder=3); ax.axhline(2.0, color="#D97706", ls=":", lw=1.3, label=l6_3, zorder=2)
-    mark_end(ax, xm, s_al.values, "#1B3A6B", t["comma"], (yhi - ylo) * 0.025); mark_end(ax, xm, s_hv.values, "#D97706", t["comma"], (yhi - ylo) * 0.025)
+    mark_ends(ax, [(xm, s_al.values, "#1B3A6B"), (xm, s_hv.values, "#D97706")], t["comma"], yhi - ylo)
     ax.set_xticks(xm); ax.set_xticklabels(list(s_al.index)); set_legend(ax, 2)
 
 def save_single(draw_fn, t, data, fname, src_key, top_adj=0.68):
