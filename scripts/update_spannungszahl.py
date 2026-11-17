@@ -1,4 +1,4 @@
-import os, io, re, csv, json, time, glob, zipfile, requests
+import os, io, re, csv, json, time, zipfile, requests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,23 +18,21 @@ MONATE_EN = ("January", "February", "March", "April", "May", "June", "July", "Au
 TEXTS = {
     "de": {
         "m": MONATE_DE,
-        "p1_t": "Spannungszahl",
+        "p1_t": "Einfache Spannungszahl (Gesamtzeitraum)",
         "p1_l": ("Einfache Spannungszahl (Ursprungswerte)",
                  "Linie unveränderter wirtschaftlicher Aktivität (ausgehend vom Vorjahresmonat)"),
-        "p2_t": "Spannungszahl",
+        "p2_t": "Einfache Spannungszahl (Aktueller 13-Monats-Verlauf)",
         "p2_l1": "Einfache Spannungszahl (Ursprungswerte)",
         "p2_l_vj": "Linie unveränderter wirtschaftlicher Aktivität (ausgehend vom Vorjahresmonat)",
-        "p2_l_prefix": "Linie unveränderter wirtschaftlicher Aktivität (ausgehend von ",
-        "p3_t": "Erweiterte Spannungszahl*",
+        "p2_l_prefix": "Linie unveränderter wirtschaftlicher Aktivität (ab ",
+        "p3_t": "Erweiterte Spannungszahl* (Gesamtzeitraum)",
         "p3_l": ("Erweiterte Spannungszahl (Ursprungswerte)",
                  "Linie unveränderter wirtschaftlicher Aktivität (ausgehend vom Vorjahresmonat)"),
-        "p4_t": "Erweiterte Spannungszahl*",
+        "p4_t": "Erweiterte Spannungszahl* (Aktueller 13-Monats-Verlauf)",
         "p5_t": "Spannungszahl und reales BIP",
-        "p5_l": ("Reales BIP (Ursprungswerte)",
-                 "Einfache Spannungszahl (Ursprungswerte)",
-                 "Erweiterte Spannungszahl (berücksichtigt Kurzarbeit)"),
-        "p5_yl": "Reales BIP,\nVeränderung gg. Vj., %",
-        "p5_yr": "Spannungszahl,\nLinie unv. wirtschaftl. Aktivität",
+        "p5_l": ("Reales BIP (Ursprungswerte, linke Achse)",
+                 "Einfache Spannungszahl (Ursprungswerte, rechte Achse)",
+                 "Erweiterte Spannungszahl (inkl. Kurzarbeit, rechte Achse)"),
         "x_m": "Monatswerte",
         "x_mq": "Monatswerte (Spannungszahl) / Quartalswerte (reales BIP)",
         "src_ba": "Quelle: Statistisches Bundesamt (BA-Daten), eigene Berechnungen | Stand: ",
@@ -44,23 +42,21 @@ TEXTS = {
     },
     "en": {
         "m": MONATE_EN,
-        "p1_t": "Economic Tension Number",
+        "p1_t": "Simple Economic Tension Number (Full Period)",
         "p1_l": ("Simple Economic Tension Number (unadjusted data)",
                  "Line of unchanged economic activity (starting from previous year's month)"),
-        "p2_t": "Economic Tension Number",
+        "p2_t": "Simple Economic Tension Number (13-Month Trend)",
         "p2_l1": "Simple Economic Tension Number (unadjusted data)",
         "p2_l_vj": "Line of unchanged economic activity (starting from previous year's month)",
-        "p2_l_prefix": "Line of unchanged economic activity (starting from ",
-        "p3_t": "Extended Economic Tension Number*",
+        "p2_l_prefix": "Line of unchanged economic activity (from ",
+        "p3_t": "Extended Economic Tension Number* (Full Period)",
         "p3_l": ("Extended Economic Tension Number (unadjusted data)",
                  "Line of unchanged economic activity (starting from previous year's month)"),
-        "p4_t": "Extended Economic Tension Number*",
+        "p4_t": "Extended Economic Tension Number* (13-Month Trend)",
         "p5_t": "Economic Tension Number and Real GDP",
-        "p5_l": ("Real GDP (unadjusted data)",
-                 "Simple Economic Tension Number (unadjusted data)",
-                 "Extended Economic Tension Number (includes short-time work)"),
-        "p5_yl": "Real GDP,\nyoy change, %",
-        "p5_yr": "Economic Tension Number,\nline of unch. economic activity",
+        "p5_l": ("Real GDP (unadjusted data, left axis)",
+                 "Simple Economic Tension Number (unadjusted data, right axis)",
+                 "Extended Economic Tension Number (incl. short-time work, right axis)"),
         "x_m": "Monthly values",
         "x_mq": "Monthly values (Economic Tension Number) / Quarterly values (real GDP)",
         "src_ba": "Source: Federal Statistical Office (FEA data), own calculations | As of: ",
@@ -84,6 +80,14 @@ def fmt_clean(val, use_comma, dec=2):
         v = 0.0
     s = f"{v:.{dec}f}".rstrip("0").rstrip(".")
     return s.replace(".", ",") if use_comma else s
+
+def _normalize_tsd(ser):
+    if ser.empty:
+        return ser
+    s = ser.dropna().copy()
+    s = s[~s.index.duplicated(keep="last")].sort_index()
+    s = s.apply(lambda v: v / 1000.0 if abs(float(v)) > 15000 else float(v))
+    return s
 
 def _destatis_ffcsv(table, startyear="2018"):
     if not D_USER or not D_PASS:
@@ -150,7 +154,6 @@ def load_labor_market():
         meta_df = df.loc[~is_date]
         data_df = df.loc[is_date]
         yms = data_df[time_col].astype(str).str.slice(0, 7).values
-
         for col in df.columns[1:]:
             if str(col).endswith("_FLAGS"):
                 continue
@@ -163,7 +166,7 @@ def load_labor_market():
             if valid.sum() < 36:
                 continue
             nums = vals.loc[valid].values
-            scale = 0.001 if np.nanmedian(nums) > 20000 else 1.0
+            scale = 0.001 if np.nanmedian(nums) > 15000 else 1.0
             ser = pd.Series(nums * scale, index=yms[valid]).groupby(level=0).last().sort_index()
             if "arbeitslose" in cl and ("insgesamt" in cl or "deutschland" in cl):
                 if s_alo.empty or ser.index[-1] > s_alo.index[-1]:
@@ -186,7 +189,7 @@ def load_labor_market():
                 sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first").sort_values("ZEIT")
                 if not sub.empty:
                     vals = sub["V"].values
-                    scale = 0.001 if np.nanmedian(vals) > 20000 else 1.0
+                    scale = 0.001 if np.nanmedian(vals) > 15000 else 1.0
                     s_new = pd.Series(vals * scale, index=sub["ZEIT"].astype(str).str.strip().values)
                     if target_s == "ste":
                         s_ste = s_new.combine_first(s_ste).sort_index()
@@ -197,7 +200,7 @@ def load_labor_market():
     except Exception:
         pass
 
-    return s_ste, s_alo, s_kug
+    return _normalize_tsd(s_ste), _normalize_tsd(s_alo), _normalize_tsd(s_kug)
 
 def get_destatis_bip_q():
     try:
@@ -283,7 +286,7 @@ def save_sz_plotly(fig_p, title_p, src_text, now_str, fname_p, sfx, use_comma=Tr
     if use_comma:
         fig_p.update_layout(separators=",.")
     xaxis_kw = dict(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.5, color="#475569"))
-    if tick_step > 1 and fig_p.data and fig_p.data[0].x is not None:
+    if tick_step > 1 and len(fig_p.data) > 0 and fig_p.data[0].x is not None:
         all_x = list(fig_p.data[0].x)
         t_vals = [x for i, x in enumerate(all_x) if i % tick_step == 0]
         xaxis_kw.update(tickmode="array", tickvals=t_vals, ticktext=t_vals)
@@ -295,3 +298,152 @@ def save_sz_plotly(fig_p, title_p, src_text, now_str, fname_p, sfx, use_comma=Tr
         html_s = fh.read().replace("<body>", '<body style="margin:0;padding:0;overflow:hidden;">')
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(html_s)
+
+def calc_sz_ylim(series_list):
+    vals = []
+    for s in series_list:
+        if s is not None and len(s) > 0:
+            vals.extend([float(v) for v in s.values if v is not None and not np.isnan(v)])
+    if not vals:
+        return -400.0, 300.0, np.arange(-400, 301, 100), 100.0
+    lo_raw = min(min(vals), -300.0)
+    hi_raw = max(max(vals), 200.0)
+    span = max(hi_raw - lo_raw, 100.0)
+    for step in (100.0, 200.0, 500.0, 1000.0):
+        lo = np.floor((lo_raw - span * 0.08) / step) * step
+        hi = np.ceil((hi_raw + span * 0.10) / step) * step
+        if (hi - lo) / step <= 9:
+            return lo, hi, np.arange(lo, hi + step * 0.1, step), step
+    step = 1000.0
+    lo = np.floor((lo_raw - span * 0.08) / step) * step
+    hi = np.ceil((hi_raw + span * 0.10) / step) * step
+    return lo, hi, np.arange(lo, hi + step * 0.1, step), step
+
+def fmt_month_year(ym, m_names):
+    return f"{m_names[int(ym[5:7]) - 1]} {ym[:4]}"
+
+def build_spannungszahl(lang, s_ste, s_alo, s_kug, s_bip):
+    t = TEXTS[lang]
+    use_c = t["comma"]
+    sfx = t["sfx"]
+    plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
+    now_str = datetime.now().strftime(t["date_fmt"])
+
+    common_m = sorted(list(s_ste.index.intersection(s_alo.index).unique()))
+    diff_einf = (s_ste.reindex(common_m) - s_alo.reindex(common_m)).dropna()
+    kug_aligned = s_kug.reindex(diff_einf.index).fillna(0.0)
+    diff_erw = (diff_einf - kug_aligned).dropna()
+
+    m12 = sorted(list(diff_einf.index[-13:]))
+    m_all = sorted(list(diff_einf.index[diff_einf.index >= "2019-01"]))
+    anchors_12 = [m12[i] for i in (5, 8, 10) if len(m12) > i]
+    styles_anc = [("#059669", ":"), ("#7C3AED", "-."), ("#DC2626", "--")]
+
+    def _plot_series(diff_s, months_use, title_s, lbl_main, src_key, fname, top_adj=0.78, leg_fs=7.4, use_anchors=False, is_12m=False):
+        y_main = diff_s.reindex(months_use)
+        s_vj = line_unv(diff_s, months_use[0], months_use)
+        extra_s = [line_unv(diff_s, a, months_use) for a in anchors_12] if use_anchors else []
+        ylo, yhi, yt, y_step = calc_sz_ylim([y_main, s_vj] + extra_s)
+
+        fig, ax = plt.subplots(figsize=(8.2, 5.4), dpi=300, facecolor="white")
+        bot_m = 0.28 if is_12m else 0.24
+        plt.subplots_adjust(left=0.10, right=0.95, top=top_adj, bottom=bot_m)
+        style_sz_ax(fig, ax, title_s, ylo, yhi, yt, t["x_m"], use_c, xlabel_y=(-0.39 if is_12m else -0.32))
+        x = np.arange(len(months_use))
+        mk_sz = 4 if is_12m else 0
+        ax.plot(x, y_main.values, color="#1B3A6B", lw=(2.3 if is_12m else 1.8), marker=("o" if is_12m else None), ms=mk_sz, label=lbl_main, zorder=4)
+        ax.plot(x, s_vj.reindex(months_use).values, color="#D97706", lw=(1.9 if is_12m else 1.5), ls="--", label=t["p2_l_vj"], zorder=3)
+
+        fp = go.Figure()
+        fp.add_trace(go.Scatter(x=months_use, y=[None if np.isnan(v) else round(float(v), 1) for v in y_main.values], customdata=[fmt_num(v, use_c) for v in y_main.values], name=lbl_main, mode=("lines+markers" if is_12m else "lines"), line=dict(color="#1B3A6B", width=2.2), hovertemplate=f"{lbl_main}: <b>%{{customdata}}</b><extra></extra>"))
+        fp.add_trace(go.Scatter(x=months_use, y=[None if np.isnan(v) else round(float(v), 1) for v in s_vj.reindex(months_use).values], customdata=[fmt_num(v, use_c) for v in s_vj.reindex(months_use).values], name=t["p2_l_vj"], mode="lines", line=dict(color="#D97706", width=1.9, dash="dash"), hovertemplate=f"{t['p2_l_vj']}: <b>%{{customdata}}</b><extra></extra>"))
+
+        if use_anchors:
+            for anc, (col_a, ls_a) in zip(anchors_12, styles_anc):
+                sa = line_unv(diff_s, anc, months_use).reindex(months_use)
+                lbl_a = f"{t['p2_l_prefix']}{fmt_month_year(anc, t['m'])})"
+                ax.plot(x, sa.values, color=col_a, lw=1.9, ls=ls_a, label=lbl_a, zorder=3)
+                dash_p = "dot" if ls_a == ":" else ("dashdot" if ls_a == "-." else "dash")
+                fp.add_trace(go.Scatter(x=months_use, y=[None if np.isnan(v) else round(float(v), 1) for v in sa.values], customdata=[fmt_num(v, use_c) for v in sa.values], name=lbl_a, mode="lines", line=dict(color=col_a, width=1.9, dash=dash_p), hovertemplate=f"{lbl_a}: <b>%{{customdata}}</b><extra></extra>"))
+
+        draw_year_groups(ax, months_use, t["m"], step=(1 if is_12m else 3), year_y=(-0.31 if is_12m else -0.24))
+        ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=leg_fs)
+        fig.text(0.10, 0.015, f"{t[src_key]}{now_str}", fontsize=7.2, color="#64748B")
+        fig.text(0.95, 0.015, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
+        plt.savefig(f"static/spannungszahl/{fname}{sfx}.png", dpi=300)
+        plt.close()
+
+        fp.update_yaxes(range=[ylo, yhi], dtick=y_step)
+        save_sz_plotly(fp, title_s, t[src_key], now_str, fname, sfx, use_c, height_p=(520 if use_anchors else 455), top_m=(145 if use_anchors else 95), tick_step=(1 if is_12m else 6))
+
+    _plot_series(diff_einf, m_all, t["p1_t"], t["p1_l"][0], "src_ba", "01_spannungszahl_einfach", top_adj=0.80, leg_fs=7.5, use_anchors=False, is_12m=False)
+    _plot_series(diff_einf, m12, t["p2_t"], t["p2_l1"], "src_ba", "02_spannungszahl_linien", top_adj=0.71, leg_fs=6.8, use_anchors=True, is_12m=True)
+    _plot_series(diff_erw, m_all, t["p3_t"], t["p3_l"][0], "src_ba_kug", "03_spannungszahl_erweitert", top_adj=0.80, leg_fs=7.5, use_anchors=False, is_12m=False)
+    _plot_series(diff_erw, m12, t["p4_t"], t["p3_l"][0], "src_ba_kug", "04_spannungszahl_erweitert_linien", top_adj=0.71, leg_fs=6.8, use_anchors=True, is_12m=True)
+
+    y_e_all = diff_einf.reindex(m_all)
+    y_w_all = diff_erw.reindex(m_all)
+    ylo5, yhi5, yt5, y_step5 = calc_sz_ylim([y_e_all, y_w_all])
+
+    bip_map = {}
+    for q_str, q_val in s_bip.items():
+        if "-Q" not in q_str:
+            continue
+        yr, qn = q_str[:4], int(q_str[-1])
+        mid_m = f"{yr}-{qn * 3 - 1:02d}"
+        bip_map[mid_m] = float(q_val)
+    bip_y_full = [bip_map.get(ym, None) for ym in m_all]
+    bip_x_idx = [i for i, v in enumerate(bip_y_full) if v is not None]
+    bip_y_vals = [bip_y_full[i] for i in bip_x_idx]
+
+    fig, ax_r = plt.subplots(figsize=(8.4, 5.4), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.10, right=0.89, top=0.76, bottom=0.24)
+    style_sz_ax(fig, ax_r, t["p5_t"], ylo5, yhi5, yt5, t["x_mq"], use_c, xlabel_y=-0.32)
+    ax_r.yaxis.tick_right()
+    ax_r.yaxis.set_label_position("right")
+
+    ax_l = ax_r.twinx()
+    ax_l.yaxis.tick_left()
+    ax_l.yaxis.set_label_position("left")
+    ax_l.set_ylim(-12, 12)
+    ax_l.set_yticks(np.arange(-12, 13, 4))
+    ax_l.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, pos: fmt_clean(x, use_c, 1)))
+    ax_l.tick_params(axis="y", colors="#475569", labelsize=8.5, length=0)
+    for s in ("top", "right", "left", "bottom"):
+        ax_l.spines[s].set_visible(False)
+
+    x_all = np.arange(len(m_all))
+    l_bip = ax_l.bar(bip_x_idx, bip_y_vals, width=2.2, color="#CBD5E1", alpha=0.65, label=t["p5_l"][0], zorder=1)
+    l_einf, = ax_r.plot(x_all, y_e_all.values, color="#1B3A6B", lw=1.9, label=t["p5_l"][1], zorder=4)
+    l_erw, = ax_r.plot(x_all, y_w_all.values, color="#D97706", lw=1.8, ls="--", label=t["p5_l"][2], zorder=5)
+
+    draw_year_groups(ax_r, m_all, t["m"], step=3, year_y=-0.24)
+    ax_r.legend(handles=[l_bip, l_einf, l_erw], loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.2)
+    fig.text(0.10, 0.015, f"{t['src_all']}{now_str}", fontsize=7.2, color="#64748B")
+    fig.text(0.89, 0.015, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
+    plt.savefig(f"static/spannungszahl/05_spannungszahl_bip{sfx}.png", dpi=300)
+    plt.close()
+
+    fp5 = make_subplots(specs=[[{"secondary_y": True}]])
+    fp5.add_trace(go.Bar(x=m_all, y=bip_y_full, customdata=[fmt_num(v, use_c) for v in bip_y_full], name=t["p5_l"][0], marker_color="#CBD5E1", opacity=0.75, hovertemplate=f"{t['p5_l'][0]}: <b>%{{customdata}} %</b><extra></extra>"), secondary_y=False)
+    fp5.add_trace(go.Scatter(x=m_all, y=[None if np.isnan(v) else round(float(v), 1) for v in y_e_all.values], customdata=[fmt_num(v, use_c) for v in y_e_all.values], name=t["p5_l"][1], mode="lines", line=dict(color="#1B3A6B", width=2.1), hovertemplate=f"{t['p5_l'][1]}: <b>%{{customdata}}</b><extra></extra>"), secondary_y=True)
+    fp5.add_trace(go.Scatter(x=m_all, y=[None if np.isnan(v) else round(float(v), 1) for v in y_w_all.values], customdata=[fmt_num(v, use_c) for v in y_w_all.values], name=t["p5_l"][2], mode="lines", line=dict(color="#D97706", width=1.9, dash="dash"), hovertemplate=f"{t['p5_l'][2]}: <b>%{{customdata}}</b><extra></extra>"), secondary_y=True)
+    save_sz_plotly(fp5, t["p5_t"], t["src_all"], now_str, "05_spannungszahl_bip", sfx, use_c, height_p=485, top_m=115, tick_step=6)
+    fp5.update_yaxes(range=[-12, 12], dtick=4, fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", secondary_y=False)
+    fp5.update_yaxes(range=[ylo5, yhi5], dtick=y_step5, fixedrange=True, showgrid=False, zeroline=False, secondary_y=True)
+    out5 = f"static/spannungszahl/05_spannungszahl_bip{sfx}.html"
+    fp5.write_html(out5, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
+    with open(out5, "r", encoding="utf-8") as fh:
+        html5 = fh.read().replace("<body>", '<body style="margin:0;padding:0;overflow:hidden;">')
+    with open(out5, "w", encoding="utf-8") as fh:
+        fh.write(html5)
+
+def main():
+    s_ste, s_alo, s_kug = load_labor_market()
+    s_bip = get_destatis_bip_q()
+    build_spannungszahl("de", s_ste, s_alo, s_kug, s_bip)
+    build_spannungszahl("en", s_ste, s_alo, s_kug, s_bip)
+    print(f"[OK] Spannungszahl (DE & EN) bis {s_ste.index[-1]} erzeugt.")
+
+if __name__ == "__main__":
+    main()
