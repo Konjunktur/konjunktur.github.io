@@ -289,21 +289,21 @@ def render_single(key, lang, exp, imp, bal):
     plt.savefig(f"static/aussenhandel-industrie/{key}{t['sfx']}.png", dpi=300)
     plt.close()
 
-    # 2. HTML
+    # 2. HTML (Smartphone- & Desktop-optimiert: Legende fest unter Titel, Fußzeile fest am Container-Boden)
     t_vals = [months[i] for i in tick_pos]
     fp = go.Figure()
     fp.add_trace(go.Bar(x=months, y=[round(v, dec) for v in vb], customdata=[fmt_num(v, use_c, dec) for v in vb], name=t["bal"], marker_color=bar_colors, opacity=0.45, hovertemplate=f"{t['bal']}: <b>%{{customdata}} {t['unit']}</b><extra></extra>"))
     fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in ve], customdata=[fmt_num(v, use_c, dec) for v in ve], name=t["exp"], mode="lines", line=dict(color="#1B3A6B", width=2.3), hovertemplate=f"{t['exp']}: <b>%{{customdata}} {t['unit']}</b><extra></extra>"))
     fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vi], customdata=[fmt_num(v, use_c, dec) for v in vi], name=t["imp"], mode="lines", line=dict(color="#DC2626", width=2.3), hovertemplate=f"{t['imp']}: <b>%{{customdata}} {t['unit']}</b><extra></extra>"))
     fp.update_layout(
-        title=dict(text=f"<b>{ct['title']}</b><br><span style='font-size:11px;color:#475569;'>{ct['sub']}</span>", x=0.03, y=0.96, yanchor="top", font=dict(size=14, color="#0F172A", family="DejaVu Sans, sans-serif")),
+        title=dict(text=f"<b>{ct['title']}</b><br><span style='font-size:11px;color:#475569;'>{ct['sub']}</span>", x=0.03, y=0.97, yref="container", yanchor="top", font=dict(size=13.5, color="#0F172A", family="DejaVu Sans, sans-serif")),
         plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
         hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
-        legend=dict(orientation="h", x=0.0, y=-0.20, xanchor="left", yanchor="top", bgcolor="rgba(255,255,255,0)", font=dict(size=10.5, color="#1E293B")),
-        margin=dict(l=48, r=24, t=68, b=118), height=445,
+        legend=dict(orientation="h", x=0.03, y=0.865, yref="container", xanchor="left", yanchor="top", bgcolor="rgba(255,255,255,0)", font=dict(size=10, color="#1E293B")),
+        margin=dict(l=46, r=20, t=122, b=78), height=455,
         annotations=[
-            dict(text=f"{t['src']}{now_str}", x=0.0, y=-0.35, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"),
-            dict(text="T.H.", x=1.0, y=-0.35, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")
+            dict(text=f"{t['src']}{now_str}", x=0.03, y=0.015, xref="container", yref="container", showarrow=False, font=dict(size=9.5, color="#64748B"), xanchor="left", yanchor="bottom"),
+            dict(text="T.H.", x=0.97, y=0.015, xref="container", yref="container", showarrow=False, font=dict(size=10, color="#94A3B8"), xanchor="right", yanchor="bottom")
         ]
     )
     fp.update_xaxes(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickmode="array", tickvals=t_vals, ticktext=t_vals, tickfont=dict(size=10, color="#475569"))
@@ -378,7 +378,7 @@ def render_dual(key, lang, exp_a, imp_a, bal_a, exp_b, imp_b, bal_b):
     plt.savefig(f"static/aussenhandel-industrie/{key}{t['sfx']}.png", dpi=300)
     plt.close()
 
-    # 2. HTML
+    # 2. HTML (Smartphone- & Desktop-optimiert: Legende fest unter Titel, Fußzeile fest am Container-Boden)
     t_vals = [months[i] for i in tick_pos]
     fp = go.Figure()
     fp.add_trace(go.Bar(x=months, y=[round(v, dec) for v in vba], customdata=[fmt_num(v, use_c, dec) for v in vba], name=f"Saldo – {ct['lbl_a']}", marker_color=col_ba, opacity=0.45, hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
@@ -389,14 +389,14 @@ def render_dual(key, lang, exp_a, imp_a, bal_a, exp_b, imp_b, bal_b):
     fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vib], customdata=[fmt_num(v, use_c, dec) for v in vib], name=f"{t['imp']} – {ct['lbl_b']}", mode="lines", line=dict(color="#F97316", width=1.9, dash="dash"), hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
 
     fp.update_layout(
-        title=dict(text=f"<b>{ct['title']}</b><br><span style='font-size:11px;color:#475569;'>{ct['sub']}</span>", x=0.03, y=0.96, yanchor="top", font=dict(size=14, color="#0F172A", family="DejaVu Sans, sans-serif")),
+        title=dict(text=f"<b>{ct['title']}</b><br><span style='font-size:11px;color:#475569;'>{ct['sub']}</span>", x=0.03, y=0.97, yref="container", yanchor="top", font=dict(size=13.5, color="#0F172A", family="DejaVu Sans, sans-serif")),
         plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False, barmode="group",
         hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
-        legend=dict(orientation="h", x=0.0, y=-0.18, xanchor="left", yanchor="top", bgcolor="rgba(255,255,255,0)", font=dict(size=9.5, color="#1E293B")),
-        margin=dict(l=48, r=24, t=68, b=142), height=475,
+        legend=dict(orientation="h", x=0.03, y=0.875, yref="container", xanchor="left", yanchor="top", bgcolor="rgba(255,255,255,0)", font=dict(size=9.2, color="#1E293B")),
+        margin=dict(l=46, r=20, t=168, b=78), height=505,
         annotations=[
-            dict(text=f"{t['src']}{now_str}", x=0.0, y=-0.42, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"),
-            dict(text="T.H.", x=1.0, y=-0.42, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")
+            dict(text=f"{t['src']}{now_str}", x=0.03, y=0.015, xref="container", yref="container", showarrow=False, font=dict(size=9.5, color="#64748B"), xanchor="left", yanchor="bottom"),
+            dict(text="T.H.", x=0.97, y=0.015, xref="container", yref="container", showarrow=False, font=dict(size=10, color="#94A3B8"), xanchor="right", yanchor="bottom")
         ]
     )
     fp.update_xaxes(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickmode="array", tickvals=t_vals, ticktext=t_vals, tickfont=dict(size=10, color="#475569"))
