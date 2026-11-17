@@ -3,8 +3,6 @@ title: "The Leading Indicator Economic Tension Number"
 description: "Leading business cycle indicator for Germany based on reported job vacancies, unemployment, and short-time work."
 ---
 
-Leading business cycle indicator for Germany based on reported job vacancies, unemployment, and short-time work.
-
 The Economic Tension Number measures the number of reported job vacancies (labor demand) minus the number of unemployed persons (labor supply) minus the same difference from the prior-year period. It was developed by Claus Köhler, former member of the German Council of Economic Experts and the Executive Board of the Deutsche Bundesbank.
 
 *For a detailed discussion of the Economic Tension Number, see:* Claus Köhler, *Die Spannungszahl – Ein Indikator der gesamtwirtschaftlichen Entwicklung*, Working Papers of the Institute for Empirical Economic Research, Vol. 10, 1993.
