@@ -13,3 +13,6 @@ Vertiefende, monatlich automatisch aktualisierte Zeitreihen und Branchenvergleic
 
 - [**Die Kapazitätsauslastung im Verarbeitenden Gewerbe**](/kapazitaetsauslastung/)<br>
   Quartalsweise Entwicklung der Kapazitätsauslastung ab dem 1. Quartal 2019 im Vergleich zum langfristigen Mittelwert (1. Q. 1991 – 4. Q. 2019).
+
+- [**Außenhandel insgesamt und nach ausgewählten Warengruppen des Verarbeitenden Gewerbes**](/aussenhandel-industrie/)<br>
+  Monatliche Entwicklung von Exporten, Importen und Außenhandelssalden insgesamt sowie für Kraftwagen, Stahl und Chemie (Welt und China).
