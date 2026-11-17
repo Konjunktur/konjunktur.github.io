@@ -1,19 +1,41 @@
-name: Test Aussenhandel Codes
+name: Update Aussenhandel Industrie
 
 on:
+  schedule:
+    - cron: "30 6 * * 1,4"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  test:
+  update-aussenhandel:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install requests pandas
-      - name: GENESIS Struktur prüfen
+
+      - name: Pakete installieren
+        run: |
+          pip install -r scripts/requirements.txt
+          pip install plotly
+
+      - name: Außenhandels-Grafiken neu berechnen
         env:
           DESTATIS_USER: ${{ secrets.DESTATIS_USER }}
           DESTATIS_PASS: ${{ secrets.DESTATIS_PASS }}
-        run: python scripts/test_aussenhandel.py
+        run: |
+          python scripts/update_aussenhandel.py
+
+      - name: Neue Grafiken speichern
+        run: |
+          git config --local user.email "github-actions[bot]@://github.com"
+          git config --local user.name "github-actions[bot]"
+          git add static/aussenhandel-industrie/
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update Aussenhandel Industrie charts" && git push)
