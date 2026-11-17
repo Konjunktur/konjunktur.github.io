@@ -36,10 +36,13 @@ Real-time indicators of labor market tightness, full-employment rate (FERU), Bev
 - **Source:** Michaillat and Saez (2024) methodology based on Bundesbank/Destatis data.
 
 ### Beveridge Curve {#beveridge-curve}
+
 <iframe src="/konjunktur-arbeitsmarkt/bev_en.html" style="width:100%; height:465px; border:none; overflow:hidden;" scrolling="no"></iframe>
+
 - [View full screen](/konjunktur-arbeitsmarkt/bev_en.png)
-- **Construction & Interpretation:** Scatter plot of <i>v</i> against <i>u</i> illustrating business cycle movements and structural shifts.
-- **Source:** Michaillat and Saez (2024) methodology based on Bundesbank/Destatis data.
+- **Construction:** Scatter plot of the vacancy rate (<i>v</i>) against the unemployment rate (<i>u</i>) including the 45° ray (<i>v</i> = <i>u</i>) and hyperbolic trend curves (<i>v</i> = <i>a</i> + <i>b</i>/<i>u</i>) with coefficient of determination (<i>R</i>²).
+- **Interpretation:** The Beveridge curve is one of the most robust relationships in macroeconomics. Over the business cycle, the economy moves along the curve. In recessions the unemployment rate increases while the vacancy rate decreases; in expansions the unemployment rate decreases while the vacancy rate increases.
+- **Source:** Own calculation following the methodology of Michaillat and Saez (2024) based on data from Deutsche Bundesbank and the Federal Statistical Office.
 
 ### Unemployment Rate and Full-Employment Rate (FERU) {#full-employment-rate}
 <iframe src="/konjunktur-arbeitsmarkt/feru_en.html" style="width:100%; height:455px; border:none; overflow:hidden;" scrolling="no"></iframe>
@@ -60,7 +63,10 @@ Real-time indicators of labor market tightness, full-employment rate (FERU), Bev
 - **Source:** Michaillat and Saez (2025) methodology based on Bundesbank/Destatis data.
 
 ### Recession Probability {#recession-probability}
+
 <iframe src="/konjunktur-arbeitsmarkt/rec_prob_en.html" style="width:100%; height:455px; border:none; overflow:hidden;" scrolling="no"></iframe>
+
 - [View full screen](/konjunktur-arbeitsmarkt/rec_prob_en.png)
-- **Construction & Interpretation:** Real-time nowcast of German recession risk derived from the recession indicator thresholds (0 % to 100 %).
-- **Source:** Michaillat and Saez (2025) methodology based on Bundesbank/Destatis data.
+- **Construction:** The recession probability translates the recession indicator into a percentage scale from 0 % to 100 %, measuring how far the indicator has moved between the lower threshold (no recession signal) and the upper threshold (clear recession signal).
+- **Interpretation:** Below the lower threshold, the probability is 0 %. Once the indicator crosses the lower threshold, the probability rises proportionally up to 100 % at the upper threshold, providing an ongoing real-time assessment of recession risk in Germany.
+- **Source:** Own calculation following the methodology of Michaillat and Saez (2025) based on data from Deutsche Bundesbank and the Federal Statistical Office.
