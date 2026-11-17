@@ -26,14 +26,14 @@ TEXTS = {
         "comma": True,
         "sfx": "",
         "rec_lbl": "Rezessions-/Schwächephasen (DE)",
-        "u": ("1. Arbeitslosenquote (u)", "Registrierte Arbeitslose in % aller zivilen Erwerbspersonen", "Arbeitslosenquote (u)", "in %"),
-        "v": ("2. Vakanzrate (v)", "Gemeldete Arbeitsstellen in % aller zivilen Erwerbspersonen", "Vakanzrate (v)", "in %"),
-        "theta": ("3. Arbeitsmarktanspannung (v / u)", "Verhältnis von Vakanzrate zu Arbeitslosenquote (Referenzlinie = 1)", "Anspannung (v / u)", "Ratio"),
+        "u": ("1. Arbeitslosenquote (u)", "Registrierte Arbeitslose in % aller zivilen Erwerbspersonen", "Arbeitslosenquote (u)"),
+        "v": ("2. Vakanzrate (v)", "Gemeldete Arbeitsstellen in % aller zivilen Erwerbspersonen", "Vakanzrate (v)"),
+        "theta": ("3. Arbeitsmarktanspannung (v / u)", "Verhältnis von Vakanzrate zu Arbeitslosenquote (Referenzlinie = 1)", "Anspannung (v / u)"),
         "bev": ("4. Beveridge-Kurve (Deutschland)", "Vakanzrate (v) vs. Arbeitslosenquote (u) mit 45°-Linie (v = u)", "Historie", "Aktuell (ab 2022)", "45°-Linie (v = u)"),
-        "feru": ("5. Vollbeschäftigungs-Arbeitslosenquote (FERU u*)", "Geometrisches Mittel u* = √(u × v) im Vergleich zur tatsächlichen Quote (u)", "Tatsächliche Quote (u)", "FERU (u*)", "in %"),
-        "gap": ("6. Arbeitslosigkeitslücke (u − u*)", "Abstand zwischen Arbeitslosenquote und FERU in Prozentpunkten (+ Unterauslastung / − Überhitzung)", "Arbeitslosigkeitslücke (u − u*)", "in %-Punkten"),
+        "feru": ("5. Vollbeschäftigungs-Arbeitslosenquote (FERU u*)", "Geometrisches Mittel u* = √(u × v) im Vergleich zur tatsächlichen Quote (u)", "Tatsächliche Quote (u)", "FERU (u*)"),
+        "gap": ("6. Arbeitslosigkeitslücke (u − u*)", "Abstand zwischen Arbeitslosenquote und FERU in Prozentpunkten (+ Unterauslastung / − Überhitzung)", "Arbeitslosigkeitslücke (u − u*)"),
         "rec_ind": ("7. Rezessionsindikator (Michez-Regel für Deutschland)", "Minimum aus 3M-Anstieg der Arbeitslosenquote und 3M-Rückgang der Vakanzrate (in %-Punkten)", "Rezessionsindikator", "Schwelle 1 (möglich)", "Schwelle 2 (sicher)"),
-        "rec_prob": ("8. Rezessionswahrscheinlichkeit (duale Michez-Regel)", "Normierter Anteil zwischen unterer und oberer Rezessionsschwelle (in %)", "Rezessionswahrscheinlichkeit", "in %"),
+        "rec_prob": ("8. Rezessionswahrscheinlichkeit (duale Michez-Regel)", "Normierter Anteil zwischen unterer und oberer Rezessionsschwelle (in %)", "Rezessionswahrscheinlichkeit"),
     },
     "en": {
         "src": "Source: Deutsche Bundesbank, Federal Statistical Office (BA) | As of: ",
@@ -41,14 +41,14 @@ TEXTS = {
         "comma": False,
         "sfx": "_en",
         "rec_lbl": "Recession / downturn periods (DE)",
-        "u": ("1. Unemployment Rate (u)", "Registered unemployed in % of total civilian labor force", "Unemployment rate (u)", "in %"),
-        "v": ("2. Vacancy Rate (v)", "Registered job openings in % of total civilian labor force", "Vacancy rate (v)", "in %"),
-        "theta": ("3. Labor Market Tightness (v / u)", "Ratio of vacancy rate to unemployment rate (reference = 1)", "Tightness (v / u)", "Ratio"),
+        "u": ("1. Unemployment Rate (u)", "Registered unemployed in % of total civilian labor force", "Unemployment rate (u)"),
+        "v": ("2. Vacancy Rate (v)", "Registered job openings in % of total civilian labor force", "Vacancy rate (v)"),
+        "theta": ("3. Labor Market Tightness (v / u)", "Ratio of vacancy rate to unemployment rate (reference = 1)", "Tightness (v / u)"),
         "bev": ("4. Beveridge Curve (Germany)", "Vacancy rate (v) vs. unemployment rate (u) with 45° ray (v = u)", "History", "Recent (from 2022)", "45° ray (v = u)"),
-        "feru": ("5. Full-Employment Rate of Unemployment (FERU u*)", "Geometric mean u* = √(u × v) vs. actual unemployment rate (u)", "Actual rate (u)", "FERU (u*)", "in %"),
-        "gap": ("6. Unemployment Gap (u − u*)", "Distance between unemployment rate and FERU in percentage points (+ slack / − tight)", "Unemployment gap (u − u*)", "in pp"),
+        "feru": ("5. Full-Employment Rate of Unemployment (FERU u*)", "Geometric mean u* = √(u × v) vs. actual unemployment rate (u)", "Actual rate (u)", "FERU (u*)"),
+        "gap": ("6. Unemployment Gap (u − u*)", "Distance between unemployment rate and FERU in percentage points (+ slack / − tight)", "Unemployment gap (u − u*)"),
         "rec_ind": ("7. Recession Indicator (Michez Rule for Germany)", "Minimum of 3M unemployment rate rise and 3M vacancy rate drop (in percentage points)", "Recession indicator", "Threshold 1 (possible)", "Threshold 2 (certain)"),
-        "rec_prob": ("8. Recession Probability (Dual Michez Rule)", "Normalized share between lower and upper recession thresholds (in %)", "Recession probability", "in %"),
+        "rec_prob": ("8. Recession Probability (Dual Michez Rule)", "Normalized share between lower and upper recession thresholds (in %)", "Recession probability"),
     }
 }
 
@@ -247,7 +247,8 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
     t = TEXTS[lang]
     use_c = t["comma"]
     now_str = datetime.now().strftime(t["date_fmt"])
-    title_t, sub_t = t[key], t[key]
+    title_t = t[key]
+    sub_t = t[key]
     x = np.arange(len(months))
     step = max(12, (len(months) // 14 // 12) * 12)
     tick_pos = [i for i in range(0, len(months), step)]
@@ -270,7 +271,7 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_num(v, use_c, dec)))
 
     for vals, lbl, col, ls in series_list:
-        ax.plot(x, vals, color=col, lw=2.0, linestyle=ls, label=lbl, zorder=4)
+        ax.plot(x, vals, color=col, lw=2.0, linestyle=ls, label=str(lbl), zorder=4)
         ax.scatter([x[-1]], [vals[-1]], color=col, s=16, zorder=5)
         ax.text(x[-1] + 1.2, vals[-1], fmt_num(vals[-1], use_c, dec), fontsize=7.3, fontweight="bold", color=col, va="center", ha="left")
     for r_val, r_lbl, r_col in (ref_lines or []):
@@ -289,7 +290,7 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
     fp = go.Figure()
     for vals, lbl, col, ls in series_list:
         dash = "dash" if ls == "--" else "solid"
-        fp.add_trace(go.Scatter(x=months, y=[round(float(v), dec) for v in vals], customdata=[fmt_num(v, use_c, dec) for v in vals], name=lbl, mode="lines", line=dict(color=col, width=2.2, dash=dash), hovertemplate=f"{lbl}: <b>%{{customdata}}</b><extra></extra>"))
+        fp.add_trace(go.Scatter(x=months, y=[round(float(v), dec) for v in vals], customdata=[fmt_num(v, use_c, dec) for v in vals], name=str(lbl), mode="lines", line=dict(color=col, width=2.2, dash=dash), hovertemplate=f"{lbl}: <b>%{{customdata}}</b><extra></extra>"))
     for r_val, r_lbl, r_col in (ref_lines or []):
         fp.add_trace(go.Scatter(x=months, y=[round(float(r_val), dec)] * len(months), customdata=[fmt_num(r_val, use_c, dec)] * len(months), name=f"{r_lbl} ({fmt_num(r_val, use_c, dec)})", mode="lines", line=dict(color=r_col, width=1.6, dash="dash"), hovertemplate=f"{r_lbl}: <b>%{{customdata}}</b><extra></extra>"))
     if use_c:
@@ -378,4 +379,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
