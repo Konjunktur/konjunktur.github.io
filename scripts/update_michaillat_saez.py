@@ -12,9 +12,8 @@ G_BASE = "https://www-genesis." + "destatis.de/genesisWS/rest/2020/data"
 BBK_BASE = "https://api.statistiken." + "bundesbank.de/rest/data/"
 
 DE_RECESSIONS = [
-    ("1992-04", "1993-06"),
-    ("2001-04", "2003-06"),
     ("2008-04", "2009-06"),
+    ("2012-10", "2013-03"),
     ("2020-01", "2020-06"),
     ("2023-01", "2024-06"),
 ]
@@ -25,34 +24,34 @@ TEXTS = {
         "date_fmt": "%d.%m.%Y",
         "comma": True,
         "sfx": "",
-        "u_title": "1. Arbeitslosenquote (u)",
+        "u_title": "Arbeitslosenquote (u)",
         "u_sub": "Registrierte Arbeitslose in % aller zivilen Erwerbspersonen",
         "u_lbl": "Arbeitslosenquote (u)",
-        "v_title": "2. Vakanzrate (v)",
+        "v_title": "Vakanzrate (v)",
         "v_sub": "Gemeldete Arbeitsstellen in % aller zivilen Erwerbspersonen",
         "v_lbl": "Vakanzrate (v)",
-        "theta_title": "3. Arbeitsmarktanspannung (v / u)",
-        "theta_sub": "Verhältnis von Vakanzrate zu Arbeitslosenquote (Referenzlinie = 1)",
+        "theta_title": "Arbeitsmarktanspannung (v / u)",
+        "theta_sub": "Verhältnis von Vakanzrate zu Arbeitslosenquote (Effizienz-Referenz = 1)",
         "theta_lbl": "Anspannung (v / u)",
-        "bev_title": "4. Beveridge-Kurve (Deutschland)",
-        "bev_sub": "Vakanzrate (v) vs. Arbeitslosenquote (u) mit 45°-Linie (v = u)",
-        "bev_hist": "Historie",
-        "bev_rec": "Aktuell (ab 2022)",
+        "bev_title": "Beveridge-Kurve (Deutschland)",
+        "bev_sub": "Vakanzrate (v) gegen Arbeitslosenquote (u) mit 45°-Linie (v = u)",
+        "bev_hist": "Ab Jan. 2005",
+        "bev_rec": "Ab Jan. 2022",
         "bev_45": "45°-Linie (v = u)",
-        "feru_title": "5. Vollbeschäftigungs-Arbeitslosenquote (FERU u*)",
-        "feru_sub": "Geometrisches Mittel u* = √(u × v) im Vergleich zur tatsächlichen Quote (u)",
-        "feru_u": "Tatsächliche Quote (u)",
+        "feru_title": "Vollbeschäftigungs-Arbeitslosenquote (FERU u*)",
+        "feru_sub": "Geometrisches Mittel u* = √(u × v) im Vergleich zur Arbeitslosenquote (u)",
+        "feru_u": "Arbeitslosenquote (u)",
         "feru_star": "FERU (u*)",
-        "gap_title": "6. Arbeitslosigkeitslücke (u − u*)",
+        "gap_title": "Arbeitslosigkeitslücke (u − u*)",
         "gap_sub": "Abstand zwischen Arbeitslosenquote und FERU in Prozentpunkten (+ Unterauslastung / − Überhitzung)",
         "gap_lbl": "Arbeitslosigkeitslücke (u − u*)",
-        "rec_ind_title": "7. Rezessionsindikator (Michez-Regel für Deutschland)",
+        "rec_ind_title": "Rezessionsindikator (Michez-Regel für Deutschland)",
         "rec_ind_sub": "Minimum aus 3M-Anstieg der Arbeitslosenquote und 3M-Rückgang der Vakanzrate (in %-Punkten)",
         "rec_ind_lbl": "Rezessionsindikator",
-        "rec_t1": "Schwelle 1 (möglich)",
-        "rec_t2": "Schwelle 2 (sicher)",
-        "rec_prob_title": "8. Rezessionswahrscheinlichkeit (duale Michez-Regel)",
-        "rec_prob_sub": "Normierter Anteil zwischen unterer und oberer Rezessionsschwelle (in %)",
+        "rec_t1": "Untere Schwelle (möglich)",
+        "rec_t2": "Obere Schwelle (sicher)",
+        "rec_prob_title": "Rezessionswahrscheinlichkeit (duale Michez-Regel)",
+        "rec_prob_sub": "Anteil der überschrittenen Rezessionsschwellen zwischen unterer und oberer Schwelle (in %)",
         "rec_prob_lbl": "Rezessionswahrscheinlichkeit",
     },
     "en": {
@@ -60,34 +59,34 @@ TEXTS = {
         "date_fmt": "%Y-%m-%d",
         "comma": False,
         "sfx": "_en",
-        "u_title": "1. Unemployment Rate (u)",
-        "u_sub": "Registered unemployed in % of total civilian labor force",
+        "u_title": "Unemployment Rate (u)",
+        "u_sub": "Number of registered unemployed divided by civilian labor force (in %)",
         "u_lbl": "Unemployment rate (u)",
-        "v_title": "2. Vacancy Rate (v)",
-        "v_sub": "Registered job openings in % of total civilian labor force",
+        "v_title": "Vacancy Rate (v)",
+        "v_sub": "Number of registered job openings divided by civilian labor force (in %)",
         "v_lbl": "Vacancy rate (v)",
-        "theta_title": "3. Labor Market Tightness (v / u)",
-        "theta_sub": "Ratio of vacancy rate to unemployment rate (reference = 1)",
+        "theta_title": "Labor Market Tightness (v / u)",
+        "theta_sub": "Ratio of vacancy rate to unemployment rate (efficiency benchmark = 1)",
         "theta_lbl": "Tightness (v / u)",
-        "bev_title": "4. Beveridge Curve (Germany)",
-        "bev_sub": "Vacancy rate (v) vs. unemployment rate (u) with 45° ray (v = u)",
-        "bev_hist": "History",
-        "bev_rec": "Recent (from 2022)",
+        "bev_title": "Beveridge Curve (Germany)",
+        "bev_sub": "Vacancy rate (v) against unemployment rate (u) with 45° ray (v = u)",
+        "bev_hist": "From Jan 2005",
+        "bev_rec": "From Jan 2022",
         "bev_45": "45° ray (v = u)",
-        "feru_title": "5. Full-Employment Rate of Unemployment (FERU u*)",
-        "feru_sub": "Geometric mean u* = √(u × v) vs. actual unemployment rate (u)",
-        "feru_u": "Actual rate (u)",
+        "feru_title": "Full-Employment Rate of Unemployment (FERU u*)",
+        "feru_sub": "Geometric average u* = √(u × v) compared to the unemployment rate (u)",
+        "feru_u": "Unemployment rate (u)",
         "feru_star": "FERU (u*)",
-        "gap_title": "6. Unemployment Gap (u − u*)",
-        "gap_sub": "Distance between unemployment rate and FERU in percentage points (+ slack / − tight)",
+        "gap_title": "Unemployment Gap (u − u*)",
+        "gap_sub": "Distance between the unemployment rate and FERU in percentage points (+ slack / − tight)",
         "gap_lbl": "Unemployment gap (u − u*)",
-        "rec_ind_title": "7. Recession Indicator (Michez Rule for Germany)",
+        "rec_ind_title": "Recession Indicator (Michez Rule for Germany)",
         "rec_ind_sub": "Minimum of 3M unemployment rate rise and 3M vacancy rate drop (in percentage points)",
         "rec_ind_lbl": "Recession indicator",
-        "rec_t1": "Threshold 1 (possible)",
-        "rec_t2": "Threshold 2 (certain)",
-        "rec_prob_title": "8. Recession Probability (Dual Michez Rule)",
-        "rec_prob_sub": "Normalized share between lower and upper recession thresholds (in %)",
+        "rec_t1": "Lower threshold (possible)",
+        "rec_t2": "Upper threshold (certain)",
+        "rec_prob_title": "Recession Probability (Dual Michez Rule)",
+        "rec_prob_sub": "Share of thresholds crossed between lower and upper recession bounds (in %)",
         "rec_prob_lbl": "Recession probability",
     }
 }
@@ -104,22 +103,22 @@ def _unpack(resp):
             return zf.read(next(n for n in zf.namelist() if n.endswith(".csv"))).decode("utf-8", errors="replace")
     return resp.text
 
-def _destatis_ffcsv(table, startyear="2022"):
+def _destatis_ffcsv(table, startyear="2005"):
     if not D_USER or not D_PASS:
         return pd.DataFrame()
     headers = {"username": D_USER, "password": D_PASS, "Content-Type": "application/x-www-form-urlencoded"}
     data = {"name": table, "area": "all", "compress": "false", "format": "ffcsv", "language": "de", "startyear": startyear}
-    r = requests.post(f"{G_BASE}/tablefile", headers=headers, data=data, timeout=60)
+    r = requests.post(f"{G_BASE}/tablefile", headers=headers, data=data, timeout=90)
     raw = _unpack(r)
     if raw.lstrip().startswith("{"):
-        rj = requests.post(f"{G_BASE}/tablefile", headers=headers, data={**data, "job": "true"}, timeout=60)
+        rj = requests.post(f"{G_BASE}/tablefile", headers=headers, data={**data, "job": "true"}, timeout=90)
         m = re.search(r"([0-9A-Z\-]+_[0-9]+)", str(json.loads(rj.text).get("Status", {}).get("Content", "")))
         if not m:
             return pd.DataFrame()
         raw = ""
-        for _ in range(36):
+        for _ in range(45):
             time.sleep(2.5)
-            txt = _unpack(requests.post(f"{G_BASE}/resultfile", headers=headers, data={"name": m.group(1), "area": "all", "compress": "false", "language": "de"}, timeout=60))
+            txt = _unpack(requests.post(f"{G_BASE}/resultfile", headers=headers, data={"name": m.group(1), "area": "all", "compress": "false", "language": "de"}, timeout=90))
             if not txt.lstrip().startswith("{"):
                 raw = txt
                 break
@@ -167,7 +166,7 @@ def load_all_labor_data():
                 continue
             desc = " | ".join(str(x).strip() for x in meta_df[col].dropna().tolist()[:8])
             cl = f"{col} | {desc}".lower()
-            if any(ex in cl for ex in ("saisonbereinigt", "kalenderbereinigt", "männer", "frauen", "ausländer", "zugang", "abgang", "anzeige", "index", "geringfügig", "beschäftigte", "sozialversicherungspflichtig", "unterbeschäftigung")):
+            if any(ex in cl for ex in ("saisonbereinigt", "kalenderbereinigt", "männer", "frauen", "ausländer", "zugang", "abgang", "anzeige", "index", "geringfügig", "beschäftigte", "sozialversicherungspflichtig", "unterbeschäftigung", "abhängige")):
                 continue
             vals = pd.to_numeric(data_df[col].astype(str).str.replace(",", "."), errors="coerce")
             valid = vals.notna()
@@ -175,21 +174,21 @@ def load_all_labor_data():
                 continue
             nums = vals.loc[valid].values
             ser = pd.Series(nums, index=yms[valid]).groupby(level=0).last().sort_index()
-            if "arbeitslosenquote" in cl and "alle zivilen" in cl and ("insgesamt" in cl or "deutschland" in cl):
-                if s_alq.empty or ser.index[-1] > s_alq.index[-1]:
+            if ("arbeitslosenquote" in cl or "quote" in cl) and ("zivilen" in cl or "erwerbspersonen" in cl) and ("insgesamt" in cl or "deutschland" in cl):
+                if s_alq.empty or len(ser) > len(s_alq):
                     s_alq = ser
             elif "quote" not in cl and "%" not in cl:
                 scale = 0.001 if np.nanmedian(nums) > 20000 else 1.0
                 ser_s = ser * scale
                 if "arbeitslose" in cl and ("insgesamt" in cl or "deutschland" in cl):
-                    if s_alo.empty or ser_s.index[-1] > s_alo.index[-1]:
+                    if s_alo.empty or len(ser_s) > len(s_alo):
                         s_alo = ser_s
                 elif ("gemeldete arbeitsstellen" in cl or "offene stellen" in cl) and ("insgesamt" in cl or "deutschland" in cl):
-                    if s_ste.empty or ser_s.index[-1] > s_ste.index[-1]:
+                    if s_ste.empty or len(ser_s) > len(s_ste):
                         s_ste = ser_s
 
     try:
-        df_ba = _destatis_ffcsv("13211-0002", "2022")
+        df_ba = _destatis_ffcsv("13211-0002", "2005")
         if not df_ba.empty and "2_variable_attribute_label" in df_ba.columns:
             df_ba = df_ba[df_ba["2_variable_attribute_label"].astype(str).str.strip() == "Insgesamt"].copy()
         if not df_ba.empty:
@@ -213,7 +212,8 @@ def load_all_labor_data():
         pass
 
     comb = pd.DataFrame({"alo": s_alo, "ste": s_ste, "alq": s_alq}).dropna()
-    comb = comb[(comb["alo"] > 0) & (comb["ste"] > 0) & (comb["alq"] > 0)].copy()
+    comb = comb[(comb["alo"] > 0) & (comb["ste"] > 0) & (comb["alq"] > 0)]
+    comb = comb[comb.index >= "2005-01"].copy()
     comb["ep"] = comb["alo"] / (comb["alq"] / 100.0)
     comb["u"] = comb["alo"] / comb["ep"] * 100.0
     comb["v"] = comb["ste"] / comb["ep"] * 100.0
@@ -257,7 +257,7 @@ def _add_rec_shapes_plotly(months):
             shapes.append(dict(type="rect", xref="x", yref="paper", x0=next(iter(vis)), x1=vis[-1], y0=0, y1=1, fillcolor="#CBD5E1", opacity=0.35, line_width=0, layer="below"))
     return shapes
 
-def _save_plotly(fig_p, months, title_p, sub_p, src_text, now_str, out_path, tick_step=12, shapes=None, zero_line=False):
+def _save_plotly(fig_p, months, title_p, sub_p, src_text, now_str, out_path, tick_step=24, shapes=None, zero_line=False):
     fig_p.update_layout(
         title=dict(text=f"<b>{title_p}</b><br><span style='font-size:11px;color:#475569;'>{sub_p}</span>", x=0.03, y=0.96, yanchor="top", font=dict(size=14.5, color="#0F172A", family="DejaVu Sans, sans-serif")),
         plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
@@ -289,10 +289,9 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
     title_t = t[f"{key}_title"]
     sub_t = t[f"{key}_sub"]
     x = np.arange(len(months))
-    step = max(12, (len(months) // 14 // 12) * 12)
+    step = 24 if len(months) > 120 else 12
     tick_pos = [i for i in range(0, len(months), step)]
 
-    # PNG
     fig, ax = plt.subplots(figsize=(8.6, 5.2), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.09, right=0.92, top=0.80, bottom=0.21)
     fig.suptitle(title_t, x=0.09, y=0.96, ha="left", fontsize=11.0, fontweight="bold", color="#0F172A")
@@ -310,13 +309,13 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_num(v, use_c, dec)))
 
     for vals, lbl, col, ls in series_list:
-        ax.plot(x, vals, color=col, lw=2.0, linestyle=ls, label=str(lbl), zorder=4)
+        ax.plot(x, vals, color=col, lw=1.9, linestyle=ls, label=str(lbl), zorder=4)
         ax.scatter([x[-1]], [vals[-1]], color=col, s=16, zorder=5)
-        ax.text(x[-1] + 1.2, vals[-1], fmt_num(vals[-1], use_c, dec), fontsize=7.3, fontweight="bold", color=col, va="center", ha="left")
+        ax.text(x[-1] + 2.0, vals[-1], fmt_num(vals[-1], use_c, dec), fontsize=7.3, fontweight="bold", color=col, va="center", ha="left")
     for r_val, r_lbl, r_col in (ref_lines or []):
         ax.axhline(r_val, color=r_col, lw=1.4, linestyle="--", label=f"{r_lbl} ({fmt_num(r_val, use_c, dec)})", zorder=3)
 
-    ax.set_xlim(-1, len(months) + 12)
+    ax.set_xlim(-2, len(months) + 18)
     ax.set_xticks(tick_pos)
     ax.set_xticklabels([months[i][:7] for i in tick_pos], ha="right")
     ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.01), ncol=3, frameon=False, fontsize=7.6)
@@ -325,16 +324,29 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
     plt.savefig(f"static/konjunktur-arbeitsmarkt/{key}{t['sfx']}.png", dpi=300)
     plt.close()
 
-    # HTML
     fp = go.Figure()
     for vals, lbl, col, ls in series_list:
         dash = "dash" if ls == "--" else "solid"
-        fp.add_trace(go.Scatter(x=months, y=[round(float(v), dec) for v in vals], customdata=[fmt_num(v, use_c, dec) for v in vals], name=str(lbl), mode="lines", line=dict(color=col, width=2.2, dash=dash), hovertemplate=f"{lbl}: <b>%{{customdata}}</b><extra></extra>"))
+        fp.add_trace(go.Scatter(x=months, y=[round(float(v), dec) for v in vals], customdata=[fmt_num(v, use_c, dec) for v in vals], name=str(lbl), mode="lines", line=dict(color=col, width=2.1, dash=dash), hovertemplate=f"{lbl}: <b>%{{customdata}}</b><extra></extra>"))
     for r_val, r_lbl, r_col in (ref_lines or []):
         fp.add_trace(go.Scatter(x=months, y=[round(float(r_val), dec)] * len(months), customdata=[fmt_num(r_val, use_c, dec)] * len(months), name=f"{r_lbl} ({fmt_num(r_val, use_c, dec)})", mode="lines", line=dict(color=r_col, width=1.6, dash="dash"), hovertemplate=f"{r_lbl}: <b>%{{customdata}}</b><extra></extra>"))
     if use_c:
         fp.update_layout(separators=",.")
     _save_plotly(fp, months, title_t, sub_t, t["src"], now_str, f"static/konjunktur-arbeitsmarkt/{key}{t['sfx']}.html", tick_step=step, shapes=_add_rec_shapes_plotly(months), zero_line=zero_line)
+
+def _fit_hyperbola_r2(u_vals, v_vals):
+    inv_u = 1.0 / np.asarray(u_vals, dtype=float)
+    y = np.asarray(v_vals, dtype=float)
+    if len(y) < 3 or np.allclose(inv_u, inv_u.mean()):
+        return 0.0, np.array([]), np.array([])
+    b, a = np.polyfit(inv_u, y, 1)
+    y_hat = a + b * inv_u
+    ss_res = float(np.sum((y - y_hat) ** 2))
+    ss_tot = float(np.sum((y - y.mean()) ** 2))
+    r2 = max(0.0, 1.0 - ss_res / ss_tot) if ss_tot > 0 else 0.0
+    u_grid = np.linspace(float(u_vals.min()), float(u_vals.max()), 60)
+    v_grid = a + b / u_grid
+    return r2, u_grid, v_grid
 
 def render_beveridge(lang, df):
     t = TEXTS[lang]
@@ -347,9 +359,19 @@ def render_beveridge(lang, df):
     lbl_45 = t["bev_45"]
     hist = df[df.index < "2022-01"]
     rec = df[df.index >= "2022-01"]
-    lim = max(float(df["u"].max()), float(df["v"].max())) * 1.08
+    lim = max(float(df["u"].max()), float(df["v"].max())) * 1.12
 
-    # PNG
+    r2_all, ug_all, vg_all = _fit_hyperbola_r2(df["u"].values, df["v"].values)
+    r2_rec, ug_rec, vg_rec = _fit_hyperbola_r2(rec["u"].values, rec["v"].values)
+    r2_txt_all = f"R² ({df.index.min()[:4]}–{df.index.max()[:4]}) = {fmt_num(r2_all, use_c, 3)}"
+    r2_txt_rec = f"R² (ab 2022) = {fmt_num(r2_rec, use_c, 3)}" if lang == "de" else f"R² (from 2022) = {fmt_num(r2_rec, use_c, 3)}"
+
+    last_ym = df.index[-1]
+    prev_ym = f"{int(last_ym[:4]) - 1:04d}-{last_ym[5:7]}"
+    has_prev = prev_ym in df.index
+    u_last, v_last = float(df["u"].iloc[-1]), float(df["v"].iloc[-1])
+    u_prev, v_prev = (float(df.loc[prev_ym, "u"]), float(df.loc[prev_ym, "v"])) if has_prev else (u_last, v_last)
+
     fig, ax = plt.subplots(figsize=(8.6, 5.4), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.10, right=0.93, top=0.80, bottom=0.19)
     fig.suptitle(title_t, x=0.10, y=0.96, ha="left", fontsize=11.0, fontweight="bold", color="#0F172A")
@@ -362,12 +384,21 @@ def render_beveridge(lang, df):
     ax.spines["bottom"].set_color("#94A3B8")
 
     ax.plot([0, lim], [0, lim], color="#D97706", lw=1.4, linestyle="--", label=lbl_45, zorder=2)
+    if len(ug_all) > 0:
+        ax.plot(ug_all, vg_all, color="#64748B", lw=1.2, linestyle=":", zorder=2)
+    if len(ug_rec) > 0:
+        ax.plot(ug_rec, vg_rec, color="#1B3A6B", lw=1.2, linestyle=":", zorder=2)
     ax.scatter(hist["u"], hist["v"], color="#94A3B8", s=16, alpha=0.55, label=lbl_h, zorder=3)
     ax.plot(rec["u"], rec["v"], color="#1B3A6B", lw=1.3, alpha=0.75, zorder=4)
     ax.scatter(rec["u"], rec["v"], color="#1B3A6B", s=22, label=lbl_r, zorder=5)
-    ax.scatter([rec["u"].iloc[-1]], [rec["v"].iloc[-1]], color="#DC2626", s=45, zorder=6)
-    ax.text(rec["u"].iloc[-1] + 0.18, rec["v"].iloc[-1], rec.index[-1], fontsize=7.5, fontweight="bold", color="#DC2626", va="center")
 
+    if has_prev:
+        ax.scatter([u_prev], [v_prev], color="#DC2626", s=45, zorder=6)
+        ax.annotate(prev_ym, xy=(u_prev, v_prev), xytext=(10, 8), textcoords="offset points", fontsize=7.4, fontweight="bold", color="#DC2626", ha="left")
+    ax.scatter([u_last], [v_last], color="#DC2626", s=50, zorder=7)
+    ax.annotate(last_ym, xy=(u_last, v_last), xytext=(10, -10), textcoords="offset points", fontsize=7.5, fontweight="bold", color="#DC2626", ha="left")
+
+    ax.text(0.97, 0.08, f"{r2_txt_all}\n{r2_txt_rec}", transform=ax.transAxes, ha="right", va="bottom", fontsize=7.5, color="#334155", bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="#CBD5E1", alpha=0.9))
     ax.set_xlim(0, lim)
     ax.set_ylim(0, lim)
     ax.set_xlabel("u (%)", fontsize=8.5, color="#475569")
@@ -378,18 +409,22 @@ def render_beveridge(lang, df):
     plt.savefig(f"static/konjunktur-arbeitsmarkt/bev{t['sfx']}.png", dpi=300)
     plt.close()
 
-    # HTML
     fp = go.Figure()
     fp.add_trace(go.Scatter(x=[0, round(lim, 2)], y=[0, round(lim, 2)], name=lbl_45, mode="lines", line=dict(color="#D97706", width=1.6, dash="dash"), hoverinfo="skip"))
+    if len(ug_all) > 0:
+        fp.add_trace(go.Scatter(x=[round(float(z), 2) for z in ug_all], y=[round(float(z), 2) for z in vg_all], mode="lines", line=dict(color="#64748B", width=1.2, dash="dot"), showlegend=False, hoverinfo="skip"))
     fp.add_trace(go.Scatter(x=[round(float(x), 2) for x in hist["u"]], y=[round(float(y), 2) for y in hist["v"]], text=list(hist.index), name=lbl_h, mode="markers", marker=dict(color="#94A3B8", size=6, opacity=0.6), hovertemplate="%{text}<br>u: %{x:.2f} % | v: %{y:.2f} %<extra></extra>"))
     fp.add_trace(go.Scatter(x=[round(float(x), 2) for x in rec["u"]], y=[round(float(y), 2) for y in rec["v"]], text=list(rec.index), name=lbl_r, mode="lines+markers", line=dict(color="#1B3A6B", width=1.6), marker=dict(color="#1B3A6B", size=7), hovertemplate="%{text}<br>u: %{x:.2f} % | v: %{y:.2f} %<extra></extra>"))
-    fp.add_trace(go.Scatter(x=[round(float(rec["u"].iloc[-1]), 2)], y=[round(float(rec["v"].iloc[-1]), 2)], text=[rec.index[-1]], name=rec.index[-1], mode="markers+text", textposition="middle right", marker=dict(color="#DC2626", size=10), showlegend=False, hovertemplate="%{text}<br>u: %{x:.2f} % | v: %{y:.2f} %<extra></extra>"))
+    if has_prev:
+        fp.add_trace(go.Scatter(x=[round(u_prev, 2)], y=[round(v_prev, 2)], text=[prev_ym], mode="markers+text", textposition="top right", textfont=dict(size=10, color="#DC2626"), marker=dict(color="#DC2626", size=9), showlegend=False, hovertemplate="%{text}<br>u: %{x:.2f} % | v: %{y:.2f} %<extra></extra>"))
+    fp.add_trace(go.Scatter(x=[round(u_last, 2)], y=[round(v_last, 2)], text=[last_ym], mode="markers+text", textposition="bottom right", textfont=dict(size=10.5, color="#DC2626"), marker=dict(color="#DC2626", size=10), showlegend=False, hovertemplate="%{text}<br>u: %{x:.2f} % | v: %{y:.2f} %<extra></extra>"))
     fp.update_layout(
         title=dict(text=f"<b>{title_t}</b><br><span style='font-size:11px;color:#475569;'>{sub_t}</span>", x=0.03, y=0.96, yanchor="top", font=dict(size=14.5, color="#0F172A", family="DejaVu Sans, sans-serif")),
         plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="closest", dragmode=False,
         legend=dict(orientation="h", x=0.0, y=1.01, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.2, color="#1E293B")),
         margin=dict(l=54, r=24, t=96, b=95), height=455,
         annotations=[
+            dict(text=f"{r2_txt_all}<br>{r2_txt_rec}", x=0.98, y=0.05, xref="paper", yref="paper", showarrow=False, align="right", bgcolor="rgba(255,255,255,0.85)", bordercolor="#CBD5E1", borderwidth=1, font=dict(size=10, color="#334155"), xanchor="right", yanchor="bottom"),
             dict(text=f"{t['src']}{now_str}", x=0.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"),
             dict(text="T.H.", x=1.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")
         ]
@@ -418,7 +453,7 @@ def main():
         render_ts_chart("gap", lang, months, [(df["gap"].values, t["gap_lbl"], "#DC2626", "-")], dec=2, zero_line=True)
         render_ts_chart("rec_ind", lang, months, [(df["michez"].values, t["rec_ind_lbl"], "#1B3A6B", "-")], ref_lines=[(thr_low, t["rec_t1"], "#D97706"), (thr_high, t["rec_t2"], "#DC2626")], dec=2)
         render_ts_chart("rec_prob", lang, months, [(df["prob"].values, t["rec_prob_lbl"], "#DC2626", "-")], dec=0)
-    print(f"[OK] Michaillat-Saez Deutschland (DE & EN) bis {months[-1]} erstellt (Schwellen: {thr_low}/{thr_high} pp).")
+    print(f"[OK] Michaillat-Saez Deutschland (DE & EN) von {months.min()} bis {months.max()} erstellt (Schwellen: {thr_low}/{thr_high} pp).")
 
 if __name__ == "__main__":
     main()
