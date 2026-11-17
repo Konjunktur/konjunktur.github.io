@@ -140,11 +140,42 @@ def fmt_num(val, use_comma):
     s = f"{float(val):.1f}"
     return s.replace(".", ",") if use_comma else s
 
-def style_panel(ax, title, sub, ymin, ymax, yticks, z=True, title_y=1.40, sub_y=1.32):
+def fmt_clean(val, use_comma, dec=1):
+    if val is None or (isinstance(val, float) and np.isnan(val)): return ""
+    v = round(float(val), dec)
+    if v == 0: v = 0.0
+    s = f"{v:.{dec}f}".rstrip("0").rstrip(".")
+    return s.replace(".", ",") if use_comma else s
+
+def nice_axis_range(vals, min_low=None, max_high=None, include_zero=True):
+    clean = [float(v) for v in vals if v is not None and not np.isnan(v)]
+    if include_zero:
+        clean.append(0.0)
+    lo = min(clean) if clean else -5.0
+    hi = max(clean) if clean else 5.0
+    if min_low is not None: lo = min(lo, float(min_low))
+    if max_high is not None: hi = max(hi, float(max_high))
+    span = max(hi - lo, 2.0)
+    lo -= span * 0.12
+    hi += span * 0.12
+    if min_low == 0 and min(clean) >= 0:
+        lo = 0.0
+    for step in (1.0, 2.0, 2.5, 5.0, 10.0, 20.0, 25.0, 50.0):
+        ylo = np.floor(lo / step) * step
+        yhi = np.ceil(hi / step) * step
+        if (yhi - ylo) / step <= 9:
+            return ylo, yhi, np.arange(ylo, yhi + step * 0.1, step)
+    step = 50.0
+    ylo = np.floor(lo / step) * step
+    yhi = np.ceil(hi / step) * step
+    return ylo, yhi, np.arange(ylo, yhi + step * 0.1, step)
+
+def style_panel(ax, title, sub, ymin, ymax, yticks, use_comma, z=True, title_y=1.40, sub_y=1.32):
     ax.set_facecolor("#F8FAFC")
     ax.text(0.0, title_y, title, transform=ax.transAxes, fontsize=11.5, fontweight="bold", color="#0F172A")
     ax.text(0.0, sub_y, sub, transform=ax.transAxes, fontsize=8.2, color="#64748B")
     ax.set_ylim(ymin, ymax); ax.set_yticks(yticks)
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, pos: fmt_clean(x, use_comma, 1)))
     ax.tick_params(axis="y", colors="#475569", labelsize=8.5, length=0)
     ax.tick_params(axis="x", colors="#475569", labelsize=8, rotation=45, length=3, color="#CBD5E1")
     for lbl in ax.get_xticklabels(): lbl.set_ha("right")
@@ -168,29 +199,38 @@ def mark_end(ax, x_vals, y_vals, col, use_comma, off=0.0):
         ax.plot(lx, ly, marker="o", markersize=4.5, color=col, zorder=5)
         ax.text(lx + 0.35, ly + off, fmt_num(ly, use_comma), fontsize=8, fontweight="bold", color=col, va="center")
 
-def draw_bars_with_labels(ax, xi, vals, label, use_comma):
+def draw_bars_with_labels(ax, xi, vals, label, use_comma, y_span=18.0):
     bars = ax.bar(xi, vals, width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=label, zorder=2)
+    off_b = y_span * 0.016
     for b in bars:
         h = b.get_height()
         if not np.isnan(h):
-            ax.text(b.get_x() + b.get_width() / 2, h + (0.25 if h >= 0 else -0.35), fmt_num(h, use_comma), ha="center", va=("bottom" if h >= 0 else "top"), fontsize=6.2, color="#1E3A8A", fontweight="bold", zorder=4)
+            ax.text(b.get_x() + b.get_width() / 2, h + (off_b if h >= 0 else -off_b), fmt_num(h, use_comma), ha="center", va=("bottom" if h >= 0 else "top"), fontsize=6.2, color="#1E3A8A", fontweight="bold", zorder=4)
 
 def draw_p1(ax, t, d):
-    xi, xl_bip = d["xi"], d["xl_bip"]; style_panel(ax, t["p1_t"], t["p1_s"], -10, 8, range(-10, 10, 2))
-    l1_0, l1_1, l1_2, l1_3 = t["p1_l"]; draw_bars_with_labels(ax, xi, d["bip_r"], l1_0, t["comma"])
+    xi, xl_bip = d["xi"], d["xl_bip"]
+    all_v = np.concatenate([d["bip_r"], d["pg"], d["bau"], d["hvg"]])
+    ylo, yhi, yt = nice_axis_range(all_v, -10, 8)
+    style_panel(ax, t["p1_t"], t["p1_s"], ylo, yhi, yt, t["comma"])
+    l1_0, l1_1, l1_2, l1_3 = t["p1_l"]; draw_bars_with_labels(ax, xi, d["bip_r"], l1_0, t["comma"], yhi - ylo)
     for key, col, mk, ms, lbl in (("pg", "#D97706", "o", 2.5, l1_1), ("bau", "#64748B", "s", 2.5, l1_2), ("hvg", "#059669", "^", 2.8, l1_3)):
         ax.plot(xi, d[key], color=col, lw=1.9, marker=mk, ms=ms, label=lbl, zorder=3)
     ax.set_xticks(xi); ax.set_xticklabels(xl_bip); set_legend(ax, 2)
 
 def draw_p2(ax, t, d):
-    xi, xl_bip = d["xi"], d["xl_bip"]; style_panel(ax, t["p2_t"], t["p2_s"], -10, 15, range(-10, 20, 5), title_y=1.52, sub_y=1.43)
-    l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]; draw_bars_with_labels(ax, xi, d["bip_n"], l2_0, t["comma"])
+    xi, xl_bip = d["xi"], d["xl_bip"]
+    all_v = np.concatenate([d["bip_n"], d["kp"], d["kph"], d["aus"], d["binv"], d["exp"], d["imp"]])
+    ylo, yhi, yt = nice_axis_range(all_v, -10, 15)
+    style_panel(ax, t["p2_t"], t["p2_s"], ylo, yhi, yt, t["comma"], title_y=1.52, sub_y=1.43)
+    l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]; draw_bars_with_labels(ax, xi, d["bip_n"], l2_0, t["comma"], yhi - ylo)
     for vals, col, lbl, lstyle in ((d["kp"], "#D97706", l2_1, "-"), (d["kph"], "#059669", l2_2, "--"), (d["aus"], "#7C3AED", l2_3, "-"), (d["binv"], "#0284C7", l2_4, "-"), (d["exp"], "#DC2626", l2_5, "-"), (d["imp"], "#64748B", l2_6, "-")):
         ax.plot(xi, vals, color=col, lw=1.7, ls=lstyle, label=lbl, zorder=3)
     ax.set_xticks(xi); ax.set_xticklabels(xl_bip); set_legend(ax, 2)
 
 def draw_p3(ax, t, d):
-    s_ai, s_ab = d["s_ai"], d["s_ab"]; xm = np.arange(len(s_ai)); style_panel(ax, t["p3_t"], t["p3_s"], -10, 20, range(-10, 25, 5))
+    s_ai, s_ab = d["s_ai"], d["s_ab"]; xm = np.arange(len(s_ai))
+    ylo, yhi, yt = nice_axis_range(list(s_ai.values) + list(s_ab.values), -10, 20)
+    style_panel(ax, t["p3_t"], t["p3_s"], ylo, yhi, yt, t["comma"])
     l3_0, l3_1 = t["p3_l"]
     ax.plot(xm, s_ai.values, color="#1B3A6B", lw=2.1, marker="o", ms=3, label=l3_0, zorder=3)
     ax.plot(xm, s_ab.values, color="#D97706", lw=2.0, marker="s", ms=3, label=l3_1, zorder=3)
@@ -198,7 +238,9 @@ def draw_p3(ax, t, d):
     ax.set_xticks(xm); ax.set_xticklabels(list(s_ai.index)); set_legend(ax, 1)
 
 def draw_p4(ax, t, d):
-    s_pi, s_pb, s_eh = d["s_pi"], d["s_pb"], d["s_eh"]; xm = np.arange(len(s_pi)); style_panel(ax, t["p4_t"], t["p4_s"], -8, 8, range(-8, 10, 2))
+    s_pi, s_pb, s_eh = d["s_pi"], d["s_pb"], d["s_eh"]; xm = np.arange(len(s_pi))
+    ylo, yhi, yt = nice_axis_range(list(s_pi.values) + list(s_pb.values) + list(s_eh.values), -8, 8)
+    style_panel(ax, t["p4_t"], t["p4_s"], ylo, yhi, yt, t["comma"])
     l4_0, l4_1, l4_2 = t["p4_l"]
     ax.plot(xm, s_pi.values, color="#1B3A6B", lw=2.1, marker="o", ms=3, label=l4_0, zorder=3)
     ax.plot(xm, s_pb.values, color="#D97706", lw=2.0, marker="s", ms=3, label=l4_1, zorder=3)
@@ -207,11 +249,15 @@ def draw_p4(ax, t, d):
     ax.set_xticks(xm); ax.set_xticklabels(list(s_pi.index)); set_legend(ax, 2)
 
 def draw_p5(ax, t, d):
-    s_lb = d["s_lb"]; xm = np.arange(len(s_lb)); style_panel(ax, t["p5_t"], t["p5_s"], 0, 30, range(0, 35, 5))
-    draw_bars_with_labels(ax, xm, s_lb.values, t["p5_l"], t["comma"]); ax.set_xticks(xm); ax.set_xticklabels(list(s_lb.index)); set_legend(ax, 1)
+    s_lb = d["s_lb"]; xm = np.arange(len(s_lb))
+    ylo, yhi, yt = nice_axis_range(list(s_lb.values), 0, 30)
+    style_panel(ax, t["p5_t"], t["p5_s"], ylo, yhi, yt, t["comma"], z=(ylo < 0))
+    draw_bars_with_labels(ax, xm, s_lb.values, t["p5_l"], t["comma"], yhi - ylo); ax.set_xticks(xm); ax.set_xticklabels(list(s_lb.index)); set_legend(ax, 1)
 
 def draw_p6(ax, t, d):
-    s_al, s_hv = d["s_al"], d["s_hv"]; xm = np.arange(len(s_al)); style_panel(ax, t["p6_t"], t["p6_s"], 0, 8, range(0, 10, 2), z=False)
+    s_al, s_hv = d["s_al"], d["s_hv"]; xm = np.arange(len(s_al))
+    ylo, yhi, yt = nice_axis_range(list(s_al.values) + list(s_hv.values) + [2.0, 3.0], 0, 8)
+    style_panel(ax, t["p6_t"], t["p6_s"], ylo, yhi, yt, t["comma"], z=False)
     l6_0, l6_1, l6_2, l6_3 = t["p6_l"]
     ax.plot(xm, s_al.values, color="#1B3A6B", lw=2.2, marker="o", ms=3.2, label=l6_0, zorder=3); ax.axhline(3.0, color="#1B3A6B", ls=":", lw=1.3, label=l6_1, zorder=2)
     ax.plot(xm, s_hv.values, color="#D97706", lw=2.2, marker="s", ms=3.2, label=l6_2, zorder=3); ax.axhline(2.0, color="#D97706", ls=":", lw=1.3, label=l6_3, zorder=2)
@@ -243,6 +289,8 @@ def build_for_lang(lang, data):
             margin=dict(l=46, r=16, t=top_m, b=95), height=height_p,
             annotations=[dict(text=f"{t[src_key]}{now_str_p}", x=0.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"), dict(text="T.H.", x=1.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")]
         )
+        if use_c:
+            fig_p.update_layout(separators=",.")
         fig_p.update_xaxes(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.5, color="#475569"))
         fig_p.update_yaxes(fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, tickfont=dict(size=10.5, color="#475569"))
         out_path = f"static/dashboard/{fname_p}{t['sfx']}.html"
@@ -286,7 +334,6 @@ def build_for_lang(lang, data):
     fp6.add_trace(go.Scatter(x=x6, y=y6_2, customdata=fmt_arr(y6_2), name=l6_2, mode="lines+markers", marker=dict(size=5), line=dict(color="#D97706", width=2.3), hovertemplate=f"{l6_2}: <b>%{{customdata}} %</b><extra></extra>"))
     fp6.add_trace(go.Scatter(x=x6, y=[2.0]*len(x6), name=l6_3, mode="lines", line=dict(color="#D97706", width=1.4, dash="dot"), hoverinfo="skip"))
     save_dash_plotly(fp6, t["p6_t"], t["p6_s"], "src_ba_destatis", "06_arbeitslosigkeit_inflation", 142, 480)
-
 
 def align_series(series_list):
     all_idx = sorted(set().union(*(s.index for s in series_list if not s.empty)))[-13:]
