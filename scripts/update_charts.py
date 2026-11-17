@@ -215,7 +215,7 @@ def mark_ends(ax, series_items, use_comma, y_span):
                 pts[i][2] += shift
     for lx, orig_y, text_y, col in pts:
         ax.plot(lx, orig_y, marker="o", markersize=4.5, color=col, zorder=5)
-        ax.text(lx + 1.15, text_y, fmt_num(orig_y, use_comma), fontsize=8, fontweight="bold", color=col, va="center", ha="right", zorder=6)
+        ax.text(lx + 0.85, text_y, fmt_num(orig_y, use_comma), fontsize=8, fontweight="bold", color=col, va="center", ha="right", zorder=6)
 
 def draw_bars_with_labels(ax, xi, vals, label, use_comma, y_span=18.0):
     bars = ax.bar(xi, vals, width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=label, zorder=2)
