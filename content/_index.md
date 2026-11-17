@@ -13,6 +13,9 @@ Dieses Dashboard zeigt aktuelle Wirtschaftsindikatoren. Alle Grafiken aktualisie
 - [**Der Frühindikator Spannungszahl**](/spannungszahl/)  
   Konjunktur-Frühindikator für Deutschland auf Basis von gemeldeten Stellen, Arbeitslosen und Kurzarbeit nach Claus Köhler.
 
+- [**Konjunktur und Arbeitsmarkt in Deutschland nach dem „Automated Business Cycle Dashboard“ von Pascal Michaillat, Emmanuel Saez**](/konjunktur-arbeitsmarkt/)<br>
+  Arbeitslosen- und Vakanzrate, Arbeitsmarktanspannung, Beveridge-Kurve, Vollbeschäftigungs-Arbeitslosenquote (FERU) sowie Rezessionsindikator und -wahrscheinlichkeit.
+
 - [**Schwerpunkt: Industrie / Verarbeitendes Gewerbe**](/schwerpunkt-industrie/)<br>
   Vertiefende Daten zu Beschäftigten, Umsatz, Arbeitsstunden und Löhnen im Verarbeitenden Gewerbe nach Wirtschaftszweigen.
 
