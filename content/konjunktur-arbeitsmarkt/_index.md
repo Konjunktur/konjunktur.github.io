@@ -49,8 +49,14 @@ Echtzeit-Indikatoren zur Arbeitsmarktanspannung, Vollbeschäftigungsquote (FERU)
 <iframe src="/konjunktur-arbeitsmarkt/bev.html" style="width:100%; height:465px; border:none; overflow:hidden;" scrolling="no"></iframe>
 
 - [In Vollbild anzeigen](/konjunktur-arbeitsmarkt/bev.png)
+
+### Beveridge-Kurve {#beveridge-kurve}
+
+<iframe src="/konjunktur-arbeitsmarkt/bev.html" style="width:100%; height:465px; border:none; overflow:hidden;" scrolling="no"></iframe>
+
+- [In Vollbild anzeigen](/konjunktur-arbeitsmarkt/bev.png)
 - **Konstruktion:** Streudiagramm der Vakanzrate (<i>v</i>) gegen die Arbeitslosenquote (<i>u</i>) inklusive der 45°-Linie (<i>v</i> = <i>u</i>) sowie hyperbolischer Anpassungskurven (<i>v</i> = <i>a</i> + <i>b</i>/<i>u</i>) mit Bestimmtheitsmaß (<i>R</i>²).
-- **Interpretation:** Im Konjunkturzyklus bewegt sich die Wirtschaft entlang der Beveridge-Kurve. In Rezessionen steigt die Arbeitslosenquote und die Vakanzrate sinkt (Bewegung nach unten rechts); im Aufschwung verläuft die Bewegung nach oben links. Verschiebungen der Kurve nach außen zeigen strukturelle Friktionen an.
+- **Interpretation:** Die Beveridge-Kurve ist einer der stabilsten Zusammenhänge der Makroökonomie. Im Konjunkturzyklus bewegt sich die Wirtschaft entlang der Kurve: In Rezessionen steigt die Arbeitslosenquote, während die Vakanzrate sinkt; im Aufschwung sinkt die Arbeitslosenquote, während die Vakanzrate steigt.
 - **Quelle:** Eigene Berechnung nach der Methodik von Michaillat und Saez (2024) auf Basis von Daten der Deutschen Bundesbank und des Statistischen Bundesamts.
 
 ### Arbeitslosenquote und Vollbeschäftigungsquote (FERU) {#vollbeschaeftigungsquote}
@@ -85,6 +91,13 @@ Echtzeit-Indikatoren zur Arbeitsmarktanspannung, Vollbeschäftigungsquote (FERU)
 <iframe src="/konjunktur-arbeitsmarkt/rec_prob.html" style="width:100%; height:455px; border:none; overflow:hidden;" scrolling="no"></iframe>
 
 - [In Vollbild anzeigen](/konjunktur-arbeitsmarkt/rec_prob.png)
-- **Konstruktion:** Normierter Anteil der Spanne zwischen unterer und oberer Rezessionsschwelle, den der Rezessionsindikator aktuell erreicht hat (in %).
-- **Interpretation:** Liegt der Indikator unter der unteren Schwelle, beträgt die Wahrscheinlichkeit 0 %. Zwischen unterer und oberer Schwelle steigt sie linear bis 100 % an und dient als Echtzeit-Frühindikator (Nowcast) für Rezessionsrisiken in Deutschland.
+
+### Rezessionswahrscheinlichkeit {#rezessionswahrscheinlichkeit}
+
+<iframe src="/konjunktur-arbeitsmarkt/rec_prob.html" style="width:100%; height:455px; border:none; overflow:hidden;" scrolling="no"></iframe>
+
+- [In Vollbild anzeigen](/konjunktur-arbeitsmarkt/rec_prob.png)
+- **Konstruktion:** Die Rezessionswahrscheinlichkeit übersetzt den Wert des Rezessionsindikators in eine Prozentzahl zwischen 0 % und 100 %. Dabei markiert die untere Schwelle den Bereich ohne Rezessionssignal (0 %) und die obere Schwelle den Wert, ab dem historische Rezessionen eindeutig erreicht wurden (100 %).
+- **Interpretation:** Liegt der Indikator unter der unteren Schwelle, beträgt die Wahrscheinlichkeit 0 %. Steigt er über die untere Schwelle an, wächst die Wahrscheinlichkeit schrittweise bis auf 100 % bei Erreichen der oberen Schwelle und zeigt so laufend das aktuelle Rezessionsrisiko für Deutschland an.
 - **Quelle:** Eigene Berechnung nach der Methodik von Michaillat und Saez (2025) auf Basis von Daten der Deutschen Bundesbank und des Statistischen Bundesamts.
+
