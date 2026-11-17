@@ -67,8 +67,7 @@ TEXTS = {
             }
         }
     },
-
-        "en": {
+    "en": {
         "unit": "bn €",
         "xlabel": "Monthly values",
         "exp": "Exports",
@@ -127,6 +126,15 @@ def fmt_num(val, use_comma, dec=2):
     if val is None or (isinstance(val, float) and np.isnan(val)):
         return ""
     s = f"{float(val):.{dec}f}"
+    return s.replace(".", ",") if use_comma else s
+
+def fmt_axis(val, use_comma, dec=2):
+    if val is None or (isinstance(val, float) and np.isnan(val)):
+        return ""
+    v = round(float(val), dec)
+    if v == 0:
+        v = 0.0
+    s = f"{v:.{dec}f}".rstrip("0").rstrip(".")
     return s.replace(".", ",") if use_comma else s
 
 def _unpack(resp):
@@ -205,7 +213,7 @@ def fetch_genesis_trade(table, startyear="2019", cvar1=None, ckey1=None, cvar2=N
     val_num = val_num.loc[df.index]
 
     if unit_col and df[unit_col].notna().any():
-        u_sample = str(df[unit_col].dropna().iloc).lower()
+        u_sample = str(next(iter(df[unit_col].dropna()))).lower()
         divisor = 1e6 if "tsd" in u_sample else (1e3 if "mio" in u_sample else 1e9)
     else:
         divisor = 1e6
@@ -240,12 +248,13 @@ def render_single(key, lang, exp, imp, bal):
     ve, vi, vb = exp.values, imp.values, bal.values
 
     all_vals = np.concatenate([ve, vi, vb, [0.0]])
-    ymin = np.floor(np.min(all_vals) * 1.12 * 10) / 10
-    ymax = np.ceil(np.max(all_vals) * 1.15 * 10) / 10
+    lo_raw, hi_raw = float(np.min(all_vals)), float(np.max(all_vals))
+    span = max(hi_raw - lo_raw, 0.2)
+    ymin = lo_raw - span * 0.12
+    ymax = hi_raw + span * 0.14
     dec = 1 if (ymax - ymin) >= 15 else 2
     tick_pos = [i for i, ym in enumerate(months) if ym.endswith("-01") or ym.endswith("-07")]
 
-    # 1. PNG
     fig, ax = plt.subplots(figsize=(8.6, 5.2), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.09, right=0.92, top=0.79, bottom=0.23)
     fig.suptitle(ct["title"], x=0.09, y=0.96, ha="left", fontsize=11.0, fontweight="bold", color="#0F172A")
@@ -254,7 +263,7 @@ def render_single(key, lang, exp, imp, bal):
     ax.set_facecolor("#F8FAFC")
     ax.set_ylim(ymin, ymax)
     ax.set_xlim(-0.8, len(months) + 3.2)
-    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_num(v, use_c, dec)))
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_axis(v, use_c, dec)))
     ax.tick_params(axis="y", colors="#475569", labelsize=8.2, length=0)
     ax.tick_params(axis="x", colors="#475569", labelsize=7.8, rotation=45, length=3, color="#CBD5E1")
     ax.yaxis.grid(True, color="#E2E8F0", linewidth=0.8, zorder=0)
@@ -289,7 +298,6 @@ def render_single(key, lang, exp, imp, bal):
     plt.savefig(f"static/aussenhandel-industrie/{key}{t['sfx']}.png", dpi=300)
     plt.close()
 
-    # 2. HTML (exakt wie kapazitaetsauslastung)
     t_vals = [months[i] for i in tick_pos]
     fp = go.Figure()
     fp.add_trace(go.Bar(x=months, y=[round(v, dec) for v in vb], customdata=[fmt_num(v, use_c, dec) for v in vb], name=t["bal"], marker_color=bar_colors, opacity=0.45, hovertemplate=f"{t['bal']}: <b>%{{customdata}} {t['unit']}</b><extra></extra>"))
@@ -324,12 +332,13 @@ def render_dual(key, lang, exp_a, imp_a, bal_a, exp_b, imp_b, bal_b):
     veb, vib, vbb = exp_b.values, imp_b.values, bal_b.values
 
     all_vals = np.concatenate([vea, via, vba, veb, vib, vbb, [0.0]])
-    ymin = np.floor(np.min(all_vals) * 1.12 * 10) / 10
-    ymax = np.ceil(np.max(all_vals) * 1.15 * 10) / 10
+    lo_raw, hi_raw = float(np.min(all_vals)), float(np.max(all_vals))
+    span = max(hi_raw - lo_raw, 0.2)
+    ymin = lo_raw - span * 0.12
+    ymax = hi_raw + span * 0.14
     dec = 1 if (ymax - ymin) >= 15 else 2
     tick_pos = [i for i, ym in enumerate(months) if ym.endswith("-01") or ym.endswith("-07")]
 
-    # 1. PNG
     fig, ax = plt.subplots(figsize=(8.6, 5.7), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.09, right=0.92, top=0.72, bottom=0.21)
     fig.suptitle(ct["title"], x=0.09, y=0.96, ha="left", fontsize=11.0, fontweight="bold", color="#0F172A")
@@ -338,7 +347,7 @@ def render_dual(key, lang, exp_a, imp_a, bal_a, exp_b, imp_b, bal_b):
     ax.set_facecolor("#F8FAFC")
     ax.set_ylim(ymin, ymax)
     ax.set_xlim(-0.8, len(months) + 3.2)
-    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_num(v, use_c, dec)))
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_axis(v, use_c, dec)))
     ax.tick_params(axis="y", colors="#475569", labelsize=8.2, length=0)
     ax.tick_params(axis="x", colors="#475569", labelsize=7.8, rotation=45, length=3, color="#CBD5E1")
     ax.yaxis.grid(True, color="#E2E8F0", linewidth=0.8, zorder=0)
@@ -378,7 +387,6 @@ def render_dual(key, lang, exp_a, imp_a, bal_a, exp_b, imp_b, bal_b):
     plt.savefig(f"static/aussenhandel-industrie/{key}{t['sfx']}.png", dpi=300)
     plt.close()
 
-    # 2. HTML (exakt wie kapazitaetsauslastung, mit t=124 für die 2-zeilige Legende)
     t_vals = [months[i] for i in tick_pos]
     fp = go.Figure()
     fp.add_trace(go.Bar(x=months, y=[round(v, dec) for v in vba], customdata=[fmt_num(v, use_c, dec) for v in vba], name=f"Saldo – {ct['lbl_a']}", marker_color=col_ba, opacity=0.45, hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
