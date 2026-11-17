@@ -453,7 +453,7 @@ def main():
         render_ts_chart("gap", lang, months, [(df["gap"].values, t["gap_lbl"], "#DC2626", "-")], dec=2, zero_line=True)
         render_ts_chart("rec_ind", lang, months, [(df["michez"].values, t["rec_ind_lbl"], "#1B3A6B", "-")], ref_lines=[(thr_low, t["rec_t1"], "#D97706"), (thr_high, t["rec_t2"], "#DC2626")], dec=2)
         render_ts_chart("rec_prob", lang, months, [(df["prob"].values, t["rec_prob_lbl"], "#DC2626", "-")], dec=0)
-    print(f"[OK] Michaillat-Saez Deutschland (DE & EN) von {months.min()} bis {months.max()} erstellt (Schwellen: {thr_low}/{thr_high} pp).")
+        print(f"[OK] Michaillat-Saez Deutschland (DE & EN) von {min(months)} bis {max(months)} erstellt (Schwellen: {thr_low}/{thr_high} pp).")
 
 if __name__ == "__main__":
     main()
