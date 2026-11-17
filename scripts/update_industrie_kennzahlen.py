@@ -85,6 +85,15 @@ def fmt_rate(val, use_comma):
     s = f"{float(val):.1f}"
     return s.replace(".", ",") if use_comma else s
 
+def fmt_axis(val, use_comma):
+    if val is None or (isinstance(val, float) and np.isnan(val)):
+        return ""
+    v = round(float(val), 1)
+    if v == 0:
+        v = 0.0
+    s = f"{v:.1f}".rstrip("0").rstrip(".")
+    return s.replace(".", ",") if use_comma else s
+
 def _extract_payload(resp):
     if resp.content[:2] == b"PK":
         with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
@@ -149,19 +158,12 @@ def fetch_42111_0004_multi():
         raw_piv[var_code] = raw_piv[var_code].reindex(common_idx)
 
     wage_per_emp = raw_piv["VST003"] / raw_piv["ERW012"]
-
-    def to_yoy(df_lvl):
-        yoy = (df_lvl / df_lvl.shift(12) - 1.0) * 100.0
-        return yoy[yoy.index >= "2019-01"]
-
-    yoy_data = {
-        "ums": to_yoy(raw_piv["UMS002"]),
-        "hrs": to_yoy(raw_piv["ARBST1"]),
-        "emp": to_yoy(raw_piv["ERW012"]),
-        "wag": to_yoy(wage_per_emp),
-        "emp_lvl": raw_piv["ERW012"][raw_piv["ERW012"].index >= "2019-01"]
-    }
-    return yoy_data
+    yoy = {}
+    for key, mat in (("ums", raw_piv["UMS002"]), ("hrs", raw_piv["ARBST1"]), ("emp", raw_piv["ERW012"]), ("wag", wage_per_emp)):
+        yoy_mat = (mat / mat.shift(12) - 1.0) * 100.0
+        yoy[key] = yoy_mat[yoy_mat.index >= "2019-01"]
+    yoy["emp_lvl"] = raw_piv["ERW012"][raw_piv["ERW012"].index >= "2019-01"]
+    return yoy
 
 def nice_sym_range(vals):
     clean = [abs(float(v)) for v in vals if v is not None and not np.isnan(v)]
@@ -210,7 +212,6 @@ def render_multi_charts(lang, slug, code, title_name, s_ums, s_hrs, s_wag, s_emp
     c_ums, c_hrs, c_wag, c_emp = "#1B3A6B", "#7FA6C9", "#5C9E31", "#E03C31"
     full_title = f"{title_name} ({code})"
 
-    # 1. Statisches PNG
     fig, ax1 = plt.subplots(figsize=(8.2, 5.8), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.11, right=0.88, top=0.72, bottom=0.27)
     fig.suptitle(full_title, x=0.11, y=0.96, ha="left", fontsize=11.5, fontweight="bold", color="#0F172A")
@@ -220,7 +221,7 @@ def render_multi_charts(lang, slug, code, title_name, s_ums, s_hrs, s_wag, s_emp
     ax1.set_ylim(l_min, l_max)
     ax1.set_yticks(np.arange(l_min, l_max + l_step * 0.1, l_step))
     ax1.set_xlim(-1.0, len(months) + 2.8)
-    ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, pos: fmt_rate(x, use_c)))
+    ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, pos: fmt_axis(x, use_c)))
     ax1.tick_params(axis="y", colors="#475569", labelsize=8.5, length=0)
     ax1.tick_params(axis="x", colors="#475569", labelsize=8.0, rotation=90, length=3, color="#CBD5E1")
     ax1.yaxis.grid(True, color="#E2E8F0", linewidth=0.8, zorder=0)
@@ -233,7 +234,7 @@ def render_multi_charts(lang, slug, code, title_name, s_ums, s_hrs, s_wag, s_emp
     ax2 = ax1.twinx()
     ax2.set_ylim(r_min, r_max)
     ax2.set_yticks(np.arange(r_min, r_max + r_step * 0.1, r_step))
-    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, pos: fmt_rate(x, use_c)))
+    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, pos: fmt_axis(x, use_c)))
     ax2.tick_params(axis="y", colors="#475569", labelsize=8.5, length=0)
     for s in ("top", "right", "left", "bottom"):
         ax2.spines[s].set_visible(False)
@@ -275,7 +276,6 @@ def render_multi_charts(lang, slug, code, title_name, s_ums, s_hrs, s_wag, s_emp
     plt.savefig(f"static/industrie/{slug}{t['sfx']}.png", dpi=300)
     plt.close()
 
-    # 2. Interaktives HTML (ohne Scrollbalken, mit großzügigem Abstand unter dem Untertitel)
     fp = make_subplots(specs=[[{"secondary_y": True}]])
     for vals, name, col, sec_y in (
         (v_ums, t["leg"][0], c_ums, False),
@@ -351,3 +351,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
