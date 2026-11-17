@@ -3,8 +3,6 @@ title: "Der Frühindikator Spannungszahl"
 description: "Konjunktur-Frühindikator für Deutschland auf Basis von gemeldeten Stellen, Arbeitslosen und Kurzarbeit."
 ---
 
-Konjunktur-Frühindikator für Deutschland auf Basis von gemeldeten Stellen, Arbeitslosen und Kurzarbeit.
-
 Die Spannungszahl misst die Zahl der gemeldeten Stellen (Arbeitsnachfrage) minus die Zahl der Arbeitslosen (Arbeitsangebot) minus derselben Differenz des Vorjahreszeitraums. Entwickelt hat sie Claus Köhler, früher Mitglied des Sachverständigenrats zur Begutachtung der gesamtwirtschaftlichen Entwicklung und des Direktoriums der Deutschen Bundesbank.
 
 *Zur Spannungszahl vergleiche ausführlich:* Claus Köhler, *Die Spannungszahl – Ein Indikator der gesamtwirtschaftlichen Entwicklung*, Arbeitspapiere des Instituts für Empirische Wirtschaftsforschung, Band 10, 1993.
