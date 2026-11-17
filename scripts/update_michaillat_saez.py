@@ -228,16 +228,17 @@ def load_all_labor_data():
     comb["michez"] = np.minimum(du, dv).clip(lower=0.0)
 
     rec_peaks = []
-    for r_s, r_e in DE_RECESSIONS[:-1]:
-        sub_r = comb.loc[r_s:r_e, "michez"].dropna()
-        if not sub_r.empty:
-            rec_peaks.append(float(sub_r.max()))
-    non_rec_mask = pd.Series(True, index=comb.index)
     for r_s, r_e in DE_RECESSIONS:
-        non_rec_mask.loc[r_s:r_e] = False
-    exp_max = float(comb.loc[non_rec_mask, "michez"].max()) if non_rec_mask.any() else 0.10
-    thr_low = round(max(exp_max + 0.01, min(rec_peaks) * 0.85 if rec_peaks else 0.15), 2)
-    thr_high = round(max(thr_low + 0.15, float(np.median(rec_peaks)) if rec_peaks else 0.45), 2)
+        sub_r = comb.loc[r_s:r_e, "michez"].dropna()
+        if not sub_r.empty and float(sub_r.max()) > 0:
+            rec_peaks.append(float(sub_r.max()))
+    if len(rec_peaks) >= 2:
+        thr_low = round(min(rec_peaks) * 0.75, 2)
+        thr_high = round(np.percentile(rec_peaks, 75), 2)
+    else:
+        thr_low, thr_high = 0.08, 0.25
+    if thr_high <= thr_low:
+        thr_high = round(thr_low + 0.10, 2)
     comb["prob"] = ((comb["michez"] - thr_low) / (thr_high - thr_low) * 100.0).clip(0.0, 100.0)
     return comb, thr_low, thr_high
 
@@ -364,7 +365,10 @@ def render_beveridge(lang, df):
     lbl_45 = t["bev_45"]
     hist = df[df.index < "2022-01"]
     rec = df[df.index >= "2022-01"]
-    lim = max(float(df["u"].max()), float(df["v"].max())) * 1.12
+
+    u_max = min(13.5, float(df["u"].max()) * 1.06)
+    v_max = min(4.5, max(float(df["v"].max()) * 1.25, 3.5))
+    lim = max(u_max, v_max)
 
     r2_all, ug_all, vg_all = _fit_hyperbola_r2(df["u"].values, df["v"].values)
     r2_rec, ug_rec, vg_rec = _fit_hyperbola_r2(rec["u"].values, rec["v"].values)
@@ -404,8 +408,8 @@ def render_beveridge(lang, df):
     ax.annotate(last_ym, xy=(u_last, v_last), xytext=(10, -10), textcoords="offset points", fontsize=7.5, fontweight="bold", color="#DC2626", ha="left")
 
     ax.text(0.97, 0.08, f"{r2_txt_all}\n{r2_txt_rec}", transform=ax.transAxes, ha="right", va="bottom", fontsize=7.5, color="#334155", bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="#CBD5E1", alpha=0.9))
-    ax.set_xlim(0, lim)
-    ax.set_ylim(0, lim)
+    ax.set_xlim(0, u_max)
+    ax.set_ylim(0, v_max)
     ax.set_xlabel("u (%)", fontsize=8.5, color="#475569")
     ax.set_ylabel("v (%)", fontsize=8.5, color="#475569")
     ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.01), ncol=3, frameon=False, fontsize=7.8)
@@ -434,8 +438,8 @@ def render_beveridge(lang, df):
             dict(text="T.H.", x=1.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")
         ]
     )
-    fp.update_xaxes(title="u (%)", range=[0, lim], fixedrange=True, gridcolor="#E2E8F0", linecolor="#94A3B8", tickfont=dict(size=10))
-    fp.update_yaxes(title="v (%)", range=[0, lim], fixedrange=True, gridcolor="#E2E8F0", linecolor="#94A3B8", tickfont=dict(size=10))
+    fp.update_xaxes(title="u (%)", range=[0, u_max], fixedrange=True, gridcolor="#E2E8F0", linecolor="#94A3B8", tickfont=dict(size=10))
+    fp.update_yaxes(title="v (%)", range=[0, v_max], fixedrange=True, gridcolor="#E2E8F0", linecolor="#94A3B8", tickfont=dict(size=10))
     if use_c:
         fp.update_layout(separators=",.")
     out_path = f"static/konjunktur-arbeitsmarkt/bev{t['sfx']}.html"
