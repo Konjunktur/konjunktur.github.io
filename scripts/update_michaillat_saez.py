@@ -97,6 +97,15 @@ def fmt_num(val, use_comma, dec=2):
     s = f"{float(val):.{dec}f}"
     return s.replace(".", ",") if use_comma else s
 
+def fmt_clean(val, use_comma, dec=2):
+    if val is None or (isinstance(val, float) and np.isnan(val)):
+        return ""
+    v = round(float(val), dec)
+    if v == 0:
+        v = 0.0
+    s = f"{v:.{dec}f}".rstrip("0").rstrip(".")
+    return s.replace(".", ",") if use_comma else s
+
 def _unpack(resp):
     if resp.content[:2] == b"PK":
         with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
@@ -234,7 +243,7 @@ def load_all_labor_data():
             rec_peaks.append(float(sub_r.max()))
     if len(rec_peaks) >= 2:
         thr_low = round(min(rec_peaks) * 0.75, 2)
-        thr_high = round(np.percentile(rec_peaks, 75), 2)
+        thr_high = round(float(np.percentile(rec_peaks, 75)), 2)
     else:
         thr_low, thr_high = 0.08, 0.25
     if thr_high <= thr_low:
@@ -307,19 +316,25 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
         ax.axhline(0, color="#64748B", lw=1.0, zorder=1)
     if y_range is not None:
         ax.set_ylim(y_range[0], y_range[1])
+    else:
+        all_y = [float(v) for vals, _, _, _ in series_list for v in vals if not np.isnan(v)] + [float(r[0]) for r in (ref_lines or [])]
+        if all_y:
+            ymin_a, ymax_a = min(all_y), max(all_y)
+            pad = max((ymax_a - ymin_a) * 0.10, 0.05)
+            ax.set_ylim(ymin_a - pad, ymax_a + pad)
     for s in ("top", "right", "left"):
         ax.spines[s].set_visible(False)
     ax.spines["bottom"].set_color("#94A3B8")
     ax.tick_params(axis="y", colors="#475569", labelsize=8.2, length=0)
     ax.tick_params(axis="x", colors="#475569", labelsize=7.8, rotation=45, length=3, color="#CBD5E1")
-    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_num(v, use_c, dec)))
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_clean(v, use_c, dec)))
 
     for vals, lbl, col, ls in series_list:
         ax.plot(x, vals, color=col, lw=1.9, linestyle=ls, label=str(lbl), zorder=4)
         ax.scatter([x[-1]], [vals[-1]], color=col, s=16, zorder=5)
         ax.text(x[-1] + 2.0, vals[-1], fmt_num(vals[-1], use_c, dec), fontsize=7.3, fontweight="bold", color=col, va="center", ha="left")
     for r_val, r_lbl, r_col in (ref_lines or []):
-        ax.axhline(r_val, color=r_col, lw=1.4, linestyle="--", label=f"{r_lbl} ({fmt_num(r_val, use_c, dec)})", zorder=3)
+        ax.axhline(r_val, color=r_col, lw=1.4, linestyle="--", label=f"{r_lbl} ({fmt_clean(r_val, use_c, dec)})", zorder=3)
 
     ax.set_xlim(-2, len(months) + 18)
     ax.set_xticks(tick_pos)
@@ -335,7 +350,7 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
         dash = "dash" if ls == "--" else "solid"
         fp.add_trace(go.Scatter(x=months, y=[round(float(v), dec) for v in vals], customdata=[fmt_num(v, use_c, dec) for v in vals], name=str(lbl), mode="lines", line=dict(color=col, width=2.1, dash=dash), hovertemplate=f"{lbl}: <b>%{{customdata}}</b><extra></extra>"))
     for r_val, r_lbl, r_col in (ref_lines or []):
-        fp.add_trace(go.Scatter(x=months, y=[round(float(r_val), dec)] * len(months), customdata=[fmt_num(r_val, use_c, dec)] * len(months), name=f"{r_lbl} ({fmt_num(r_val, use_c, dec)})", mode="lines", line=dict(color=r_col, width=1.6, dash="dash"), hovertemplate=f"{r_lbl}: <b>%{{customdata}}</b><extra></extra>"))
+        fp.add_trace(go.Scatter(x=months, y=[round(float(r_val), dec)] * len(months), customdata=[fmt_num(r_val, use_c, dec)] * len(months), name=f"{r_lbl} ({fmt_clean(r_val, use_c, dec)})", mode="lines", line=dict(color=r_col, width=1.6, dash="dash"), hovertemplate=f"{r_lbl}: <b>%{{customdata}}</b><extra></extra>"))
     if use_c:
         fp.update_layout(separators=",.")
     _save_plotly(fp, months, title_t, sub_t, t["src"], now_str, f"static/konjunktur-arbeitsmarkt/{key}{t['sfx']}.html", tick_step=step, shapes=_add_rec_shapes_plotly(months), zero_line=zero_line, y_range=y_range)
@@ -410,6 +425,8 @@ def render_beveridge(lang, df):
     ax.text(0.97, 0.08, f"{r2_txt_all}\n{r2_txt_rec}", transform=ax.transAxes, ha="right", va="bottom", fontsize=7.5, color="#334155", bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="#CBD5E1", alpha=0.9))
     ax.set_xlim(0, u_max)
     ax.set_ylim(0, v_max)
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_clean(v, use_c, 1)))
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_clean(v, use_c, 1)))
     ax.set_xlabel("u (%)", fontsize=8.5, color="#475569")
     ax.set_ylabel("v (%)", fontsize=8.5, color="#475569")
     ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.01), ncol=3, frameon=False, fontsize=7.8)
