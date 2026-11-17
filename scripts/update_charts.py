@@ -267,7 +267,10 @@ def draw_p6(ax, t, d):
 
 def save_single(draw_fn, t, data, fname, src_key, top_adj=0.68):
     fig, ax = plt.subplots(figsize=(7.4, 4.9), dpi=300, facecolor="white"); plt.subplots_adjust(left=0.09, right=0.93, top=top_adj, bottom=0.24); draw_fn(ax, t, data)
+    for txt in list(ax.texts):
+        if txt.get_text() == "T.H.": txt.remove()
     fig.text(0.09, 0.02, f"{t[src_key]}{datetime.now().strftime(t['date_fmt'])}", fontsize=7.5, color="#64748B")
+    fig.text(0.93, 0.02, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
     plt.savefig(f"static/dashboard/{fname}{t['sfx']}.png", dpi=300); plt.close()
 
 def build_for_lang(lang, data):
