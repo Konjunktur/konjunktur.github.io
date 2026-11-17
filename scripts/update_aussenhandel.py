@@ -20,7 +20,7 @@ TEXTS = {
         "exp": "Exporte",
         "imp": "Importe",
         "bal": "Saldo (Exp. − Imp.)",
-        "src": "Quelle: Statistisches Bundesamt (GENESIS-Online) | Stand: ",
+        "src": "Quelle: Statistisches Bundesamt | Stand: ",
         "date_fmt": "%d.%m.%Y",
         "comma": True,
         "sfx": "",
@@ -35,13 +35,13 @@ TEXTS = {
             },
             "aussenhandel_stahl": {
                 "title": "Außenhandel: Eisen und Stahl sowie Waren daraus",
-                "sub": "WAM2 Kap. 72 (Eisen/Stahl) vs. Kap. 72+73 (inkl. Waren aus Eisen/Stahl) in Mrd. €",
+                "sub": "WAM2 Kap. 72 (Eisen/Stahl) vs. Kap. 72+73 (inkl. Waren) in Mrd. €",
                 "lbl_a": "Kap. 72 (Eisen/Stahl)",
                 "lbl_b": "Kap. 72+73 (inkl. Waren)"
             },
             "aussenhandel_chemie": {
                 "title": "Außenhandel: Chemische und pharmazeutische Erzeugnisse",
-                "sub": "WAM2 Kap. 28–38 ohne Kap. 30 (Chemie o. Pharma) vs. inkl. Kap. 30 in Mrd. €",
+                "sub": "WAM2 Kap. 28–38 ohne Kap. 30 vs. inkl. Kap. 30 in Mrd. €",
                 "lbl_a": "Chemie o. Pharma",
                 "lbl_b": "Chemie inkl. Pharma"
             },
@@ -55,13 +55,13 @@ TEXTS = {
             },
             "china_stahl": {
                 "title": "Außenhandel mit China: Eisen und Stahl sowie Waren daraus",
-                "sub": "WAM2 Kap. 72 (Eisen/Stahl) vs. Kap. 72+73 (inkl. Waren aus Eisen/Stahl) in Mrd. €",
+                "sub": "WAM2 Kap. 72 (Eisen/Stahl) vs. Kap. 72+73 (inkl. Waren) in Mrd. €",
                 "lbl_a": "Kap. 72 (Eisen/Stahl)",
                 "lbl_b": "Kap. 72+73 (inkl. Waren)"
             },
             "china_chemie": {
                 "title": "Außenhandel mit China: Chemische und pharmazeutische Erzeugnisse",
-                "sub": "WAM2 Kap. 28–38 ohne Kap. 30 (Chemie o. Pharma) vs. inkl. Kap. 30 in Mrd. €",
+                "sub": "WAM2 Kap. 28–38 ohne Kap. 30 vs. inkl. Kap. 30 in Mrd. €",
                 "lbl_a": "Chemie o. Pharma",
                 "lbl_b": "Chemie inkl. Pharma"
             }
@@ -74,7 +74,7 @@ TEXTS = {
         "exp": "Exports",
         "imp": "Imports",
         "bal": "Balance (Exp. − Imp.)",
-        "src": "Source: Federal Statistical Office (GENESIS-Online) | As of: ",
+        "src": "Source: Federal Statistical Office | As of: ",
         "date_fmt": "%Y-%m-%d",
         "comma": False,
         "sfx": "_en",
@@ -89,13 +89,13 @@ TEXTS = {
             },
             "aussenhandel_stahl": {
                 "title": "Foreign Trade: Iron, Steel and Articles Thereof",
-                "sub": "WAM2 Ch. 72 (Iron & steel) vs. Ch. 72+73 (incl. articles thereof) in bn €",
+                "sub": "WAM2 Ch. 72 (Iron & steel) vs. Ch. 72+73 (incl. articles) in bn €",
                 "lbl_a": "Ch. 72 (Iron & steel)",
                 "lbl_b": "Ch. 72+73 (incl. articles)"
             },
             "aussenhandel_chemie": {
                 "title": "Foreign Trade: Chemical and Pharmaceutical Products",
-                "sub": "WAM2 Ch. 28–38 excl. Ch. 30 (Chemicals excl. pharma) vs. incl. Ch. 30 in bn €",
+                "sub": "WAM2 Ch. 28–38 excl. Ch. 30 vs. incl. Ch. 30 in bn €",
                 "lbl_a": "Chemicals excl. pharma",
                 "lbl_b": "Chemicals incl. pharma"
             },
@@ -109,13 +109,13 @@ TEXTS = {
             },
             "china_stahl": {
                 "title": "Foreign Trade with China: Iron, Steel and Articles Thereof",
-                "sub": "WAM2 Ch. 72 (Iron & steel) vs. Ch. 72+73 (incl. articles thereof) in bn €",
+                "sub": "WAM2 Ch. 72 (Iron & steel) vs. Ch. 72+73 (incl. articles) in bn €",
                 "lbl_a": "Ch. 72 (Iron & steel)",
                 "lbl_b": "Ch. 72+73 (incl. articles)"
             },
             "china_chemie": {
                 "title": "Foreign Trade with China: Chemical and Pharmaceutical Products",
-                "sub": "WAM2 Ch. 28–38 excl. Ch. 30 (Chemicals excl. pharma) vs. incl. Ch. 30 in bn €",
+                "sub": "WAM2 Ch. 28–38 excl. Ch. 30 vs. incl. Ch. 30 in bn €",
                 "lbl_a": "Chemicals excl. pharma",
                 "lbl_b": "Chemicals incl. pharma"
             }
@@ -222,10 +222,18 @@ def extract_series(df, wam_filter=None):
     bal = exp - imp
     return exp, imp, bal
 
+def _write_clean_html(fig, path):
+    fig.write_html(path, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
+    with open(path, "r", encoding="utf-8") as fh:
+        html_s = fh.read().replace("<body>", '<body style="margin:0;padding:0;overflow:hidden;">')
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(html_s)
+
 def render_single(key, lang, exp, imp, bal):
     t = TEXTS[lang]
     ct = t["charts"][key]
     use_c = t["comma"]
+    plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
     now_str = datetime.now().strftime(t["date_fmt"])
     months = list(exp.index)
     x = np.arange(len(months))
@@ -235,9 +243,9 @@ def render_single(key, lang, exp, imp, bal):
     ymin = np.floor(np.min(all_vals) * 1.12 * 10) / 10
     ymax = np.ceil(np.max(all_vals) * 1.15 * 10) / 10
     dec = 1 if (ymax - ymin) >= 15 else 2
-
     tick_pos = [i for i, ym in enumerate(months) if ym.endswith("-01") or ym.endswith("-07")]
 
+    # 1. PNG
     fig, ax = plt.subplots(figsize=(8.6, 5.2), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.09, right=0.92, top=0.79, bottom=0.23)
     fig.suptitle(ct["title"], x=0.09, y=0.96, ha="left", fontsize=11.0, fontweight="bold", color="#0F172A")
@@ -245,7 +253,7 @@ def render_single(key, lang, exp, imp, bal):
 
     ax.set_facecolor("#F8FAFC")
     ax.set_ylim(ymin, ymax)
-    ax.set_xlim(-0.8, len(months) + 3.0)
+    ax.set_xlim(-0.8, len(months) + 3.2)
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_num(v, use_c, dec)))
     ax.tick_params(axis="y", colors="#475569", labelsize=8.2, length=0)
     ax.tick_params(axis="x", colors="#475569", labelsize=7.8, rotation=45, length=3, color="#CBD5E1")
@@ -261,13 +269,19 @@ def render_single(key, lang, exp, imp, bal):
     ax.plot(x, ve, color="#1B3A6B", lw=2.1, label=t["exp"], zorder=4)
     ax.plot(x, vi, color="#DC2626", lw=2.1, label=t["imp"], zorder=4)
 
-    for arr, col in ((ve, "#1B3A6B"), (vi, "#DC2626"), (vb, "#15803D" if vb[-1] >= 0 else "#B91C1C")):
-        ax.scatter([x[-1]], [arr[-1]], color=col, s=18, zorder=5)
-        ax.text(x[-1] + 0.5, arr[-1], fmt_num(arr[-1], use_c, dec), fontsize=7.3, fontweight="bold", color=col, va="center", ha="left", zorder=5)
+    end_items = sorted([(ve[-1], "#1B3A6B"), (vi[-1], "#DC2626"), (vb[-1], "#15803D" if vb[-1] >= 0 else "#B91C1C")], key=lambda z: z)
+    min_gap = (ymax - ymin) * 0.048
+    placed_y = []
+    for val_y, col in end_items:
+        y_pos = val_y
+        if placed_y and y_pos - placed_y[-1] < min_gap:
+            y_pos = placed_y[-1] + min_gap
+        placed_y.append(y_pos)
+        ax.scatter([x[-1]], [val_y], color=col, s=18, zorder=5)
+        ax.text(x[-1] + 0.6, y_pos, fmt_num(val_y, use_c, dec), fontsize=7.3, fontweight="bold", color=col, va="center", ha="left", zorder=5)
 
     ax.set_xticks(tick_pos)
     ax.set_xticklabels([months[i] for i in tick_pos], ha="right")
-    ax.text(-0.01, 1.02, t["unit"], transform=ax.transAxes, ha="right", va="bottom", fontsize=7.8, color="#475569")
     ax.text(0.5, -0.22, t["xlabel"], transform=ax.transAxes, ha="center", va="top", fontsize=8.2, color="#475569")
     ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.01), ncol=3, frameon=False, fontsize=7.8, columnspacing=1.4)
     fig.text(0.09, 0.015, f"{t['src']}{now_str}", fontsize=7.1, color="#64748B")
@@ -275,24 +289,34 @@ def render_single(key, lang, exp, imp, bal):
     plt.savefig(f"static/aussenhandel-industrie/{key}{t['sfx']}.png", dpi=300)
     plt.close()
 
+    # 2. HTML
+    t_vals = [months[i] for i in tick_pos]
     fp = go.Figure()
     fp.add_trace(go.Bar(x=months, y=[round(v, dec) for v in vb], customdata=[fmt_num(v, use_c, dec) for v in vb], name=t["bal"], marker_color=bar_colors, opacity=0.45, hovertemplate=f"{t['bal']}: <b>%{{customdata}} {t['unit']}</b><extra></extra>"))
     fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in ve], customdata=[fmt_num(v, use_c, dec) for v in ve], name=t["exp"], mode="lines", line=dict(color="#1B3A6B", width=2.3), hovertemplate=f"{t['exp']}: <b>%{{customdata}} {t['unit']}</b><extra></extra>"))
     fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vi], customdata=[fmt_num(v, use_c, dec) for v in vi], name=t["imp"], mode="lines", line=dict(color="#DC2626", width=2.3), hovertemplate=f"{t['imp']}: <b>%{{customdata}} {t['unit']}</b><extra></extra>"))
     fp.update_layout(
-        title=dict(text=f"<b>{ct['title']}</b><br><span style='font-size:11px;color:#64748B'>{ct['sub']}</span>", x=0.02, y=0.95, font=dict(size=14, color="#0F172A")),
-        plot_bgcolor="#F8FAFC", paper_bgcolor="white", height=430,
-        margin=dict(l=52, r=24, t=92, b=52), hovermode="x unified",
-        legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0, font=dict(size=11)),
-        xaxis=dict(showgrid=False, linecolor="#94A3B8", tickangle=-35, tickfont=dict(size=10)),
-        yaxis=dict(title=t["unit"], gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#94A3B8", tickfont=dict(size=10))
+        title=dict(text=f"<b>{ct['title']}</b><br><span style='font-size:11px;color:#475569;'>{ct['sub']}</span>", x=0.03, y=0.96, yanchor="top", font=dict(size=14, color="#0F172A", family="DejaVu Sans, sans-serif")),
+        plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
+        hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
+        legend=dict(orientation="h", x=0.0, y=-0.20, xanchor="left", yanchor="top", bgcolor="rgba(255,255,255,0)", font=dict(size=10.5, color="#1E293B")),
+        margin=dict(l=48, r=24, t=68, b=118), height=445,
+        annotations=[
+            dict(text=f"{t['src']}{now_str}", x=0.0, y=-0.35, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"),
+            dict(text="T.H.", x=1.0, y=-0.35, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")
+        ]
     )
-    fp.write_html(f"static/aussenhandel-industrie/{key}{t['sfx']}.html", include_plotlyjs="cdn", config={"displayModeBar": False})
+    fp.update_xaxes(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickmode="array", tickvals=t_vals, ticktext=t_vals, tickfont=dict(size=10, color="#475569"))
+    fp.update_yaxes(range=[ymin, ymax], fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#94A3B8", tickfont=dict(size=10, color="#475569"))
+    if use_c:
+        fp.update_layout(separators=",.")
+    _write_clean_html(fp, f"static/aussenhandel-industrie/{key}{t['sfx']}.html")
 
 def render_dual(key, lang, exp_a, imp_a, bal_a, exp_b, imp_b, bal_b):
     t = TEXTS[lang]
     ct = t["charts"][key]
     use_c = t["comma"]
+    plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
     now_str = datetime.now().strftime(t["date_fmt"])
     months = list(exp_a.index)
     x = np.arange(len(months))
@@ -303,9 +327,9 @@ def render_dual(key, lang, exp_a, imp_a, bal_a, exp_b, imp_b, bal_b):
     ymin = np.floor(np.min(all_vals) * 1.12 * 10) / 10
     ymax = np.ceil(np.max(all_vals) * 1.15 * 10) / 10
     dec = 1 if (ymax - ymin) >= 15 else 2
-
     tick_pos = [i for i, ym in enumerate(months) if ym.endswith("-01") or ym.endswith("-07")]
 
+    # 1. PNG
     fig, ax = plt.subplots(figsize=(8.6, 5.7), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.09, right=0.92, top=0.72, bottom=0.21)
     fig.suptitle(ct["title"], x=0.09, y=0.96, ha="left", fontsize=11.0, fontweight="bold", color="#0F172A")
@@ -313,7 +337,7 @@ def render_dual(key, lang, exp_a, imp_a, bal_a, exp_b, imp_b, bal_b):
 
     ax.set_facecolor("#F8FAFC")
     ax.set_ylim(ymin, ymax)
-    ax.set_xlim(-0.8, len(months) + 3.0)
+    ax.set_xlim(-0.8, len(months) + 3.2)
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_num(v, use_c, dec)))
     ax.tick_params(axis="y", colors="#475569", labelsize=8.2, length=0)
     ax.tick_params(axis="x", colors="#475569", labelsize=7.8, rotation=45, length=3, color="#CBD5E1")
@@ -334,13 +358,19 @@ def render_dual(key, lang, exp_a, imp_a, bal_a, exp_b, imp_b, bal_b):
     ax.plot(x, via, color="#B91C1C", lw=2.0, label=f"{t['imp']} – {ct['lbl_a']}", zorder=4)
     ax.plot(x, vib, color="#F97316", lw=1.8, linestyle="--", label=f"{t['imp']} – {ct['lbl_b']}", zorder=4)
 
-    for arr, col in ((vea, "#1B3A6B"), (veb, "#3B82F6"), (via, "#B91C1C"), (vib, "#F97316")):
-        ax.scatter([x[-1]], [arr[-1]], color=col, s=15, zorder=5)
-        ax.text(x[-1] + 0.5, arr[-1], fmt_num(arr[-1], use_c, dec), fontsize=7.0, fontweight="bold", color=col, va="center", ha="left", zorder=5)
+    end_items = sorted([(vea[-1], "#1B3A6B"), (veb[-1], "#3B82F6"), (via[-1], "#B91C1C"), (vib[-1], "#F97316")], key=lambda z: z)
+    min_gap = (ymax - ymin) * 0.045
+    placed_y = []
+    for val_y, col in end_items:
+        y_pos = val_y
+        if placed_y and y_pos - placed_y[-1] < min_gap:
+            y_pos = placed_y[-1] + min_gap
+        placed_y.append(y_pos)
+        ax.scatter([x[-1]], [val_y], color=col, s=15, zorder=5)
+        ax.text(x[-1] + 0.6, y_pos, fmt_num(val_y, use_c, dec), fontsize=7.0, fontweight="bold", color=col, va="center", ha="left", zorder=5)
 
     ax.set_xticks(tick_pos)
     ax.set_xticklabels([months[i] for i in tick_pos], ha="right")
-    ax.text(-0.01, 1.02, t["unit"], transform=ax.transAxes, ha="right", va="bottom", fontsize=7.8, color="#475569")
     ax.text(0.5, -0.20, t["xlabel"], transform=ax.transAxes, ha="center", va="top", fontsize=8.2, color="#475569")
     ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.01), ncol=2, frameon=False, fontsize=7.1, columnspacing=1.2)
     fig.text(0.09, 0.015, f"{t['src']}{now_str}", fontsize=7.1, color="#64748B")
@@ -348,6 +378,8 @@ def render_dual(key, lang, exp_a, imp_a, bal_a, exp_b, imp_b, bal_b):
     plt.savefig(f"static/aussenhandel-industrie/{key}{t['sfx']}.png", dpi=300)
     plt.close()
 
+    # 2. HTML
+    t_vals = [months[i] for i in tick_pos]
     fp = go.Figure()
     fp.add_trace(go.Bar(x=months, y=[round(v, dec) for v in vba], customdata=[fmt_num(v, use_c, dec) for v in vba], name=f"Saldo – {ct['lbl_a']}", marker_color=col_ba, opacity=0.45, hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
     fp.add_trace(go.Bar(x=months, y=[round(v, dec) for v in vbb], customdata=[fmt_num(v, use_c, dec) for v in vbb], name=f"Saldo – {ct['lbl_b']}", marker_color=col_bb, opacity=0.45, hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
@@ -357,14 +389,21 @@ def render_dual(key, lang, exp_a, imp_a, bal_a, exp_b, imp_b, bal_b):
     fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vib], customdata=[fmt_num(v, use_c, dec) for v in vib], name=f"{t['imp']} – {ct['lbl_b']}", mode="lines", line=dict(color="#F97316", width=1.9, dash="dash"), hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
 
     fp.update_layout(
-        title=dict(text=f"<b>{ct['title']}</b><br><span style='font-size:11px;color:#64748B'>{ct['sub']}</span>", x=0.02, y=0.96, font=dict(size=14, color="#0F172A")),
-        plot_bgcolor="#F8FAFC", paper_bgcolor="white", height=470, barmode="group",
-        margin=dict(l=52, r=24, t=122, b=52), hovermode="x unified",
-        legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0, font=dict(size=10)),
-        xaxis=dict(showgrid=False, linecolor="#94A3B8", tickangle=-35, tickfont=dict(size=10)),
-        yaxis=dict(title=t["unit"], gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#94A3B8", tickfont=dict(size=10))
+        title=dict(text=f"<b>{ct['title']}</b><br><span style='font-size:11px;color:#475569;'>{ct['sub']}</span>", x=0.03, y=0.96, yanchor="top", font=dict(size=14, color="#0F172A", family="DejaVu Sans, sans-serif")),
+        plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False, barmode="group",
+        hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
+        legend=dict(orientation="h", x=0.0, y=-0.18, xanchor="left", yanchor="top", bgcolor="rgba(255,255,255,0)", font=dict(size=9.5, color="#1E293B")),
+        margin=dict(l=48, r=24, t=68, b=142), height=475,
+        annotations=[
+            dict(text=f"{t['src']}{now_str}", x=0.0, y=-0.42, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"),
+            dict(text="T.H.", x=1.0, y=-0.42, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")
+        ]
     )
-    fp.write_html(f"static/aussenhandel-industrie/{key}{t['sfx']}.html", include_plotlyjs="cdn", config={"displayModeBar": False})
+    fp.update_xaxes(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickmode="array", tickvals=t_vals, ticktext=t_vals, tickfont=dict(size=10, color="#475569"))
+    fp.update_yaxes(range=[ymin, ymax], fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#94A3B8", tickfont=dict(size=10, color="#475569"))
+    if use_c:
+        fp.update_layout(separators=",.")
+    _write_clean_html(fp, f"static/aussenhandel-industrie/{key}{t['sfx']}.html")
 
 def main():
     wam_keys = "WA28,WA29,WA30,WA31,WA32,WA33,WA34,WA35,WA36,WA37,WA38,WA72,WA73,WA87"
