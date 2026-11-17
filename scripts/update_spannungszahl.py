@@ -333,10 +333,16 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     xz = np.arange(len(months_z))
     yz = [float(sz_einf.loc[ym]) for ym in months_z]
     fig, ax = plt.subplots(figsize=(8.0, 5.8), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.95, top=0.70, bottom=0.25)
-    ymin_z = int(np.floor((min(yz) - 150) / 100.0) * 100)
-    ymax_z = int(np.ceil((max(yz) + 150) / 100.0) * 100)
-    style_sz_ax(fig, ax, t["p2_t"], ymin_z, ymax_z, range(ymin_z, ymax_z + 100, 100), t["x_m"], xlabel_y=-0.31)
+    plt.subplots_adjust(left=0.09, right=0.95, top=0.70, bottom=0.28)
+    all_z_vals = list(yz)
+    for anc_ym in (next(iter(months_z)), months_z[max(0, len(months_z) - 7)], months_z[max(0, len(months_z) - 4)], months_z[max(0, len(months_z) - 2)]):
+        su_tmp = line_unv(d_einf, anc_ym, months_z)
+        if len(su_tmp) >= 2:
+            all_z_vals.extend([float(v) for v in su_tmp.values])
+    ymin_z = int(np.floor((min(all_z_vals) - 100) / 100.0) * 100)
+    ymax_z = int(np.ceil((max(all_z_vals) + 100) / 100.0) * 100)
+    style_sz_ax(fig, ax, t["p2_t"], ymin_z, ymax_z, range(ymin_z, ymax_z + 100, 100), t["x_m"], xlabel_y=-0.38)
+
     ax.plot(xz, yz, color="#1B3A6B", lw=2.4, marker="o", ms=3.5, label=t["p2_l1"], zorder=4)
     fp2 = go.Figure()
     fp2.add_trace(go.Scatter(x=months_z, y=[round(v, 1) for v in yz], customdata=fmt_arr(yz), name=t["p2_l1"], mode="lines+markers", marker=dict(size=5), line=dict(color="#1B3A6B", width=2.4), hovertemplate=f"{t['p2_l1']}: <b>%{{customdata}}</b><extra></extra>"))
@@ -356,8 +362,8 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
             p_dash = "dash" if anc_ls == "--" else ("dot" if anc_ls == ":" else "dashdot")
             fp2.add_trace(go.Scatter(x=list(su.index), y=ysu, customdata=fmt_arr(ysu), name=anc_lbl, mode="lines", line=dict(color=anc_col, width=1.8, dash=p_dash), hovertemplate=f"{anc_lbl}: <b>%{{customdata}}</b><extra></extra>"))
 
-    draw_year_groups(ax, months_z, t["m"], step=1, year_y=-0.24)
-    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.3)
+    draw_year_groups(ax, months_z, t["m"], step=1, year_y=-0.31)
+    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=6.5)
     save_fig(fig, t["src_ba"], "02_einfache_spannungszahl_zoom")
     save_sz_plotly(fp2, t["p2_t"], t["src_ba"], now_str, "02_einfache_spannungszahl_zoom", t["sfx"], height_p=555, top_m=170)
 
@@ -395,10 +401,13 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     xez = np.arange(len(months_ez))
     yez = [float(sz_erw.loc[ym]) for ym in months_ez]
     fig, ax = plt.subplots(figsize=(8.0, 5.4), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.95, top=0.77, bottom=0.25)
-    ymin_4 = int(np.floor((min(yez) - 150) / 100.0) * 100)
-    ymax_4 = int(np.ceil((max(yez) + 150) / 100.0) * 100)
-    style_sz_ax(fig, ax, t["p4_t"], ymin_4, ymax_4, range(ymin_4, ymax_4 + 100, 100), t["x_m"], xlabel_y=-0.31)
+    plt.subplots_adjust(left=0.09, right=0.95, top=0.77, bottom=0.28)
+    su4_pre = line_unv(d_erw, next(iter(months_ez)), months_ez)
+    all_ez_vals = list(yez) + ([float(v) for v in su4_pre.values] if len(su4_pre) >= 2 else [])
+    ymin_4 = int(np.floor((min(all_ez_vals) - 100) / 100.0) * 100)
+    ymax_4 = int(np.ceil((max(all_ez_vals) + 100) / 100.0) * 100)
+    style_sz_ax(fig, ax, t["p4_t"], ymin_4, ymax_4, range(ymin_4, ymax_4 + 100, 100), t["x_m"], xlabel_y=-0.38)
+
     ax.plot(xez, yez, color="#D97706", lw=2.4, marker="o", ms=3.5, label=l3_a, zorder=4)
     su4 = line_unv(d_erw, months_ez[0], months_ez)
     fp4 = go.Figure()
@@ -408,7 +417,7 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
         ax.plot(xsu4, su4.values, color="#1B3A6B", lw=1.7, ls="--", label=l3_b, zorder=3)
         ysu4 = [round(float(v), 1) for v in su4.values]
         fp4.add_trace(go.Scatter(x=list(su4.index), y=ysu4, customdata=fmt_arr(ysu4), name=l3_b, mode="lines", line=dict(color="#1B3A6B", width=1.8, dash="dash"), hovertemplate=f"{l3_b}: <b>%{{customdata}}</b><extra></extra>"))
-    draw_year_groups(ax, months_ez, t["m"], step=1, year_y=-0.24)
+    draw_year_groups(ax, months_ez, t["m"], step=1, year_y=-0.31)
     ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.6)
     save_fig(fig, t["src_ba_kug"], "04_erweiterte_spannungszahl_zoom")
     save_sz_plotly(fp4, t["p4_t"], t["src_ba_kug"], now_str, "04_erweiterte_spannungszahl_zoom", t["sfx"], height_p=460, top_m=105)
