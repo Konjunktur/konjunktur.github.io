@@ -135,7 +135,7 @@ def _unpack(resp):
             return zf.read(next(n for n in zf.namelist() if n.endswith(".csv"))).decode("utf-8", errors="replace")
     return resp.text
 
-def fetch_genesis_trade(table, startyear="2019", cvar1=None, ckey1=None):
+def fetch_genesis_trade(table, startyear="2019", cvar1=None, ckey1=None, cvar2=None, ckey2=None):
     if not D_USER or not D_PASS:
         raise RuntimeError("DESTATIS_USER oder DESTATIS_PASS fehlt.")
     headers = {"username": D_USER, "password": D_PASS, "Content-Type": "application/x-www-form-urlencoded"}
@@ -143,6 +143,9 @@ def fetch_genesis_trade(table, startyear="2019", cvar1=None, ckey1=None):
     if cvar1 and ckey1:
         data["classifyingvariable1"] = cvar1
         data["classifyingkey1"] = ckey1
+    if cvar2 and ckey2:
+        data["classifyingvariable2"] = cvar2
+        data["classifyingkey2"] = ckey2
     r = requests.post(f"{G_BASE}/tablefile", headers=headers, data=data, timeout=90)
     r.raise_for_status()
     raw = _unpack(r)
@@ -153,7 +156,7 @@ def fetch_genesis_trade(table, startyear="2019", cvar1=None, ckey1=None):
         if not m:
             raise RuntimeError(f"Job-ID nicht gefunden für {table}: {rj.text[:250]}")
         raw = ""
-        for _ in range(36):
+        for _ in range(120):
             time.sleep(3)
             txt = _unpack(requests.post(f"{G_BASE}/resultfile", headers=headers, data={"name": m.group(1), "area": "all", "compress": "false", "language": "de"}, timeout=90))
             if not txt.lstrip().startswith("{"):
@@ -360,10 +363,11 @@ def render_dual(key, lang, exp_a, imp_a, bal_a, exp_b, imp_b, bal_b):
     fp.write_html(f"static/aussenhandel-industrie/{key}{t['sfx']}.html", include_plotlyjs="cdn", config={"displayModeBar": False})
 
 def main():
+    wam_keys = "WA28,WA29,WA30,WA31,WA32,WA33,WA34,WA35,WA36,WA37,WA38,WA72,WA73,WA87"
     df_tot = fetch_genesis_trade("51000-0002", "2019")
     df_cn_tot = fetch_genesis_trade("51000-0004", "2019", "STLAH", "STLAH720")
-    df_wam = fetch_genesis_trade("51000-0006", "2019")
-    df_cn_wam = fetch_genesis_trade("51000-0008", "2019", "STLAH", "STLAH720")
+    df_wam = fetch_genesis_trade("51000-0006", "2019", "WAM2", wam_keys)
+    df_cn_wam = fetch_genesis_trade("51000-0008", "2019", "STLAH", "STLAH720", "WAM2", wam_keys)
 
     singles = {
         "aussenhandel_gesamt": extract_series(df_tot),
