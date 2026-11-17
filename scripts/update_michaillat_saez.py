@@ -15,7 +15,7 @@ DE_RECESSIONS = [
     ("2008-04", "2009-06"),
     ("2012-10", "2013-03"),
     ("2020-01", "2020-06"),
-    ("2023-01", "2024-06"),
+    ("2022-10", "2025-12"),
 ]
 
 TEXTS = {
@@ -38,10 +38,10 @@ TEXTS = {
         "bev_hist": "Ab Jan. 2005",
         "bev_rec": "Ab Jan. 2022",
         "bev_45": "45°-Linie (v = u)",
-        "feru_title": "Vollbeschäftigungs-Arbeitslosenquote (FERU u*)",
+        "feru_title": "Arbeitslosenquote und Vollbeschäftigungsquote (FERU u*)",
         "feru_sub": "Geometrisches Mittel u* = √(u × v) im Vergleich zur Arbeitslosenquote (u)",
         "feru_u": "Arbeitslosenquote (u)",
-        "feru_star": "FERU (u*)",
+        "feru_star": "Vollbeschäftigungsquote (FERU u*)",
         "gap_title": "Arbeitslosigkeitslücke (u − u*)",
         "gap_sub": "Abstand zwischen Arbeitslosenquote und FERU in Prozentpunkten (+ Unterauslastung / − Überhitzung)",
         "gap_lbl": "Arbeitslosigkeitslücke (u − u*)",
@@ -73,10 +73,10 @@ TEXTS = {
         "bev_hist": "From Jan 2005",
         "bev_rec": "From Jan 2022",
         "bev_45": "45° ray (v = u)",
-        "feru_title": "Full-Employment Rate of Unemployment (FERU u*)",
+        "feru_title": "Unemployment Rate and Full-Employment Rate (FERU u*)",
         "feru_sub": "Geometric average u* = √(u × v) compared to the unemployment rate (u)",
         "feru_u": "Unemployment rate (u)",
-        "feru_star": "FERU (u*)",
+        "feru_star": "Full-employment rate (FERU u*)",
         "gap_title": "Unemployment Gap (u − u*)",
         "gap_sub": "Distance between the unemployment rate and FERU in percentage points (+ slack / − tight)",
         "gap_lbl": "Unemployment gap (u − u*)",
@@ -257,7 +257,7 @@ def _add_rec_shapes_plotly(months):
             shapes.append(dict(type="rect", xref="x", yref="paper", x0=next(iter(vis)), x1=vis[-1], y0=0, y1=1, fillcolor="#CBD5E1", opacity=0.35, line_width=0, layer="below"))
     return shapes
 
-def _save_plotly(fig_p, months, title_p, sub_p, src_text, now_str, out_path, tick_step=24, shapes=None, zero_line=False):
+def _save_plotly(fig_p, months, title_p, sub_p, src_text, now_str, out_path, tick_step=24, shapes=None, zero_line=False, y_range=None):
     fig_p.update_layout(
         title=dict(text=f"<b>{title_p}</b><br><span style='font-size:11px;color:#475569;'>{sub_p}</span>", x=0.03, y=0.96, yanchor="top", font=dict(size=14.5, color="#0F172A", family="DejaVu Sans, sans-serif")),
         plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
@@ -275,14 +275,17 @@ def _save_plotly(fig_p, months, title_p, sub_p, src_text, now_str, out_path, tic
         t_vals = [x for i, x in enumerate(months) if i % tick_step == 0]
         xaxis_kw.update(tickmode="array", tickvals=t_vals, ticktext=t_vals)
     fig_p.update_xaxes(**xaxis_kw)
-    fig_p.update_yaxes(fixedrange=True, gridcolor="#E2E8F0", zeroline=zero_line, zerolinecolor="#64748B", tickfont=dict(size=10, color="#475569"))
+    yaxis_kw = dict(fixedrange=True, gridcolor="#E2E8F0", zeroline=zero_line, zerolinecolor="#64748B", tickfont=dict(size=10, color="#475569"))
+    if y_range is not None:
+        yaxis_kw["range"] = y_range
+    fig_p.update_yaxes(**yaxis_kw)
     fig_p.write_html(out_path, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
     with open(out_path, "r", encoding="utf-8") as fh:
         html_s = fh.read().replace("<body>", '<body style="margin:0;padding:0;overflow:hidden;">')
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(html_s)
 
-def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_line=False):
+def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_line=False, y_range=None):
     t = TEXTS[lang]
     use_c = t["comma"]
     now_str = datetime.now().strftime(t["date_fmt"])
@@ -301,6 +304,8 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
     ax.yaxis.grid(True, color="#E2E8F0", linewidth=0.8, zorder=0)
     if zero_line:
         ax.axhline(0, color="#64748B", lw=1.0, zorder=1)
+    if y_range is not None:
+        ax.set_ylim(y_range[0], y_range[1])
     for s in ("top", "right", "left"):
         ax.spines[s].set_visible(False)
     ax.spines["bottom"].set_color("#94A3B8")
@@ -332,7 +337,7 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
         fp.add_trace(go.Scatter(x=months, y=[round(float(r_val), dec)] * len(months), customdata=[fmt_num(r_val, use_c, dec)] * len(months), name=f"{r_lbl} ({fmt_num(r_val, use_c, dec)})", mode="lines", line=dict(color=r_col, width=1.6, dash="dash"), hovertemplate=f"{r_lbl}: <b>%{{customdata}}</b><extra></extra>"))
     if use_c:
         fp.update_layout(separators=",.")
-    _save_plotly(fp, months, title_t, sub_t, t["src"], now_str, f"static/konjunktur-arbeitsmarkt/{key}{t['sfx']}.html", tick_step=step, shapes=_add_rec_shapes_plotly(months), zero_line=zero_line)
+    _save_plotly(fp, months, title_t, sub_t, t["src"], now_str, f"static/konjunktur-arbeitsmarkt/{key}{t['sfx']}.html", tick_step=step, shapes=_add_rec_shapes_plotly(months), zero_line=zero_line, y_range=y_range)
 
 def _fit_hyperbola_r2(u_vals, v_vals):
     inv_u = 1.0 / np.asarray(u_vals, dtype=float)
@@ -363,7 +368,7 @@ def render_beveridge(lang, df):
 
     r2_all, ug_all, vg_all = _fit_hyperbola_r2(df["u"].values, df["v"].values)
     r2_rec, ug_rec, vg_rec = _fit_hyperbola_r2(rec["u"].values, rec["v"].values)
-    r2_txt_all = f"R² ({df.index.min()[:4]}–{df.index.max()[:4]}) = {fmt_num(r2_all, use_c, 3)}"
+    r2_txt_all = f"R² ({min(df.index)[:4]}–{max(df.index)[:4]}) = {fmt_num(r2_all, use_c, 3)}"
     r2_txt_rec = f"R² (ab 2022) = {fmt_num(r2_rec, use_c, 3)}" if lang == "de" else f"R² (from 2022) = {fmt_num(r2_rec, use_c, 3)}"
 
     last_ym = df.index[-1]
@@ -451,9 +456,9 @@ def main():
         render_beveridge(lang, df)
         render_ts_chart("feru", lang, months, [(df["u"].values, t["feru_u"], "#1B3A6B", "-"), (df["feru"].values, t["feru_star"], "#D97706", "--")], dec=2)
         render_ts_chart("gap", lang, months, [(df["gap"].values, t["gap_lbl"], "#DC2626", "-")], dec=2, zero_line=True)
-        render_ts_chart("rec_ind", lang, months, [(df["michez"].values, t["rec_ind_lbl"], "#1B3A6B", "-")], ref_lines=[(thr_low, t["rec_t1"], "#D97706"), (thr_high, t["rec_t2"], "#DC2626")], dec=2)
-        render_ts_chart("rec_prob", lang, months, [(df["prob"].values, t["rec_prob_lbl"], "#DC2626", "-")], dec=0)
-        print(f"[OK] Michaillat-Saez Deutschland (DE & EN) von {min(months)} bis {max(months)} erstellt (Schwellen: {thr_low}/{thr_high} pp).")
+        render_ts_chart("rec_ind", lang, months, [(df["michez"].values, t["rec_ind_lbl"], "#1B3A6B", "-")], ref_lines=[(thr_low, t["rec_t1"], "#D97706"), (thr_high, t["rec_t2"], "#DC2626")], dec=2, zero_line=True)
+        render_ts_chart("rec_prob", lang, months, [(df["prob"].values, t["rec_prob_lbl"], "#DC2626", "-")], dec=0, zero_line=True, y_range=[-4, 106])
+    print(f"[OK] Michaillat-Saez Deutschland (DE & EN) von {min(months)} bis {max(months)} erstellt (Schwellen: {thr_low}/{thr_high} pp).")
 
 if __name__ == "__main__":
     main()
