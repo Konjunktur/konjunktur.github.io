@@ -228,7 +228,7 @@ def render_series_charts(lang, slug, code, title_name, ser):
 
     m_ref_name = t["m"][int(ref_used_ym[5:7]) - 1]
     m_cur_name = t["m"][int(latest_ym[5:7]) - 1]
-    diff_line_1 = f"{t['diff_title']} {m_ref_name} {ref_used_ym[:4]} – {m_cur_name} {latest_ym[:4]}:"
+    diff_line_1 = f"{t['diff_title']} {m_cur_name} {latest_ym[:4]} – {m_ref_name} {ref_used_ym[:4]}:"
     diff_line_2 = f"{fmt_signed_int(diff_abs, use_c)} {t['diff_unit']} ({fmt_signed_pct(diff_pct, use_c)})"
 
     full_title = f"{t['title_prefix']} – {title_name} ({code})"
