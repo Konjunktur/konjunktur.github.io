@@ -1,0 +1,41 @@
+name: Update Spannungszahl Charts
+
+on:
+  schedule:
+    - cron: "30 6 * * 1,4"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-spannungszahl:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Pakete installieren
+        run: |
+          pip install -r scripts/requirements.txt
+          pip install plotly
+
+      - name: Spannungszahl berechnen
+        env:
+          DESTATIS_USER: ${{ secrets.DESTATIS_USER }}
+          DESTATIS_PASS: ${{ secrets.DESTATIS_PASS }}
+        run: |
+          python scripts/update_spannungszahl.py
+
+      - name: Neue Grafiken speichern
+        run: |
+          git config --local user.email "github-actions[bot]@://github.com"
+          git config --local user.name "github-actions[bot]"
+          git add static/spannungszahl/
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update Spannungszahl charts" && git push)
