@@ -25,30 +25,70 @@ TEXTS = {
         "date_fmt": "%d.%m.%Y",
         "comma": True,
         "sfx": "",
-        "rec_lbl": "Rezessions-/Schwächephasen (DE)",
-        "u": ("1. Arbeitslosenquote (u)", "Registrierte Arbeitslose in % aller zivilen Erwerbspersonen", "Arbeitslosenquote (u)"),
-        "v": ("2. Vakanzrate (v)", "Gemeldete Arbeitsstellen in % aller zivilen Erwerbspersonen", "Vakanzrate (v)"),
-        "theta": ("3. Arbeitsmarktanspannung (v / u)", "Verhältnis von Vakanzrate zu Arbeitslosenquote (Referenzlinie = 1)", "Anspannung (v / u)"),
-        "bev": ("4. Beveridge-Kurve (Deutschland)", "Vakanzrate (v) vs. Arbeitslosenquote (u) mit 45°-Linie (v = u)", "Historie", "Aktuell (ab 2022)", "45°-Linie (v = u)"),
-        "feru": ("5. Vollbeschäftigungs-Arbeitslosenquote (FERU u*)", "Geometrisches Mittel u* = √(u × v) im Vergleich zur tatsächlichen Quote (u)", "Tatsächliche Quote (u)", "FERU (u*)"),
-        "gap": ("6. Arbeitslosigkeitslücke (u − u*)", "Abstand zwischen Arbeitslosenquote und FERU in Prozentpunkten (+ Unterauslastung / − Überhitzung)", "Arbeitslosigkeitslücke (u − u*)"),
-        "rec_ind": ("7. Rezessionsindikator (Michez-Regel für Deutschland)", "Minimum aus 3M-Anstieg der Arbeitslosenquote und 3M-Rückgang der Vakanzrate (in %-Punkten)", "Rezessionsindikator", "Schwelle 1 (möglich)", "Schwelle 2 (sicher)"),
-        "rec_prob": ("8. Rezessionswahrscheinlichkeit (duale Michez-Regel)", "Normierter Anteil zwischen unterer und oberer Rezessionsschwelle (in %)", "Rezessionswahrscheinlichkeit"),
+        "u_title": "1. Arbeitslosenquote (u)",
+        "u_sub": "Registrierte Arbeitslose in % aller zivilen Erwerbspersonen",
+        "u_lbl": "Arbeitslosenquote (u)",
+        "v_title": "2. Vakanzrate (v)",
+        "v_sub": "Gemeldete Arbeitsstellen in % aller zivilen Erwerbspersonen",
+        "v_lbl": "Vakanzrate (v)",
+        "theta_title": "3. Arbeitsmarktanspannung (v / u)",
+        "theta_sub": "Verhältnis von Vakanzrate zu Arbeitslosenquote (Referenzlinie = 1)",
+        "theta_lbl": "Anspannung (v / u)",
+        "bev_title": "4. Beveridge-Kurve (Deutschland)",
+        "bev_sub": "Vakanzrate (v) vs. Arbeitslosenquote (u) mit 45°-Linie (v = u)",
+        "bev_hist": "Historie",
+        "bev_rec": "Aktuell (ab 2022)",
+        "bev_45": "45°-Linie (v = u)",
+        "feru_title": "5. Vollbeschäftigungs-Arbeitslosenquote (FERU u*)",
+        "feru_sub": "Geometrisches Mittel u* = √(u × v) im Vergleich zur tatsächlichen Quote (u)",
+        "feru_u": "Tatsächliche Quote (u)",
+        "feru_star": "FERU (u*)",
+        "gap_title": "6. Arbeitslosigkeitslücke (u − u*)",
+        "gap_sub": "Abstand zwischen Arbeitslosenquote und FERU in Prozentpunkten (+ Unterauslastung / − Überhitzung)",
+        "gap_lbl": "Arbeitslosigkeitslücke (u − u*)",
+        "rec_ind_title": "7. Rezessionsindikator (Michez-Regel für Deutschland)",
+        "rec_ind_sub": "Minimum aus 3M-Anstieg der Arbeitslosenquote und 3M-Rückgang der Vakanzrate (in %-Punkten)",
+        "rec_ind_lbl": "Rezessionsindikator",
+        "rec_t1": "Schwelle 1 (möglich)",
+        "rec_t2": "Schwelle 2 (sicher)",
+        "rec_prob_title": "8. Rezessionswahrscheinlichkeit (duale Michez-Regel)",
+        "rec_prob_sub": "Normierter Anteil zwischen unterer und oberer Rezessionsschwelle (in %)",
+        "rec_prob_lbl": "Rezessionswahrscheinlichkeit",
     },
     "en": {
         "src": "Source: Deutsche Bundesbank, Federal Statistical Office (BA) | As of: ",
         "date_fmt": "%Y-%m-%d",
         "comma": False,
         "sfx": "_en",
-        "rec_lbl": "Recession / downturn periods (DE)",
-        "u": ("1. Unemployment Rate (u)", "Registered unemployed in % of total civilian labor force", "Unemployment rate (u)"),
-        "v": ("2. Vacancy Rate (v)", "Registered job openings in % of total civilian labor force", "Vacancy rate (v)"),
-        "theta": ("3. Labor Market Tightness (v / u)", "Ratio of vacancy rate to unemployment rate (reference = 1)", "Tightness (v / u)"),
-        "bev": ("4. Beveridge Curve (Germany)", "Vacancy rate (v) vs. unemployment rate (u) with 45° ray (v = u)", "History", "Recent (from 2022)", "45° ray (v = u)"),
-        "feru": ("5. Full-Employment Rate of Unemployment (FERU u*)", "Geometric mean u* = √(u × v) vs. actual unemployment rate (u)", "Actual rate (u)", "FERU (u*)"),
-        "gap": ("6. Unemployment Gap (u − u*)", "Distance between unemployment rate and FERU in percentage points (+ slack / − tight)", "Unemployment gap (u − u*)"),
-        "rec_ind": ("7. Recession Indicator (Michez Rule for Germany)", "Minimum of 3M unemployment rate rise and 3M vacancy rate drop (in percentage points)", "Recession indicator", "Threshold 1 (possible)", "Threshold 2 (certain)"),
-        "rec_prob": ("8. Recession Probability (Dual Michez Rule)", "Normalized share between lower and upper recession thresholds (in %)", "Recession probability"),
+        "u_title": "1. Unemployment Rate (u)",
+        "u_sub": "Registered unemployed in % of total civilian labor force",
+        "u_lbl": "Unemployment rate (u)",
+        "v_title": "2. Vacancy Rate (v)",
+        "v_sub": "Registered job openings in % of total civilian labor force",
+        "v_lbl": "Vacancy rate (v)",
+        "theta_title": "3. Labor Market Tightness (v / u)",
+        "theta_sub": "Ratio of vacancy rate to unemployment rate (reference = 1)",
+        "theta_lbl": "Tightness (v / u)",
+        "bev_title": "4. Beveridge Curve (Germany)",
+        "bev_sub": "Vacancy rate (v) vs. unemployment rate (u) with 45° ray (v = u)",
+        "bev_hist": "History",
+        "bev_rec": "Recent (from 2022)",
+        "bev_45": "45° ray (v = u)",
+        "feru_title": "5. Full-Employment Rate of Unemployment (FERU u*)",
+        "feru_sub": "Geometric mean u* = √(u × v) vs. actual unemployment rate (u)",
+        "feru_u": "Actual rate (u)",
+        "feru_star": "FERU (u*)",
+        "gap_title": "6. Unemployment Gap (u − u*)",
+        "gap_sub": "Distance between unemployment rate and FERU in percentage points (+ slack / − tight)",
+        "gap_lbl": "Unemployment gap (u − u*)",
+        "rec_ind_title": "7. Recession Indicator (Michez Rule for Germany)",
+        "rec_ind_sub": "Minimum of 3M unemployment rate rise and 3M vacancy rate drop (in percentage points)",
+        "rec_ind_lbl": "Recession indicator",
+        "rec_t1": "Threshold 1 (possible)",
+        "rec_t2": "Threshold 2 (certain)",
+        "rec_prob_title": "8. Recession Probability (Dual Michez Rule)",
+        "rec_prob_sub": "Normalized share between lower and upper recession thresholds (in %)",
+        "rec_prob_lbl": "Recession probability",
     }
 }
 
@@ -214,10 +254,10 @@ def _add_rec_shapes_plotly(months):
     for r_s, r_e in DE_RECESSIONS:
         vis = sorted([ym for ym in m_set if r_s <= ym <= r_e])
         if vis:
-            shapes.append(dict(type="rect", xref="x", yref="paper", x0=vis, x1=vis[-1], y0=0, y1=1, fillcolor="#CBD5E1", opacity=0.35, line_width=0, layer="below"))
+            shapes.append(dict(type="rect", xref="x", yref="paper", x0=next(iter(vis)), x1=vis[-1], y0=0, y1=1, fillcolor="#CBD5E1", opacity=0.35, line_width=0, layer="below"))
     return shapes
 
-def _save_plotly(fig_p, title_p, sub_p, src_text, now_str, out_path, tick_step=12, shapes=None, zero_line=False):
+def _save_plotly(fig_p, months, title_p, sub_p, src_text, now_str, out_path, tick_step=12, shapes=None, zero_line=False):
     fig_p.update_layout(
         title=dict(text=f"<b>{title_p}</b><br><span style='font-size:11px;color:#475569;'>{sub_p}</span>", x=0.03, y=0.96, yanchor="top", font=dict(size=14.5, color="#0F172A", family="DejaVu Sans, sans-serif")),
         plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
@@ -231,9 +271,8 @@ def _save_plotly(fig_p, title_p, sub_p, src_text, now_str, out_path, tick_step=1
         ]
     )
     xaxis_kw = dict(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10, color="#475569"))
-    if tick_step > 1 and fig_p.data and fig_p.data.x is not None:
-        all_x = list(fig_p.data.x)
-        t_vals = [x for i, x in enumerate(all_x) if i % tick_step == 0]
+    if tick_step > 1 and months:
+        t_vals = [x for i, x in enumerate(months) if i % tick_step == 0]
         xaxis_kw.update(tickmode="array", tickvals=t_vals, ticktext=t_vals)
     fig_p.update_xaxes(**xaxis_kw)
     fig_p.update_yaxes(fixedrange=True, gridcolor="#E2E8F0", zeroline=zero_line, zerolinecolor="#64748B", tickfont=dict(size=10, color="#475569"))
@@ -247,8 +286,8 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
     t = TEXTS[lang]
     use_c = t["comma"]
     now_str = datetime.now().strftime(t["date_fmt"])
-    title_t = t[key]
-    sub_t = t[key]
+    title_t = t[f"{key}_title"]
+    sub_t = t[f"{key}_sub"]
     x = np.arange(len(months))
     step = max(12, (len(months) // 14 // 12) * 12)
     tick_pos = [i for i in range(0, len(months), step)]
@@ -295,13 +334,17 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
         fp.add_trace(go.Scatter(x=months, y=[round(float(r_val), dec)] * len(months), customdata=[fmt_num(r_val, use_c, dec)] * len(months), name=f"{r_lbl} ({fmt_num(r_val, use_c, dec)})", mode="lines", line=dict(color=r_col, width=1.6, dash="dash"), hovertemplate=f"{r_lbl}: <b>%{{customdata}}</b><extra></extra>"))
     if use_c:
         fp.update_layout(separators=",.")
-    _save_plotly(fp, title_t, sub_t, t["src"], now_str, f"static/konjunktur-arbeitsmarkt/{key}{t['sfx']}.html", tick_step=step, shapes=_add_rec_shapes_plotly(months), zero_line=zero_line)
+    _save_plotly(fp, months, title_t, sub_t, t["src"], now_str, f"static/konjunktur-arbeitsmarkt/{key}{t['sfx']}.html", tick_step=step, shapes=_add_rec_shapes_plotly(months), zero_line=zero_line)
 
 def render_beveridge(lang, df):
     t = TEXTS[lang]
     use_c = t["comma"]
     now_str = datetime.now().strftime(t["date_fmt"])
-    title_t, sub_t, lbl_h, lbl_r, lbl_45 = t["bev"]
+    title_t = t["bev_title"]
+    sub_t = t["bev_sub"]
+    lbl_h = t["bev_hist"]
+    lbl_r = t["bev_rec"]
+    lbl_45 = t["bev_45"]
     hist = df[df.index < "2022-01"]
     rec = df[df.index >= "2022-01"]
     lim = max(float(df["u"].max()), float(df["v"].max())) * 1.08
@@ -367,14 +410,14 @@ def main():
     months = list(df.index)
     for lang in ("de", "en"):
         t = TEXTS[lang]
-        render_ts_chart("u", lang, months, [(df["u"].values, t["u"], "#1B3A6B", "-")], dec=2)
-        render_ts_chart("v", lang, months, [(df["v"].values, t["v"], "#0D9488", "-")], dec=2)
-        render_ts_chart("theta", lang, months, [(df["theta"].values, t["theta"], "#1B3A6B", "-")], ref_lines=[(1.0, "v = u", "#D97706")], dec=2)
+        render_ts_chart("u", lang, months, [(df["u"].values, t["u_lbl"], "#1B3A6B", "-")], dec=2)
+        render_ts_chart("v", lang, months, [(df["v"].values, t["v_lbl"], "#0D9488", "-")], dec=2)
+        render_ts_chart("theta", lang, months, [(df["theta"].values, t["theta_lbl"], "#1B3A6B", "-")], ref_lines=[(1.0, "v = u", "#D97706")], dec=2)
         render_beveridge(lang, df)
-        render_ts_chart("feru", lang, months, [(df["u"].values, t["feru"], "#1B3A6B", "-"), (df["feru"].values, t["feru"], "#D97706", "--")], dec=2)
-        render_ts_chart("gap", lang, months, [(df["gap"].values, t["gap"], "#DC2626", "-")], dec=2, zero_line=True)
-        render_ts_chart("rec_ind", lang, months, [(df["michez"].values, t["rec_ind"], "#1B3A6B", "-")], ref_lines=[(thr_low, t["rec_ind"], "#D97706"), (thr_high, t["rec_ind"], "#DC2626")], dec=2)
-        render_ts_chart("rec_prob", lang, months, [(df["prob"].values, t["rec_prob"], "#DC2626", "-")], dec=0)
+        render_ts_chart("feru", lang, months, [(df["u"].values, t["feru_u"], "#1B3A6B", "-"), (df["feru"].values, t["feru_star"], "#D97706", "--")], dec=2)
+        render_ts_chart("gap", lang, months, [(df["gap"].values, t["gap_lbl"], "#DC2626", "-")], dec=2, zero_line=True)
+        render_ts_chart("rec_ind", lang, months, [(df["michez"].values, t["rec_ind_lbl"], "#1B3A6B", "-")], ref_lines=[(thr_low, t["rec_t1"], "#D97706"), (thr_high, t["rec_t2"], "#DC2626")], dec=2)
+        render_ts_chart("rec_prob", lang, months, [(df["prob"].values, t["rec_prob_lbl"], "#DC2626", "-")], dec=0)
     print(f"[OK] Michaillat-Saez Deutschland (DE & EN) bis {months[-1]} erstellt (Schwellen: {thr_low}/{thr_high} pp).")
 
 if __name__ == "__main__":
