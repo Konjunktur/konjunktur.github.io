@@ -35,15 +35,15 @@ TEXTS = {
             },
             "aussenhandel_stahl": {
                 "title": "Außenhandel: Eisen und Stahl sowie Waren daraus",
-                "sub": "WAM2 Kap. 72 (Eisen/Stahl) sowie Kap. 72+73 (inkl. Waren aus Eisen/Stahl) in Mrd. €",
-                "lbl_a": "Eisen & Stahl (Kap. 72)",
-                "lbl_b": "inkl. Waren daraus (Kap. 72+73)"
+                "sub": "WAM2 Kap. 72 (Eisen/Stahl) vs. Kap. 72+73 (inkl. Waren aus Eisen/Stahl) in Mrd. €",
+                "lbl_a": "Kap. 72 (Eisen/Stahl)",
+                "lbl_b": "Kap. 72+73 (inkl. Waren)"
             },
             "aussenhandel_chemie": {
                 "title": "Außenhandel: Chemische und pharmazeutische Erzeugnisse",
-                "sub": "WAM2 Kap. 28–38 ohne Kap. 30 (Chemie o. Pharma) sowie inkl. Kap. 30 (Chemie & Pharma) in Mrd. €",
-                "lbl_a": "Chemie o. Pharma (Kap. 28–29, 31–38)",
-                "lbl_b": "Chemie inkl. Pharma (Kap. 28–38)"
+                "sub": "WAM2 Kap. 28–38 ohne Kap. 30 (Chemie o. Pharma) vs. inkl. Kap. 30 in Mrd. €",
+                "lbl_a": "Chemie o. Pharma",
+                "lbl_b": "Chemie inkl. Pharma"
             },
             "china_gesamt": {
                 "title": "Außenhandel Deutschlands mit China insgesamt",
@@ -55,20 +55,20 @@ TEXTS = {
             },
             "china_stahl": {
                 "title": "Außenhandel mit China: Eisen und Stahl sowie Waren daraus",
-                "sub": "WAM2 Kap. 72 (Eisen/Stahl) sowie Kap. 72+73 (inkl. Waren aus Eisen/Stahl) in Mrd. €",
-                "lbl_a": "Eisen & Stahl (Kap. 72)",
-                "lbl_b": "inkl. Waren daraus (Kap. 72+73)"
+                "sub": "WAM2 Kap. 72 (Eisen/Stahl) vs. Kap. 72+73 (inkl. Waren aus Eisen/Stahl) in Mrd. €",
+                "lbl_a": "Kap. 72 (Eisen/Stahl)",
+                "lbl_b": "Kap. 72+73 (inkl. Waren)"
             },
             "china_chemie": {
                 "title": "Außenhandel mit China: Chemische und pharmazeutische Erzeugnisse",
-                "sub": "WAM2 Kap. 28–38 ohne Kap. 30 (Chemie o. Pharma) sowie inkl. Kap. 30 (Chemie & Pharma) in Mrd. €",
-                "lbl_a": "Chemie o. Pharma (Kap. 28–29, 31–38)",
-                "lbl_b": "Chemie inkl. Pharma (Kap. 28–38)"
+                "sub": "WAM2 Kap. 28–38 ohne Kap. 30 (Chemie o. Pharma) vs. inkl. Kap. 30 in Mrd. €",
+                "lbl_a": "Chemie o. Pharma",
+                "lbl_b": "Chemie inkl. Pharma"
             }
         }
     },
 
-    "en": {
+        "en": {
         "unit": "bn €",
         "xlabel": "Monthly values",
         "exp": "Exports",
@@ -89,15 +89,15 @@ TEXTS = {
             },
             "aussenhandel_stahl": {
                 "title": "Foreign Trade: Iron, Steel and Articles Thereof",
-                "sub": "WAM2 Ch. 72 (Iron & steel) and Ch. 72+73 (incl. articles of iron/steel) in bn €",
-                "lbl_a": "Iron & steel (Ch. 72)",
-                "lbl_b": "incl. articles thereof (Ch. 72+73)"
+                "sub": "WAM2 Ch. 72 (Iron & steel) vs. Ch. 72+73 (incl. articles thereof) in bn €",
+                "lbl_a": "Ch. 72 (Iron & steel)",
+                "lbl_b": "Ch. 72+73 (incl. articles)"
             },
             "aussenhandel_chemie": {
                 "title": "Foreign Trade: Chemical and Pharmaceutical Products",
-                "sub": "WAM2 Ch. 28–38 excl. Ch. 30 (Chemicals excl. pharma) and incl. Ch. 30 in bn €",
-                "lbl_a": "Chemicals excl. pharma (Ch. 28–29, 31–38)",
-                "lbl_b": "Chemicals incl. pharma (Ch. 28–38)"
+                "sub": "WAM2 Ch. 28–38 excl. Ch. 30 (Chemicals excl. pharma) vs. incl. Ch. 30 in bn €",
+                "lbl_a": "Chemicals excl. pharma",
+                "lbl_b": "Chemicals incl. pharma"
             },
             "china_gesamt": {
                 "title": "Germany's Total Foreign Trade with China",
@@ -109,15 +109,15 @@ TEXTS = {
             },
             "china_stahl": {
                 "title": "Foreign Trade with China: Iron, Steel and Articles Thereof",
-                "sub": "WAM2 Ch. 72 (Iron & steel) and Ch. 72+73 (incl. articles of iron/steel) in bn €",
-                "lbl_a": "Iron & steel (Ch. 72)",
-                "lbl_b": "incl. articles thereof (Ch. 72+73)"
+                "sub": "WAM2 Ch. 72 (Iron & steel) vs. Ch. 72+73 (incl. articles thereof) in bn €",
+                "lbl_a": "Ch. 72 (Iron & steel)",
+                "lbl_b": "Ch. 72+73 (incl. articles)"
             },
             "china_chemie": {
                 "title": "Foreign Trade with China: Chemical and Pharmaceutical Products",
-                "sub": "WAM2 Ch. 28–38 excl. Ch. 30 (Chemicals excl. pharma) and incl. Ch. 30 in bn €",
-                "lbl_a": "Chemicals excl. pharma (Ch. 28–29, 31–38)",
-                "lbl_b": "Chemicals incl. pharma (Ch. 28–38)"
+                "sub": "WAM2 Ch. 28–38 excl. Ch. 30 (Chemicals excl. pharma) vs. incl. Ch. 30 in bn €",
+                "lbl_a": "Chemicals excl. pharma",
+                "lbl_b": "Chemicals incl. pharma"
             }
         }
     }
@@ -201,8 +201,11 @@ def fetch_genesis_trade(table, startyear="2019", cvar1=None, ckey1=None, cvar2=N
         df = df[df[var_col].isin(["WERTA", "WERTE"])].copy()
 
     val_num = pd.to_numeric(df[v_col].astype(str).str.replace(",", ".").str.strip(), errors="coerce")
+    df = df[val_num.notna()].copy()
+    val_num = val_num.loc[df.index]
+
     if unit_col and df[unit_col].notna().any():
-        u_sample = str(df[unit_col].dropna().iloc[0]).lower()
+        u_sample = str(df[unit_col].dropna().iloc).lower()
         divisor = 1e6 if "tsd" in u_sample else (1e3 if "mio" in u_sample else 1e9)
     else:
         divisor = 1e6
@@ -211,8 +214,9 @@ def fetch_genesis_trade(table, startyear="2019", cvar1=None, ckey1=None, cvar2=N
 
 def extract_series(df, wam_filter=None):
     sub = df if wam_filter is None else df[df["WAM"].isin(wam_filter)]
-    piv = sub.pivot_table(index="YM", columns="value_variable_code", values="MRD", aggfunc="sum").sort_index()
+    piv = sub.pivot_table(index="YM", columns="value_variable_code", values="MRD", aggfunc="sum", dropna=True).sort_index()
     piv = piv[piv.index >= "2019-01"].dropna(subset=["WERTA", "WERTE"])
+    piv = piv[(piv["WERTA"] > 0) & (piv["WERTE"] > 0)]
     exp = piv["WERTA"]
     imp = piv["WERTE"]
     bal = exp - imp
@@ -235,13 +239,13 @@ def render_single(key, lang, exp, imp, bal):
     tick_pos = [i for i, ym in enumerate(months) if ym.endswith("-01") or ym.endswith("-07")]
 
     fig, ax = plt.subplots(figsize=(8.6, 5.2), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.93, top=0.80, bottom=0.23)
+    plt.subplots_adjust(left=0.09, right=0.92, top=0.79, bottom=0.23)
     fig.suptitle(ct["title"], x=0.09, y=0.96, ha="left", fontsize=11.0, fontweight="bold", color="#0F172A")
     fig.text(0.09, 0.915, ct["sub"], ha="left", fontsize=7.8, color="#64748B")
 
     ax.set_facecolor("#F8FAFC")
     ax.set_ylim(ymin, ymax)
-    ax.set_xlim(-0.8, len(months) + 2.5)
+    ax.set_xlim(-0.8, len(months) + 3.0)
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_num(v, use_c, dec)))
     ax.tick_params(axis="y", colors="#475569", labelsize=8.2, length=0)
     ax.tick_params(axis="x", colors="#475569", labelsize=7.8, rotation=45, length=3, color="#CBD5E1")
@@ -267,7 +271,7 @@ def render_single(key, lang, exp, imp, bal):
     ax.text(0.5, -0.22, t["xlabel"], transform=ax.transAxes, ha="center", va="top", fontsize=8.2, color="#475569")
     ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.01), ncol=3, frameon=False, fontsize=7.8, columnspacing=1.4)
     fig.text(0.09, 0.015, f"{t['src']}{now_str}", fontsize=7.1, color="#64748B")
-    fig.text(0.93, 0.015, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
+    fig.text(0.92, 0.015, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
     plt.savefig(f"static/aussenhandel-industrie/{key}{t['sfx']}.png", dpi=300)
     plt.close()
 
@@ -277,8 +281,8 @@ def render_single(key, lang, exp, imp, bal):
     fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vi], customdata=[fmt_num(v, use_c, dec) for v in vi], name=t["imp"], mode="lines", line=dict(color="#DC2626", width=2.3), hovertemplate=f"{t['imp']}: <b>%{{customdata}} {t['unit']}</b><extra></extra>"))
     fp.update_layout(
         title=dict(text=f"<b>{ct['title']}</b><br><span style='font-size:11px;color:#64748B'>{ct['sub']}</span>", x=0.02, y=0.95, font=dict(size=14, color="#0F172A")),
-        plot_bgcolor="#F8FAFC", paper_bgcolor="white", height=420,
-        margin=dict(l=52, r=24, t=78, b=52), hovermode="x unified",
+        plot_bgcolor="#F8FAFC", paper_bgcolor="white", height=430,
+        margin=dict(l=52, r=24, t=92, b=52), hovermode="x unified",
         legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0, font=dict(size=11)),
         xaxis=dict(showgrid=False, linecolor="#94A3B8", tickangle=-35, tickfont=dict(size=10)),
         yaxis=dict(title=t["unit"], gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#94A3B8", tickfont=dict(size=10))
@@ -302,14 +306,14 @@ def render_dual(key, lang, exp_a, imp_a, bal_a, exp_b, imp_b, bal_b):
 
     tick_pos = [i for i, ym in enumerate(months) if ym.endswith("-01") or ym.endswith("-07")]
 
-    fig, ax = plt.subplots(figsize=(8.6, 5.5), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.93, top=0.76, bottom=0.22)
+    fig, ax = plt.subplots(figsize=(8.6, 5.7), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.09, right=0.92, top=0.72, bottom=0.21)
     fig.suptitle(ct["title"], x=0.09, y=0.96, ha="left", fontsize=11.0, fontweight="bold", color="#0F172A")
     fig.text(0.09, 0.915, ct["sub"], ha="left", fontsize=7.6, color="#64748B")
 
     ax.set_facecolor("#F8FAFC")
     ax.set_ylim(ymin, ymax)
-    ax.set_xlim(-0.8, len(months) + 2.5)
+    ax.set_xlim(-0.8, len(months) + 3.0)
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_num(v, use_c, dec)))
     ax.tick_params(axis="y", colors="#475569", labelsize=8.2, length=0)
     ax.tick_params(axis="x", colors="#475569", labelsize=7.8, rotation=45, length=3, color="#CBD5E1")
@@ -322,8 +326,8 @@ def render_dual(key, lang, exp_a, imp_a, bal_a, exp_b, imp_b, bal_b):
 
     col_ba = ["#16A34A" if v >= 0 else "#EF4444" for v in vba]
     col_bb = ["#0D9488" if v >= 0 else "#F97316" for v in vbb]
-    ax.bar(x - 0.19, vba, width=0.36, color=col_ba, alpha=0.42, label=f"{t['bal']} – {ct['lbl_a']}", zorder=2)
-    ax.bar(x + 0.19, vbb, width=0.36, color=col_bb, alpha=0.42, label=f"{t['bal']} – {ct['lbl_b']}", zorder=2)
+    ax.bar(x - 0.19, vba, width=0.36, color=col_ba, alpha=0.42, label=f"Saldo – {ct['lbl_a']}", zorder=2)
+    ax.bar(x + 0.19, vbb, width=0.36, color=col_bb, alpha=0.42, label=f"Saldo – {ct['lbl_b']}", zorder=2)
 
     ax.plot(x, vea, color="#1B3A6B", lw=2.0, label=f"{t['exp']} – {ct['lbl_a']}", zorder=4)
     ax.plot(x, veb, color="#3B82F6", lw=1.8, linestyle="--", label=f"{t['exp']} – {ct['lbl_b']}", zorder=4)
@@ -337,25 +341,25 @@ def render_dual(key, lang, exp_a, imp_a, bal_a, exp_b, imp_b, bal_b):
     ax.set_xticks(tick_pos)
     ax.set_xticklabels([months[i] for i in tick_pos], ha="right")
     ax.text(-0.01, 1.02, t["unit"], transform=ax.transAxes, ha="right", va="bottom", fontsize=7.8, color="#475569")
-    ax.text(0.5, -0.21, t["xlabel"], transform=ax.transAxes, ha="center", va="top", fontsize=8.2, color="#475569")
-    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.01), ncol=2, frameon=False, fontsize=7.2, columnspacing=1.2)
+    ax.text(0.5, -0.20, t["xlabel"], transform=ax.transAxes, ha="center", va="top", fontsize=8.2, color="#475569")
+    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.01), ncol=2, frameon=False, fontsize=7.1, columnspacing=1.2)
     fig.text(0.09, 0.015, f"{t['src']}{now_str}", fontsize=7.1, color="#64748B")
-    fig.text(0.93, 0.015, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
+    fig.text(0.92, 0.015, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
     plt.savefig(f"static/aussenhandel-industrie/{key}{t['sfx']}.png", dpi=300)
     plt.close()
 
     fp = go.Figure()
-    fp.add_trace(go.Bar(x=months, y=[round(v, dec) for v in vba], customdata=[fmt_num(v, use_c, dec) for v in vba], name=f"{t['bal']} – {ct['lbl_a']}", marker_color=col_ba, opacity=0.45, hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
-    fp.add_trace(go.Bar(x=months, y=[round(v, dec) for v in vbb], customdata=[fmt_num(v, use_c, dec) for v in vbb], name=f"{t['bal']} – {ct['lbl_b']}", marker_color=col_bb, opacity=0.45, hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
+    fp.add_trace(go.Bar(x=months, y=[round(v, dec) for v in vba], customdata=[fmt_num(v, use_c, dec) for v in vba], name=f"Saldo – {ct['lbl_a']}", marker_color=col_ba, opacity=0.45, hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
+    fp.add_trace(go.Bar(x=months, y=[round(v, dec) for v in vbb], customdata=[fmt_num(v, use_c, dec) for v in vbb], name=f"Saldo – {ct['lbl_b']}", marker_color=col_bb, opacity=0.45, hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
     fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vea], customdata=[fmt_num(v, use_c, dec) for v in vea], name=f"{t['exp']} – {ct['lbl_a']}", mode="lines", line=dict(color="#1B3A6B", width=2.2), hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
     fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in veb], customdata=[fmt_num(v, use_c, dec) for v in veb], name=f"{t['exp']} – {ct['lbl_b']}", mode="lines", line=dict(color="#3B82F6", width=1.9, dash="dash"), hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
     fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in via], customdata=[fmt_num(v, use_c, dec) for v in via], name=f"{t['imp']} – {ct['lbl_a']}", mode="lines", line=dict(color="#B91C1C", width=2.2), hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
     fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vib], customdata=[fmt_num(v, use_c, dec) for v in vib], name=f"{t['imp']} – {ct['lbl_b']}", mode="lines", line=dict(color="#F97316", width=1.9, dash="dash"), hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
 
     fp.update_layout(
-        title=dict(text=f"<b>{ct['title']}</b><br><span style='font-size:11px;color:#64748B'>{ct['sub']}</span>", x=0.02, y=0.95, font=dict(size=14, color="#0F172A")),
-        plot_bgcolor="#F8FAFC", paper_bgcolor="white", height=440, barmode="group",
-        margin=dict(l=52, r=24, t=92, b=52), hovermode="x unified",
+        title=dict(text=f"<b>{ct['title']}</b><br><span style='font-size:11px;color:#64748B'>{ct['sub']}</span>", x=0.02, y=0.96, font=dict(size=14, color="#0F172A")),
+        plot_bgcolor="#F8FAFC", paper_bgcolor="white", height=470, barmode="group",
+        margin=dict(l=52, r=24, t=122, b=52), hovermode="x unified",
         legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0, font=dict(size=10)),
         xaxis=dict(showgrid=False, linecolor="#94A3B8", tickangle=-35, tickfont=dict(size=10)),
         yaxis=dict(title=t["unit"], gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#94A3B8", tickfont=dict(size=10))
