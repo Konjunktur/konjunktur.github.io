@@ -155,14 +155,19 @@ def sync_ylim_like_plotly(vals, include_zero=True):
         return -5.0, 5.0, np.arange(-5.0, 5.5, 2.5), 2.5
     d_min, d_max = min(clean), max(clean)
     span = max(d_max - d_min, 1.0)
-    pad = span * 0.08
+    pad = span * 0.02
     lo_raw = 0.0 if d_min >= 0 else d_min - pad
     hi_raw = 0.0 if d_max <= 0 else d_max + pad
     for step in (0.5, 1.0, 2.0, 2.5, 5.0, 10.0, 20.0):
         ylo = np.floor(lo_raw / step) * step
         yhi = np.ceil(hi_raw / step) * step
-        if (yhi - ylo) / step <= 8:
+        if (yhi - ylo) / step <= 9:
             return ylo, yhi, np.arange(ylo, yhi + step * 0.1, step), step
+    step = 20.0
+    ylo = np.floor(lo_raw / step) * step
+    yhi = np.ceil(hi_raw / step) * step
+    return ylo, yhi, np.arange(ylo, yhi + step * 0.1, step), step
+
     step = 20.0
     ylo = np.floor(lo_raw / step) * step
     yhi = np.ceil(hi_raw / step) * step
