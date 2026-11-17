@@ -204,15 +204,15 @@ def mark_ends(ax, series_items, use_comma, y_span):
             pts.append([lx, ly, ly, col])
     if not pts:
         return
-    pts.sort(key=lambda z: z)
+    pts.sort(key=lambda z: z[1])
     min_gap = y_span * 0.042
     for _ in range(4):
         for i in range(1, len(pts)):
-            diff = pts[i] - pts[i - 1]
+            diff = pts[i][2] - pts[i - 1][2]
             if diff < min_gap:
                 shift = (min_gap - diff) / 2.0
-                pts[i - 1] -= shift
-                pts[i] += shift
+                pts[i - 1][2] -= shift
+                pts[i][2] += shift
     for lx, orig_y, text_y, col in pts:
         ax.plot(lx, orig_y, marker="o", markersize=4.5, color=col, zorder=5)
         ax.text(lx + 0.35, text_y, fmt_num(orig_y, use_comma), fontsize=8, fontweight="bold", color=col, va="center", zorder=6)
