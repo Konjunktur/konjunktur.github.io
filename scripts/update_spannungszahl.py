@@ -286,10 +286,12 @@ def save_sz_plotly(fig_p, title_p, src_text, now_str, fname_p, sfx, use_comma=Tr
     if use_comma:
         fig_p.update_layout(separators=",.")
     xaxis_kw = dict(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.5, color="#475569"))
-    if tick_step > 1 and len(fig_p.data) > 0 and fig_p.data[0].x is not None:
-        all_x = list(fig_p.data[0].x)
-        t_vals = [x for i, x in enumerate(all_x) if i % tick_step == 0]
-        xaxis_kw.update(tickmode="array", tickvals=t_vals, ticktext=t_vals)
+    if tick_step > 1 and len(fig_p.data) > 0:
+        first_trace = next(iter(fig_p.data))
+        if first_trace.x is not None:
+            all_x = list(first_trace.x)
+            t_vals = [x for i, x in enumerate(all_x) if i % tick_step == 0]
+            xaxis_kw.update(tickmode="array", tickvals=t_vals, ticktext=t_vals)
     fig_p.update_xaxes(**xaxis_kw)
     fig_p.update_yaxes(fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, tickfont=dict(size=10.5, color="#475569"))
     out_path = f"static/spannungszahl/{fname_p}{sfx}.html"
@@ -341,7 +343,8 @@ def build_spannungszahl(lang, s_ste, s_alo, s_kug, s_bip):
 
     def _plot_series(diff_s, months_use, title_s, lbl_main, src_key, fname, top_adj=0.78, leg_fs=7.4, use_anchors=False, is_12m=False):
         y_main = diff_s.reindex(months_use)
-        s_vj = line_unv(diff_s, months_use[0], months_use)
+        first_ym = next(iter(months_use))
+        s_vj = line_unv(diff_s, first_ym, months_use)
         extra_s = [line_unv(diff_s, a, months_use) for a in anchors_12] if use_anchors else []
         ylo, yhi, yt, y_step = calc_sz_ylim([y_main, s_vj] + extra_s)
 
@@ -376,10 +379,12 @@ def build_spannungszahl(lang, s_ste, s_alo, s_kug, s_bip):
         fp.update_yaxes(range=[ylo, yhi], dtick=y_step)
         save_sz_plotly(fp, title_s, t[src_key], now_str, fname, sfx, use_c, height_p=(520 if use_anchors else 455), top_m=(145 if use_anchors else 95), tick_step=(1 if is_12m else 6))
 
-    _plot_series(diff_einf, m_all, t["p1_t"], t["p1_l"][0], "src_ba", "01_spannungszahl_einfach", top_adj=0.80, leg_fs=7.5, use_anchors=False, is_12m=False)
+    p1_l0, _ = t["p1_l"]
+    p3_l0, _ = t["p3_l"]
+    _plot_series(diff_einf, m_all, t["p1_t"], p1_l0, "src_ba", "01_spannungszahl_einfach", top_adj=0.80, leg_fs=7.5, use_anchors=False, is_12m=False)
     _plot_series(diff_einf, m12, t["p2_t"], t["p2_l1"], "src_ba", "02_spannungszahl_linien", top_adj=0.71, leg_fs=6.8, use_anchors=True, is_12m=True)
-    _plot_series(diff_erw, m_all, t["p3_t"], t["p3_l"][0], "src_ba_kug", "03_spannungszahl_erweitert", top_adj=0.80, leg_fs=7.5, use_anchors=False, is_12m=False)
-    _plot_series(diff_erw, m12, t["p4_t"], t["p3_l"][0], "src_ba_kug", "04_spannungszahl_erweitert_linien", top_adj=0.71, leg_fs=6.8, use_anchors=True, is_12m=True)
+    _plot_series(diff_erw, m_all, t["p3_t"], p3_l0, "src_ba_kug", "03_spannungszahl_erweitert", top_adj=0.80, leg_fs=7.5, use_anchors=False, is_12m=False)
+    _plot_series(diff_erw, m12, t["p4_t"], p3_l0, "src_ba_kug", "04_spannungszahl_erweitert_linien", top_adj=0.71, leg_fs=6.8, use_anchors=True, is_12m=True)
 
     y_e_all = diff_einf.reindex(m_all)
     y_w_all = diff_erw.reindex(m_all)
@@ -412,10 +417,11 @@ def build_spannungszahl(lang, s_ste, s_alo, s_kug, s_bip):
     for s in ("top", "right", "left", "bottom"):
         ax_l.spines[s].set_visible(False)
 
+    p5_l0, p5_l1, p5_l2 = t["p5_l"]
     x_all = np.arange(len(m_all))
-    l_bip = ax_l.bar(bip_x_idx, bip_y_vals, width=2.2, color="#CBD5E1", alpha=0.65, label=t["p5_l"][0], zorder=1)
-    l_einf, = ax_r.plot(x_all, y_e_all.values, color="#1B3A6B", lw=1.9, label=t["p5_l"][1], zorder=4)
-    l_erw, = ax_r.plot(x_all, y_w_all.values, color="#D97706", lw=1.8, ls="--", label=t["p5_l"][2], zorder=5)
+    l_bip = ax_l.bar(bip_x_idx, bip_y_vals, width=2.2, color="#CBD5E1", alpha=0.65, label=p5_l0, zorder=1)
+    l_einf, = ax_r.plot(x_all, y_e_all.values, color="#1B3A6B", lw=1.9, label=p5_l1, zorder=4)
+    l_erw, = ax_r.plot(x_all, y_w_all.values, color="#D97706", lw=1.8, ls="--", label=p5_l2, zorder=5)
 
     draw_year_groups(ax_r, m_all, t["m"], step=3, year_y=-0.24)
     ax_r.legend(handles=[l_bip, l_einf, l_erw], loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=1, frameon=False, fontsize=7.2)
@@ -425,9 +431,9 @@ def build_spannungszahl(lang, s_ste, s_alo, s_kug, s_bip):
     plt.close()
 
     fp5 = make_subplots(specs=[[{"secondary_y": True}]])
-    fp5.add_trace(go.Bar(x=m_all, y=bip_y_full, customdata=[fmt_num(v, use_c) for v in bip_y_full], name=t["p5_l"][0], marker_color="#CBD5E1", opacity=0.75, hovertemplate=f"{t['p5_l'][0]}: <b>%{{customdata}} %</b><extra></extra>"), secondary_y=False)
-    fp5.add_trace(go.Scatter(x=m_all, y=[None if np.isnan(v) else round(float(v), 1) for v in y_e_all.values], customdata=[fmt_num(v, use_c) for v in y_e_all.values], name=t["p5_l"][1], mode="lines", line=dict(color="#1B3A6B", width=2.1), hovertemplate=f"{t['p5_l'][1]}: <b>%{{customdata}}</b><extra></extra>"), secondary_y=True)
-    fp5.add_trace(go.Scatter(x=m_all, y=[None if np.isnan(v) else round(float(v), 1) for v in y_w_all.values], customdata=[fmt_num(v, use_c) for v in y_w_all.values], name=t["p5_l"][2], mode="lines", line=dict(color="#D97706", width=1.9, dash="dash"), hovertemplate=f"{t['p5_l'][2]}: <b>%{{customdata}}</b><extra></extra>"), secondary_y=True)
+    fp5.add_trace(go.Bar(x=m_all, y=bip_y_full, customdata=[fmt_num(v, use_c) for v in bip_y_full], name=p5_l0, marker_color="#CBD5E1", opacity=0.75, hovertemplate=f"{p5_l0}: <b>%{{customdata}} %</b><extra></extra>"), secondary_y=False)
+    fp5.add_trace(go.Scatter(x=m_all, y=[None if np.isnan(v) else round(float(v), 1) for v in y_e_all.values], customdata=[fmt_num(v, use_c) for v in y_e_all.values], name=p5_l1, mode="lines", line=dict(color="#1B3A6B", width=2.1), hovertemplate=f"{p5_l1}: <b>%{{customdata}}</b><extra></extra>"), secondary_y=True)
+    fp5.add_trace(go.Scatter(x=m_all, y=[None if np.isnan(v) else round(float(v), 1) for v in y_w_all.values], customdata=[fmt_num(v, use_c) for v in y_w_all.values], name=p5_l2, mode="lines", line=dict(color="#D97706", width=1.9, dash="dash"), hovertemplate=f"{p5_l2}: <b>%{{customdata}}</b><extra></extra>"), secondary_y=True)
     save_sz_plotly(fp5, t["p5_t"], t["src_all"], now_str, "05_spannungszahl_bip", sfx, use_c, height_p=485, top_m=115, tick_step=6)
     fp5.update_yaxes(range=[-12, 12], dtick=4, fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", secondary_y=False)
     fp5.update_yaxes(range=[ylo5, yhi5], dtick=y_step5, fixedrange=True, showgrid=False, zeroline=False, secondary_y=True)
