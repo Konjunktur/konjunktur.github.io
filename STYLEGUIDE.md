@@ -27,6 +27,8 @@ Dieser Leitfaden definiert den einheitlichen Standard für alle Skripte, Grafike
 - **Achsen & Referenz-Legenden (`fmt_clean`):** Glatte Zahlen ohne überflüssige Endnullen (`5` statt `5,00`, `1,5` statt `1,50`).
 - **Endpunkt-Labels & Hover-Tooltips (`fmt_num`):** Einheitliche Nachkommastellen (1 oder 2 Stellen).
 - **Y-Achsen-Puffer:** Mindestens **10–12 % der Spannweite** (`ymax - ymin`) nach oben und unten, damit keine Kurve den Rahmen berührt.
+- **Endpunkt-Labels (`mark_ends`):** Mindestabstand `4,2 %` der Achsenspannweite mit symmetrischer Verschiebung nach oben und unten, damit Zahlen exakt auf Punkthöhe stehen und sich nie überlappen.
+
 
 ## 4. Hugo-Seiten & Markdown-Regeln
 - **Keine `$`-Zeichen für Formeln:** Hugo rendert ohne LaTeX-Plugin `$`-Zeichen wörtlich. Stattdessen HTML nutzen (`<i>u</i>`, `<i>v</i>`, `<i>u</i>*`, `<i>R</i>²`).
