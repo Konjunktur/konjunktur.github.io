@@ -266,7 +266,7 @@ def get_destatis_tech_recessions():
         df1 = _destatis_ffcsv("81000-0002", "2004", "2015")
         df2 = _destatis_ffcsv("81000-0002", "2016")
         df = pd.concat([df1, df2], ignore_index=True)
-        
+
         if df.empty:
             _TECH_REC_CACHE = []
             return _TECH_REC_CACHE
@@ -278,7 +278,8 @@ def get_destatis_tech_recessions():
                 q_ext = s_c.str.extract(r"([1-4])", expand=False)
                 df["ZEIT"] = pd.Series(np.where(q_ext.notna(), df["ZEIT"].astype(str).str.slice(0, 4) + "-Q" + q_ext.fillna(""), df["ZEIT"]), index=df.index)
                 break
-                req = {"DG", "WERTORG", "VGR014", "VGRPKM"}
+
+        req = {"DG", "WERTORG", "VGR014", "VGRPKM"}
         sub = df[df["_CODES"].apply(lambda s: req.issubset(s))].copy()
         sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
         sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first").sort_values("ZEIT")
