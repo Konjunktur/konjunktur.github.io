@@ -2,7 +2,7 @@ import os, io, re, csv, json, time, zipfile, requests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import datetime
+from matplotlib.patches import Patch
 import plotly.graph_objects as go
 
 os.makedirs("static/konjunktur-arbeitsmarkt", exist_ok=True)
@@ -45,12 +45,14 @@ TEXTS = {
         "gap_title": "Arbeitslosigkeitslücke (u − u*)",
         "gap_sub": "Abstand zwischen Arbeitslosenquote und FERU in Prozentpunkten (+ Unterauslastung / − Überhitzung)",
         "gap_lbl": "Arbeitslosigkeitslücke (u − u*)",
-        "rec_ind_title": "Rezessionsindikator (Michez-Regel für Deutschland)",
+        "rec_ind_title": "Rezessionsindikator (Michaillat-Saez-Regel für Deutschland)",
         "rec_ind_sub": "Minimum aus 3M-Anstieg der Arbeitslosenquote und 3M-Rückgang der Vakanzrate (in %-Punkten)",
         "rec_ind_lbl": "Rezessionsindikator",
         "rec_t1": "Untere Schwelle (möglich)",
         "rec_t2": "Obere Schwelle (sicher)",
-        "rec_prob_title": "Rezessionswahrscheinlichkeit (duale Michez-Regel)",
+        "rec_prob_title": "Rezessionswahrscheinlichkeit (duale Michaillat-Saez-Regel)",
+        "rec_macro": "Rezession (Rezessions-/Schwächephasen)",
+        "rec_tech": "Technische Rezession (BIP, Destatis)",
         "rec_prob_sub": "Anteil der überschrittenen Rezessionsschwellen zwischen unterer und oberer Schwelle (in %)",
         "rec_prob_lbl": "Rezessionswahrscheinlichkeit",
     },
@@ -80,12 +82,14 @@ TEXTS = {
         "gap_title": "Unemployment Gap (u − u*)",
         "gap_sub": "Distance between the unemployment rate and FERU in percentage points (+ slack / − tight)",
         "gap_lbl": "Unemployment gap (u − u*)",
-        "rec_ind_title": "Recession Indicator (Michez Rule for Germany)",
+        "rec_ind_title": "Recession Indicator (Michaillat–Saez Rule for Germany)",
         "rec_ind_sub": "Minimum of 3M unemployment rate rise and 3M vacancy rate drop (in percentage points)",
         "rec_ind_lbl": "Recession indicator",
         "rec_t1": "Lower threshold (possible)",
         "rec_t2": "Upper threshold (certain)",
-        "rec_prob_title": "Recession Probability (Dual Michez Rule)",
+        "rec_prob_title": "Recession Probability (Dual Michaillat–Saez Rule)",
+        "rec_macro": "Recession (Recession/Weak Phase)",
+        "rec_tech": "Technical recession (GDP, Destatis)",
         "rec_prob_sub": "Share of thresholds crossed between lower and upper recession bounds (in %)",
         "rec_prob_lbl": "Recession probability",
     }
@@ -251,12 +255,65 @@ def load_all_labor_data():
     comb["prob"] = ((comb["michez"] - thr_low) / (thr_high - thr_low) * 100.0).clip(0.0, 100.0)
     return comb, thr_low, thr_high
 
+_TECH_REC_CACHE = None
+
+def get_destatis_tech_recessions():
+    global _TECH_REC_CACHE
+    if _TECH_REC_CACHE is not None:
+        return _TECH_REC_CACHE
+    try:
+        df = _destatis_ffcsv("81000-0002", "2004")
+        if df.empty:
+            _TECH_REC_CACHE = []
+            return _TECH_REC_CACHE
+        code_cols = [c for c in df.columns if c.endswith("_code")]
+        for c in code_cols:
+            s_c = df[c].astype(str).str.strip()
+            if s_c.str.match(r"^QUART0?[1-4]$", case=False).any():
+                q_ext = s_c.str.extract(r"([1-4])", expand=False)
+                df["ZEIT"] = pd.Series(np.where(q_ext.notna(), df["ZEIT"].astype(str).str.slice(0, 4) + "-Q" + q_ext.fillna(""), df["ZEIT"]), index=df.index)
+                break
+        req = {"DG", "WERTBKS", "VGR014", "VGRPKM"}
+        sub = df[df["_CODES"].apply(lambda s: req.issubset(s))].copy()
+        sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
+        sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first").sort_values("ZEIT")
+        q_list = list(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"].values))
+        qoq = []
+        for i in range(1, len(q_list)):
+            qz, vc = q_list[i]
+            _, vp = q_list[i - 1]
+            if "-Q" in qz and vp != 0:
+                qoq.append((qz, (vc / vp - 1.0) * 100.0))
+        q_start = {"Q1": "01", "Q2": "04", "Q3": "07", "Q4": "10"}
+        q_end = {"Q1": "03", "Q2": "06", "Q3": "09", "Q4": "12"}
+        bands, streak = [], []
+        for qz, rate in qoq:
+            if rate < 0.0:
+                streak.append(qz)
+            else:
+                if len(streak) >= 2:
+                    s0, e0 = next(iter(streak)), streak[-1]
+                    bands.append((f"{s0[:4]}-{q_start[s0[-2:]]}", f"{e0[:4]}-{q_end[e0[-2:]]}"))
+                streak = []
+        if len(streak) >= 2:
+            s0, e0 = next(iter(streak)), streak[-1]
+            bands.append((f"{s0[:4]}-{q_start[s0[-2:]]}", f"{e0[:4]}-{q_end[e0[-2:]]}"))
+        _TECH_REC_CACHE = bands
+        return _TECH_REC_CACHE
+    except Exception:
+        _TECH_REC_CACHE = []
+        return _TECH_REC_CACHE
+
 def _add_rec_bands_ax(ax, months):
     m_map = {ym: i for i, ym in enumerate(months)}
     for r_s, r_e in DE_RECESSIONS:
         vis = [i for ym, i in m_map.items() if r_s <= ym <= r_e]
         if vis:
             ax.axvspan(min(vis) - 0.5, max(vis) + 0.5, color="#CBD5E1", alpha=0.45, zorder=0)
+    for r_s, r_e in get_destatis_tech_recessions():
+        vis = [i for ym, i in m_map.items() if r_s <= ym <= r_e]
+        if vis:
+            ax.axvspan(min(vis) - 0.5, max(vis) + 0.5, color="#93C5FD", alpha=0.35, zorder=0.5)
 
 def _add_rec_shapes_plotly(months):
     m_set = set(months)
@@ -265,7 +322,12 @@ def _add_rec_shapes_plotly(months):
         vis = sorted([ym for ym in m_set if r_s <= ym <= r_e])
         if vis:
             shapes.append(dict(type="rect", xref="x", yref="paper", x0=next(iter(vis)), x1=vis[-1], y0=0, y1=1, fillcolor="#CBD5E1", opacity=0.35, line_width=0, layer="below"))
+    for r_s, r_e in get_destatis_tech_recessions():
+        vis = sorted([ym for ym in m_set if r_s <= ym <= r_e])
+        if vis:
+            shapes.append(dict(type="rect", xref="x", yref="paper", x0=next(iter(vis)), x1=vis[-1], y0=0, y1=1, fillcolor="#93C5FD", opacity=0.30, line_width=0, layer="below"))
     return shapes
+
 
 def _save_plotly(fig_p, months, title_p, sub_p, src_text, now_str, out_path, tick_step=24, shapes=None, zero_line=False, y_range=None):
     fig_p.update_layout(
@@ -339,7 +401,11 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
     ax.set_xlim(-2, len(months) + 18)
     ax.set_xticks(tick_pos)
     ax.set_xticklabels([months[i][:7] for i in tick_pos], ha="right")
-    ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.01), ncol=3, frameon=False, fontsize=7.6)
+    h_leg, l_leg = ax.get_legend_handles_labels()
+    h_leg.extend([Patch(facecolor="#CBD5E1", alpha=0.55), Patch(facecolor="#93C5FD", alpha=0.45)])
+    l_leg.extend([t["rec_macro"], t["rec_tech"]])
+    ax.legend(h_leg, l_leg, loc="lower left", bbox_to_anchor=(-0.01, 1.01), ncol=3, frameon=False, fontsize=7.0)
+
     fig.text(0.09, 0.015, f"{t['src']}{now_str}", fontsize=7.1, color="#64748B")
     fig.text(0.92, 0.015, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
     plt.savefig(f"static/konjunktur-arbeitsmarkt/{key}{t['sfx']}.png", dpi=300)
@@ -351,6 +417,9 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
         fp.add_trace(go.Scatter(x=months, y=[round(float(v), dec) for v in vals], customdata=[fmt_num(v, use_c, dec) for v in vals], name=str(lbl), mode="lines", line=dict(color=col, width=2.1, dash=dash), hovertemplate=f"{lbl}: <b>%{{customdata}}</b><extra></extra>"))
     for r_val, r_lbl, r_col in (ref_lines or []):
         fp.add_trace(go.Scatter(x=months, y=[round(float(r_val), dec)] * len(months), customdata=[fmt_num(r_val, use_c, dec)] * len(months), name=f"{r_lbl} ({fmt_clean(r_val, use_c, dec)})", mode="lines", line=dict(color=r_col, width=1.6, dash="dash"), hovertemplate=f"{r_lbl}: <b>%{{customdata}}</b><extra></extra>"))
+    fp.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(203,213,225,0.65)"), name=t["rec_macro"], hoverinfo="skip"))
+    fp.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(147,197,253,0.55)"), name=t["rec_tech"], hoverinfo="skip"))
+    
     if use_c:
         fp.update_layout(separators=",.")
     _save_plotly(fp, months, title_t, sub_t, t["src"], now_str, f"static/konjunktur-arbeitsmarkt/{key}{t['sfx']}.html", tick_step=step, shapes=_add_rec_shapes_plotly(months), zero_line=zero_line, y_range=y_range)
