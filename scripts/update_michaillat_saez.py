@@ -2,7 +2,6 @@ import os, io, re, csv, json, time, zipfile, requests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import datetime
 from matplotlib.patches import Patch
 import plotly.graph_objects as go
 
@@ -13,8 +12,10 @@ G_BASE = "https://www-genesis." + "destatis.de/genesisWS/rest/2020/data"
 BBK_BASE = "https://api.statistiken." + "bundesbank.de/rest/data/"
 
 DE_RECESSIONS = [
-    ("2008-01", "2009-06"),
-    ("2019-10", "2020-06"),
+    ("2008-04", "2009-06"),
+    ("2012-10", "2013-03"),
+    ("2020-01", "2020-06"),
+    ("2022-10", "2025-12"),
 ]
 
 TEXTS = {
@@ -50,8 +51,8 @@ TEXTS = {
         "rec_t1": "Untere Schwelle (möglich)",
         "rec_t2": "Obere Schwelle (sicher)",
         "rec_prob_title": "Rezessionswahrscheinlichkeit (duale Michaillat-Saez-Regel)",
-        "rec_macro": "Rezessionsphasen lt. SVR",
-        "rec_tech": "Reales BIP < 0 % gg. Vj.",
+        "rec_macro": "Rezession (Rezessions-/Schwächephasen)",
+        "rec_tech": "Technische Rezession (BIP, Destatis)",
         "rec_prob_sub": "Anteil der überschrittenen Rezessionsschwellen zwischen unterer und oberer Schwelle (in %)",
         "rec_prob_lbl": "Rezessionswahrscheinlichkeit",
     },
@@ -115,13 +116,11 @@ def _unpack(resp):
             return zf.read(next(n for n in zf.namelist() if n.endswith(".csv"))).decode("utf-8", errors="replace")
     return resp.text
 
-def _destatis_ffcsv(table, startyear="2005", endyear=None):
+def _destatis_ffcsv(table, startyear="2005"):
     if not D_USER or not D_PASS:
         return pd.DataFrame()
     headers = {"username": D_USER, "password": D_PASS, "Content-Type": "application/x-www-form-urlencoded"}
     data = {"name": table, "area": "all", "compress": "false", "format": "ffcsv", "language": "de", "startyear": startyear}
-    if endyear:
-        data["endyear"] = str(endyear)
     r = requests.post(f"{G_BASE}/tablefile", headers=headers, data=data, timeout=90)
     raw = _unpack(r)
     if raw.lstrip().startswith("{"):
@@ -132,7 +131,7 @@ def _destatis_ffcsv(table, startyear="2005", endyear=None):
         raw = ""
         for _ in range(45):
             time.sleep(2.5)
-            txt = _unpack(requests.post(f"{G_BASE}/resultfile", headers=headers, data={"name": m.group(1), "area": "all", "compress": "false", "format": "ffcsv", "language": "de"}, timeout=90))
+            txt = _unpack(requests.post(f"{G_BASE}/resultfile", headers=headers, data={"name": m.group(1), "area": "all", "compress": "false", "language": "de"}, timeout=90))
             if not txt.lstrip().startswith("{"):
                 raw = txt
                 break
@@ -263,14 +262,10 @@ def get_destatis_tech_recessions():
     if _TECH_REC_CACHE is not None:
         return _TECH_REC_CACHE
     try:
-        df1 = _destatis_ffcsv("81000-0002", "2004", "2015")
-        df2 = _destatis_ffcsv("81000-0002", "2016")
-        df = pd.concat([df1, df2], ignore_index=True)
-
+        df = _destatis_ffcsv("81000-0002", "2004")
         if df.empty:
             _TECH_REC_CACHE = []
             return _TECH_REC_CACHE
-
         code_cols = [c for c in df.columns if c.endswith("_code")]
         for c in code_cols:
             s_c = df[c].astype(str).str.strip()
@@ -278,26 +273,31 @@ def get_destatis_tech_recessions():
                 q_ext = s_c.str.extract(r"([1-4])", expand=False)
                 df["ZEIT"] = pd.Series(np.where(q_ext.notna(), df["ZEIT"].astype(str).str.slice(0, 4) + "-Q" + q_ext.fillna(""), df["ZEIT"]), index=df.index)
                 break
-
-        req = {"DG", "WERTORG", "VGR014", "VGRPKM"}
+        req = {"DG", "WERTBKS", "VGR014", "VGRPKM"}
         sub = df[df["_CODES"].apply(lambda s: req.issubset(s))].copy()
         sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
         sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first").sort_values("ZEIT")
-        idx_map = dict(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"]))
+        q_list = list(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"].values))
+        qoq = []
+        for i in range(1, len(q_list)):
+            qz, vc = q_list[i]
+            _, vp = q_list[i - 1]
+            if "-Q" in qz and vp != 0:
+                qoq.append((qz, (vc / vp - 1.0) * 100.0))
         q_start = {"Q1": "01", "Q2": "04", "Q3": "07", "Q4": "10"}
         q_end = {"Q1": "03", "Q2": "06", "Q3": "09", "Q4": "12"}
-        bands = []
-        for qz in sorted(idx_map.keys()):
-            if "-Q" not in qz:
-                continue
-            prev_z = f"{int(qz[:4]) - 1}{qz[4:]}"
-            vc = idx_map.get(qz, np.nan)
-            vp = idx_map.get(prev_z, np.nan)
-            if not np.isnan(vp) and vp != 0:
-                yoy = (vc / vp - 1.0) * 100.0
-                if yoy < 0.0:
-                    q_part = qz[-2:]
-                    bands.append((f"{qz[:4]}-{q_start[q_part]}", f"{qz[:4]}-{q_end[q_part]}"))
+        bands, streak = [], []
+        for qz, rate in qoq:
+            if rate < 0.0:
+                streak.append(qz)
+            else:
+                if len(streak) >= 2:
+                    s0, e0 = next(iter(streak)), streak[-1]
+                    bands.append((f"{s0[:4]}-{q_start[s0[-2:]]}", f"{e0[:4]}-{q_end[e0[-2:]]}"))
+                streak = []
+        if len(streak) >= 2:
+            s0, e0 = next(iter(streak)), streak[-1]
+            bands.append((f"{s0[:4]}-{q_start[s0[-2:]]}", f"{e0[:4]}-{q_end[e0[-2:]]}"))
         _TECH_REC_CACHE = bands
         return _TECH_REC_CACHE
     except Exception:
@@ -313,7 +313,7 @@ def _add_rec_bands_ax(ax, months):
     for r_s, r_e in get_destatis_tech_recessions():
         vis = [i for ym, i in m_map.items() if r_s <= ym <= r_e]
         if vis:
-            ax.axvspan(min(vis) - 0.5, max(vis) + 0.5, color="#60A5FA", alpha=0.50, zorder=0.5)
+            ax.axvspan(min(vis) - 0.5, max(vis) + 0.5, color="#93C5FD", alpha=0.35, zorder=0.5)
 
 def _add_rec_shapes_plotly(months):
     m_set = set(months)
@@ -325,7 +325,7 @@ def _add_rec_shapes_plotly(months):
     for r_s, r_e in get_destatis_tech_recessions():
         vis = sorted([ym for ym in m_set if r_s <= ym <= r_e])
         if vis:
-            shapes.append(dict(type="rect", xref="x", yref="paper", x0=next(iter(vis)), x1=vis[-1], y0=0, y1=1, fillcolor="#60A5FA", opacity=0.42, line_width=0, layer="below"))
+            shapes.append(dict(type="rect", xref="x", yref="paper", x0=next(iter(vis)), x1=vis[-1], y0=0, y1=1, fillcolor="#93C5FD", opacity=0.30, line_width=0, layer="below"))
     return shapes
 
 
@@ -418,7 +418,7 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
     for r_val, r_lbl, r_col in (ref_lines or []):
         fp.add_trace(go.Scatter(x=months, y=[round(float(r_val), dec)] * len(months), customdata=[fmt_num(r_val, use_c, dec)] * len(months), name=f"{r_lbl} ({fmt_clean(r_val, use_c, dec)})", mode="lines", line=dict(color=r_col, width=1.6, dash="dash"), hovertemplate=f"{r_lbl}: <b>%{{customdata}}</b><extra></extra>"))
     fp.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(203,213,225,0.65)"), name=t["rec_macro"], hoverinfo="skip"))
-    fp.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(96,165,250,0.65)"), name=t["rec_tech"], hoverinfo="skip"))
+    fp.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(147,197,253,0.55)"), name=t["rec_tech"], hoverinfo="skip"))
     
     if use_c:
         fp.update_layout(separators=",.")
