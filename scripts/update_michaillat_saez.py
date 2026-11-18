@@ -2,12 +2,13 @@ import os, io, re, csv, json, time, zipfile, requests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime
 from matplotlib.patches import Patch
 import plotly.graph_objects as go
 
 os.makedirs("static/konjunktur-arbeitsmarkt", exist_ok=True)
 D_USER = os.environ.get("DESTATIS_USER", "")
-D_PASS = os.environ.get("DESTATIS_PASS", "")
+
 G_BASE = "https://www-genesis." + "destatis.de/genesisWS/rest/2020/data"
 BBK_BASE = "https://api.statistiken." + "bundesbank.de/rest/data/"
 
