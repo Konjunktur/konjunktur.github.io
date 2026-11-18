@@ -274,8 +274,10 @@ def get_destatis_tech_recessions():
                 q_ext = s_c.str.extract(r"([1-4])", expand=False)
                 df["ZEIT"] = pd.Series(np.where(q_ext.notna(), df["ZEIT"].astype(str).str.slice(0, 4) + "-Q" + q_ext.fillna(""), df["ZEIT"]), index=df.index)
                 break
-        req = {"DG", "WERTBKS", "VGR014", "VGRPKM"}
-        sub = df[df["_CODES"].apply(lambda s: req.issubset(s))].copy()
+        req_base = {"DG", "VGR014", "VGRPKM"}
+        sub = df[df["_CODES"].apply(lambda s: req_base.issubset(s) and ("WERTBKS" in s or "X13" in s or "BV4" in s))].copy()
+        if sub.empty:
+           sub = df[df["_CODES"].apply(lambda s: (req_base | {"WERTORG"}).issubset(s))].copy()
         sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
         sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first").sort_values("ZEIT")
         q_list = list(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"].values))
@@ -314,7 +316,7 @@ def _add_rec_bands_ax(ax, months):
     for r_s, r_e in get_destatis_tech_recessions():
         vis = [i for ym, i in m_map.items() if r_s <= ym <= r_e]
         if vis:
-            ax.axvspan(min(vis) - 0.5, max(vis) + 0.5, color="#93C5FD", alpha=0.35, zorder=0.5)
+            ax.axvspan(min(vis) - 0.5, max(vis) + 0.5, color="#60A5FA", alpha=0.50, zorder=0.5)
 
 def _add_rec_shapes_plotly(months):
     m_set = set(months)
@@ -326,7 +328,7 @@ def _add_rec_shapes_plotly(months):
     for r_s, r_e in get_destatis_tech_recessions():
         vis = sorted([ym for ym in m_set if r_s <= ym <= r_e])
         if vis:
-            shapes.append(dict(type="rect", xref="x", yref="paper", x0=next(iter(vis)), x1=vis[-1], y0=0, y1=1, fillcolor="#93C5FD", opacity=0.30, line_width=0, layer="below"))
+            shapes.append(dict(type="rect", xref="x", yref="paper", x0=next(iter(vis)), x1=vis[-1], y0=0, y1=1, fillcolor="#60A5FA", opacity=0.42, line_width=0, layer="below"))
     return shapes
 
 
@@ -419,7 +421,7 @@ def render_ts_chart(key, lang, months, series_list, ref_lines=None, dec=2, zero_
     for r_val, r_lbl, r_col in (ref_lines or []):
         fp.add_trace(go.Scatter(x=months, y=[round(float(r_val), dec)] * len(months), customdata=[fmt_num(r_val, use_c, dec)] * len(months), name=f"{r_lbl} ({fmt_clean(r_val, use_c, dec)})", mode="lines", line=dict(color=r_col, width=1.6, dash="dash"), hovertemplate=f"{r_lbl}: <b>%{{customdata}}</b><extra></extra>"))
     fp.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(203,213,225,0.65)"), name=t["rec_macro"], hoverinfo="skip"))
-    fp.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(147,197,253,0.55)"), name=t["rec_tech"], hoverinfo="skip"))
+    fp.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(96,165,250,0.65)"), name=t["rec_tech"], hoverinfo="skip"))
     
     if use_c:
         fp.update_layout(separators=",.")
