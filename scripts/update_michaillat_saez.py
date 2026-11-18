@@ -130,7 +130,7 @@ def _destatis_ffcsv(table, startyear="2005"):
         raw = ""
         for _ in range(45):
             time.sleep(2.5)
-            txt = _unpack(requests.post(f"{G_BASE}/resultfile", headers=headers, data={"name": m.group(1), "area": "all", "compress": "false", "language": "de"}, timeout=90))
+            txt = _unpack(requests.post(f"{G_BASE}/resultfile", headers=headers, data={"name": m.group(1), "area": "all", "compress": "false", "format": "ffcsv", "language": "de"}, timeout=90))
             if not txt.lstrip().startswith("{"):
                 raw = txt
                 break
@@ -265,6 +265,7 @@ def get_destatis_tech_recessions():
         if df.empty:
             _TECH_REC_CACHE = []
             return _TECH_REC_CACHE
+
         code_cols = [c for c in df.columns if c.endswith("_code")]
         for c in code_cols:
             s_c = df[c].astype(str).str.strip()
