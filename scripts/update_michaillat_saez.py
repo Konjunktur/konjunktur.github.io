@@ -13,10 +13,8 @@ G_BASE = "https://www-genesis." + "destatis.de/genesisWS/rest/2020/data"
 BBK_BASE = "https://api.statistiken." + "bundesbank.de/rest/data/"
 
 DE_RECESSIONS = [
-    ("2008-04", "2009-06"),
-    ("2012-10", "2013-03"),
-    ("2020-01", "2020-06"),
-    ("2022-10", "2025-12"),
+    ("2008-01", "2009-06"),
+    ("2019-10", "2020-06"),
 ]
 
 TEXTS = {
@@ -52,8 +50,8 @@ TEXTS = {
         "rec_t1": "Untere Schwelle (möglich)",
         "rec_t2": "Obere Schwelle (sicher)",
         "rec_prob_title": "Rezessionswahrscheinlichkeit (duale Michaillat-Saez-Regel)",
-        "rec_macro": "Rezession (Rezessions-/Schwächephasen)",
-        "rec_tech": "Technische Rezession (BIP, Destatis)",
+        "rec_macro": "Rezessionsphasen lt. SVR",
+        "rec_tech": "Reales BIP < 0 % gg. Vj.",
         "rec_prob_sub": "Anteil der überschrittenen Rezessionsschwellen zwischen unterer und oberer Schwelle (in %)",
         "rec_prob_lbl": "Rezessionswahrscheinlichkeit",
     },
@@ -274,33 +272,25 @@ def get_destatis_tech_recessions():
                 q_ext = s_c.str.extract(r"([1-4])", expand=False)
                 df["ZEIT"] = pd.Series(np.where(q_ext.notna(), df["ZEIT"].astype(str).str.slice(0, 4) + "-Q" + q_ext.fillna(""), df["ZEIT"]), index=df.index)
                 break
-        req_base = {"DG", "VGR014", "VGRPKM"}
-        sub = df[df["_CODES"].apply(lambda s: req_base.issubset(s) and ("WERTBKS" in s or "X13" in s or "BV4" in s))].copy()
-        if sub.empty:
-           sub = df[df["_CODES"].apply(lambda s: (req_base | {"WERTORG"}).issubset(s))].copy()
+                req = {"DG", "WERTORG", "VGR014", "VGRPKM"}
+        sub = df[df["_CODES"].apply(lambda s: req.issubset(s))].copy()
         sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
         sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first").sort_values("ZEIT")
-        q_list = list(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"].values))
-        qoq = []
-        for i in range(1, len(q_list)):
-            qz, vc = q_list[i]
-            _, vp = q_list[i - 1]
-            if "-Q" in qz and vp != 0:
-                qoq.append((qz, (vc / vp - 1.0) * 100.0))
+        idx_map = dict(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"]))
         q_start = {"Q1": "01", "Q2": "04", "Q3": "07", "Q4": "10"}
         q_end = {"Q1": "03", "Q2": "06", "Q3": "09", "Q4": "12"}
-        bands, streak = [], []
-        for qz, rate in qoq:
-            if rate < 0.0:
-                streak.append(qz)
-            else:
-                if len(streak) >= 2:
-                    s0, e0 = next(iter(streak)), streak[-1]
-                    bands.append((f"{s0[:4]}-{q_start[s0[-2:]]}", f"{e0[:4]}-{q_end[e0[-2:]]}"))
-                streak = []
-        if len(streak) >= 2:
-            s0, e0 = next(iter(streak)), streak[-1]
-            bands.append((f"{s0[:4]}-{q_start[s0[-2:]]}", f"{e0[:4]}-{q_end[e0[-2:]]}"))
+        bands = []
+        for qz in sorted(idx_map.keys()):
+            if "-Q" not in qz:
+                continue
+            prev_z = f"{int(qz[:4]) - 1}{qz[4:]}"
+            vc = idx_map.get(qz, np.nan)
+            vp = idx_map.get(prev_z, np.nan)
+            if not np.isnan(vp) and vp != 0:
+                yoy = (vc / vp - 1.0) * 100.0
+                if yoy < 0.0:
+                    q_part = qz[-2:]
+                    bands.append((f"{qz[:4]}-{q_start[q_part]}", f"{qz[:4]}-{q_end[q_part]}"))
         _TECH_REC_CACHE = bands
         return _TECH_REC_CACHE
     except Exception:
