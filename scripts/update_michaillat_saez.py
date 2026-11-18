@@ -115,11 +115,13 @@ def _unpack(resp):
             return zf.read(next(n for n in zf.namelist() if n.endswith(".csv"))).decode("utf-8", errors="replace")
     return resp.text
 
-def _destatis_ffcsv(table, startyear="2005"):
+def _destatis_ffcsv(table, startyear="2005", endyear=None):
     if not D_USER or not D_PASS:
         return pd.DataFrame()
     headers = {"username": D_USER, "password": D_PASS, "Content-Type": "application/x-www-form-urlencoded"}
     data = {"name": table, "area": "all", "compress": "false", "format": "ffcsv", "language": "de", "startyear": startyear}
+    if endyear:
+        data["endyear"] = str(endyear)
     r = requests.post(f"{G_BASE}/tablefile", headers=headers, data=data, timeout=90)
     raw = _unpack(r)
     if raw.lstrip().startswith("{"):
@@ -261,7 +263,10 @@ def get_destatis_tech_recessions():
     if _TECH_REC_CACHE is not None:
         return _TECH_REC_CACHE
     try:
-        df = _destatis_ffcsv("81000-0002", "2004")
+        df1 = _destatis_ffcsv("81000-0002", "2004", "2015")
+        df2 = _destatis_ffcsv("81000-0002", "2016")
+        df = pd.concat([df1, df2], ignore_index=True)
+        
         if df.empty:
             _TECH_REC_CACHE = []
             return _TECH_REC_CACHE
