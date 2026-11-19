@@ -11,6 +11,7 @@ D_USER = os.environ.get("DESTATIS_USER", "")
 D_PASS = os.environ.get("DESTATIS_PASS", "")
 G_BASE = "https://www-genesis." + "destatis.de/genesisWS/rest/2020/data"
 
+# Graue Phasen: Rezessions- und Schwächephasen (Sachverständigenrat / Bundesbank)
 DE_RECESSIONS = [
     ("2008-04", "2009-06"),
     ("2012-10", "2013-03"),
@@ -18,13 +19,14 @@ DE_RECESSIONS = [
     ("2022-10", "2025-12"),
 ]
 
-FALLBACK_GDP_NEG_QUARTERS = {
-    "2008-Q2", "2008-Q3", "2008-Q4", "2009-Q1", "2009-Q2", "2009-Q3",
-    "2012-Q4", "2013-Q1",
-    "2020-Q1", "2020-Q2", "2020-Q3", "2020-Q4",
-    "2023-Q1", "2023-Q2", "2023-Q3", "2023-Q4",
-    "2024-Q2", "2024-Q3", "2024-Q4",
-}
+# Fallback falls Destatis 81000-0002 vorübergehend nicht erreichbar ist
+# Ausschließlich Vorjahresvergleich (WERTORG + VGRPKM + VGR014 < 0 %)
+FALLBACK_GDP_YOY_NEG = [
+    ("2008-10", "2009-12"),  # 2008-Q4 bis 2009-Q4
+    ("2012-10", "2013-03"),  # 2012-Q4 bis 2013-Q1
+    ("2020-01", "2021-03"),  # 2020-Q1 bis 2021-Q1
+    ("2023-04", "2025-06"),  # 2023-Q2 bis 2025-Q2
+]
 
 TEXTS = {
     "de": {
@@ -32,6 +34,8 @@ TEXTS = {
         "date_fmt": "%d.%m.%Y",
         "comma": True,
         "sfx": "",
+        "rec_grey_lbl": "Rezession/Schwäche (SVR/BBk)",
+        "rec_blue_lbl": "Reales BIP < 0 % gg. Vj.",
         "u_title": "Arbeitslosenquote (u)",
         "u_sub": "Registrierte Arbeitslose in % aller zivilen Erwerbspersonen",
         "u_lbl": "Arbeitslosenquote (u)",
@@ -61,14 +65,14 @@ TEXTS = {
         "rec_prob_title": "Rezessionswahrscheinlichkeit (duale Michaillat-Regel)",
         "rec_prob_sub": "Anteil der überschrittenen Rezessionsschwellen zwischen unterer und oberer Schwelle (in %)",
         "rec_prob_lbl": "Rezessionswahrscheinlichkeit",
-        "band_svr": "Rezession/Schwäche (SVR/BBk)",
-        "band_gdp": "Reales BIP < 0 % gg. Vj.",
     },
     "en": {
         "src": "Source: Federal Statistical Office (BA data) | As of: ",
         "date_fmt": "%Y-%m-%d",
         "comma": False,
         "sfx": "_en",
+        "rec_grey_lbl": "Recession/slowdown (GCEE/BBk)",
+        "rec_blue_lbl": "Real GDP < 0% YoY",
         "u_title": "Unemployment Rate (u)",
         "u_sub": "Number of registered unemployed divided by civilian labor force (in %)",
         "u_lbl": "Unemployment rate (u)",
@@ -98,8 +102,6 @@ TEXTS = {
         "rec_prob_title": "Recession Probability (Dual Michaillat Rule)",
         "rec_prob_sub": "Share of thresholds crossed between lower and upper recession bounds (in %)",
         "rec_prob_lbl": "Recession probability",
-        "band_svr": "Recession/slowdown (SVR/BBk)",
-        "band_gdp": "Real GDP YoY < 0%",
     }
 }
 
@@ -162,90 +164,88 @@ def _destatis_ffcsv(table, startyear="2005"):
             m_ext = s_code.str.extract(r"([0-9]+)", expand=False).str.zfill(2)
             zeit_s = pd.Series(np.where(m_ext.notna(), zeit_s + "-" + m_ext.fillna(""), zeit_s), index=df.index)
             break
-        if s_code.str.match(r"^QUART0?[1-4]$", case=False).any():
-            q_ext = s_code.str.extract(r"([1-4])", expand=False)
-            zeit_s = pd.Series(np.where(q_ext.notna(), zeit_s + "-Q" + q_ext.fillna(""), zeit_s), index=df.index)
-            break
     df["ZEIT"] = zeit_s
     df["WERT"] = df[v_col]
     code_cols = [c for c in df.columns if c.endswith("_code")]
     df["_CODES"] = [set(str(r[c]).strip() for c in code_cols) for _, r in df.iterrows()]
     return df
 
-def _quarters_to_month_ranges(neg_quarters):
-    q_to_months = {
-        "Q1": ("01", "03"),
-        "Q2": ("04", "06"),
-        "Q3": ("07", "09"),
-        "Q4": ("10", "12"),
-    }
-    ordered_q = sorted(set(neg_quarters))
-    if not ordered_q:
-        return []
-    ranges = []
-    for q_str in ordered_q:
-        yr, q_part = q_str.split("-")
-        m_start, m_end = q_to_months[q_part]
-        ym_start, ym_end = f"{yr}-{m_start}", f"{yr}-{m_end}"
-        if ranges:
-            prev_end = ranges[-1][1]
-            py, pm = int(prev_end[:4]), int(prev_end[5:7])
-            ny, nm = (py + 1, 1) if pm == 12 else (py, pm + 1)
-            if f"{ny:04d}-{nm:02d}" == ym_start:
-                ranges[-1] = (ranges[-1][0], ym_end)
-                continue
-        ranges.append((ym_start, ym_end))
-    return ranges
-
 def load_gdp_recession_bands():
+    """
+    Lädt aus Destatis 81000-0002 strikt die preisbereinigten Originalwerte
+    (WERTORG + VGRPKM + VGR014 = Veränderung gegenüber dem Vorjahresquartal in %)
+    und gibt zusammenhängende Monatsintervalle zurück, in denen reales BIP < 0 % gg. Vj. liegt.
+    """
     try:
-        df_gdp = _destatis_ffcsv("81000-0002", "2004")
+        df_gdp = _destatis_ffcsv("81000-0002", "2005")
         if not df_gdp.empty:
-            sub = df_gdp[
-                df_gdp["_CODES"].apply(lambda s: "DG" in s and "WERTORG" in s and ("VGR014" in s or "VGRPKM" in s))
-            ].copy()
-            if not sub.empty:
+            # Strikter Filter auf Vorjahresvergleich (WERTORG), preisbereinigt (VGRPKM), Veränderungsrate (VGR014)
+            sub = df_gdp[df_gdp["_CODES"].apply(lambda s: {"WERTORG", "VGRPKM", "VGR014"}.issubset(s))].copy()
+            q_col = None
+            for c in df_gdp.columns:
+                if c.endswith("_code") and df_gdp[c].astype(str).str.match(r"^QUART[1-4]$", case=False).any():
+                    q_col = c
+                    break
+            if not sub.empty and q_col:
+                sub["Q_NUM"] = pd.to_numeric(sub[q_col].astype(str).str.extract(r"([1-4])", expand=False), errors="coerce")
+                sub["YR"] = pd.to_numeric(sub["ZEIT"].astype(str).str.slice(0, 4), errors="coerce")
                 sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
-                sub = sub[sub["ZEIT"].str.match(r"^\d{4}-Q[1-4]$") & sub["V"].notna()].copy()
-                if "value_variable_code" in sub.columns and (sub["value_variable_code"] == "VGR014").any():
-                    sub = sub[sub["value_variable_code"] == "VGR014"]
-                sub = sub.drop_duplicates(subset=["ZEIT"], keep="first").sort_values("ZEIT")
-                ser_q = pd.Series(sub["V"].values, index=sub["ZEIT"].values)
-                if ser_q.median() > 20.0:
-                    yoy_q = (ser_q / ser_q.shift(4) - 1.0) * 100.0
-                else:
-                    yoy_q = ser_q
-                neg_q = [q for q, val in yoy_q.dropna().items() if float(val) < 0.0 and q >= "2005-Q1"]
-                if neg_q:
-                    return _quarters_to_month_ranges(neg_q)
+                sub = sub.dropna(subset=["Q_NUM", "YR", "V"]).sort_values(["YR", "Q_NUM"])
+                sub = sub.drop_duplicates(subset=["YR", "Q_NUM"], keep="first")
+
+                q_months = {
+                    1: ("01", "03"),
+                    2: ("04", "06"),
+                    3: ("07", "09"),
+                    4: ("10", "12"),
+                }
+                neg_intervals = []
+                for _, row in sub[sub["V"] < 0.0].iterrows():
+                    yr = int(row["YR"])
+                    qn = int(row["Q_NUM"])
+                    m_start, m_end = q_months[qn]
+                    neg_intervals.append((f"{yr:04d}-{m_start}", f"{yr:04d}-{m_end}"))
+
+                # Angrenzende Quartale zu durchgehenden Bändern zusammenfassen
+                merged = []
+                for s_ym, e_ym in sorted(neg_intervals):
+                    if not merged:
+                        merged.append([s_ym, e_ym])
+                        continue
+                    prev_y, prev_m = int(merged[-1][1][:4]), int(merged[-1][1][5:7])
+                    cur_y, cur_m = int(s_ym[:4]), int(s_ym[5:7])
+                    if (cur_y * 12 + cur_m) == (prev_y * 12 + prev_m + 1):
+                        merged[-1][1] = e_ym
+                    else:
+                        merged.append([s_ym, e_ym])
+                if merged:
+                    return [(a, b) for a, b in merged]
     except Exception:
         pass
-    return _quarters_to_month_ranges(FALLBACK_GDP_NEG_QUARTERS)
+    return FALLBACK_GDP_YOY_NEG
 
 def load_all_labor_data():
     df_ba = _destatis_ffcsv("13211-0002", "2005")
     if df_ba.empty:
-        raise RuntimeError("Destatis-Tabelle 13211-0002 lieferte keine Daten.")
+        raise RuntimeError("Destatis Tabelle 13211-0002 lieferte keine Daten.")
     if "2_variable_attribute_label" in df_ba.columns:
         df_ba = df_ba[df_ba["2_variable_attribute_label"].astype(str).str.strip() == "Insgesamt"].copy()
 
     series_map = {}
-    for code_v, key_name in (("ERW007", "ste"), ("ERW006", "alo"), ("ERW112", "alq")):
+    for code_v, target_s in (("ERW007", "ste"), ("ERW006", "alo"), ("ERW112", "alq")):
         sub = df_ba[df_ba["_CODES"].apply(lambda s: code_v in s)].copy()
         sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
-        sub = sub[sub["ZEIT"].str.match(r"^\d{4}-\d{2}$")].dropna(subset=["V"])
-        sub = sub.drop_duplicates(subset=["ZEIT"], keep="first").sort_values("ZEIT")
+        sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first").sort_values("ZEIT")
         vals = sub["V"].values
-        if key_name == "alq":
-            series_map[key_name] = pd.Series(vals, index=sub["ZEIT"].astype(str).str.strip().values)
+        if target_s == "alq":
+            series_map[target_s] = pd.Series(vals, index=sub["ZEIT"].astype(str).str.strip().values)
         else:
             scale = 0.001 if np.nanmedian(vals) > 20000 else 1.0
-            series_map[key_name] = pd.Series(vals * scale, index=sub["ZEIT"].astype(str).str.strip().values)
+            series_map[target_s] = pd.Series(vals * scale, index=sub["ZEIT"].astype(str).str.strip().values)
 
     comb = pd.DataFrame(series_map).dropna()
     comb = comb[(comb["alo"] > 0) & (comb["ste"] > 0) & (comb["alq"] > 0)]
     comb = comb[comb.index >= "2005-01"].copy()
-
     comb["ep"] = comb["alo"] / (comb["alq"] / 100.0)
     comb["u"] = comb["alo"] / comb["ep"] * 100.0
     comb["v"] = comb["ste"] / comb["ep"] * 100.0
@@ -280,10 +280,10 @@ def _add_rec_bands_ax(ax, months, gdp_bands):
         vis = [i for ym, i in m_map.items() if r_s <= ym <= r_e]
         if vis:
             ax.axvspan(min(vis) - 0.5, max(vis) + 0.5, color="#CBD5E1", alpha=0.45, zorder=0)
-    for g_s, g_e in gdp_bands:
-        vis = [i for ym, i in m_map.items() if g_s <= ym <= g_e]
+    for b_s, b_e in gdp_bands:
+        vis = [i for ym, i in m_map.items() if b_s <= ym <= b_e]
         if vis:
-            ax.axvspan(min(vis) - 0.5, max(vis) + 0.5, color="#93C5FD", alpha=0.38, zorder=0.5)
+            ax.axvspan(min(vis) - 0.5, max(vis) + 0.5, color="#93C5FD", alpha=0.35, zorder=0.5)
 
 def _add_rec_shapes_plotly(months, gdp_bands):
     m_set = set(months)
@@ -291,11 +291,11 @@ def _add_rec_shapes_plotly(months, gdp_bands):
     for r_s, r_e in DE_RECESSIONS:
         vis = sorted([ym for ym in m_set if r_s <= ym <= r_e])
         if vis:
-            shapes.append(dict(type="rect", xref="x", yref="paper", x0=next(iter(vis)), x1=vis[-1], y0=0, y1=1, fillcolor="#CBD5E1", opacity=0.35, line_width=0, layer="below"))
-    for g_s, g_e in gdp_bands:
-        vis = sorted([ym for ym in m_set if g_s <= ym <= g_e])
+            shapes.append(dict(type="rect", xref="x", yref="paper", x0=vis[0], x1=vis[-1], y0=0, y1=1, fillcolor="#CBD5E1", opacity=0.35, line_width=0, layer="below"))
+    for b_s, b_e in gdp_bands:
+        vis = sorted([ym for ym in m_set if b_s <= ym <= b_e])
         if vis:
-            shapes.append(dict(type="rect", xref="x", yref="paper", x0=next(iter(vis)), x1=vis[-1], y0=0, y1=1, fillcolor="#93C5FD", opacity=0.35, line_width=0, layer="below"))
+            shapes.append(dict(type="rect", xref="x", yref="paper", x0=vis[0], x1=vis[-1], y0=0, y1=1, fillcolor="#93C5FD", opacity=0.30, line_width=0, layer="below"))
     return shapes
 
 def _save_plotly(fig_p, months, title_p, sub_p, src_text, now_str, out_path, tick_step=24, shapes=None, zero_line=False, y_range=None):
@@ -303,8 +303,8 @@ def _save_plotly(fig_p, months, title_p, sub_p, src_text, now_str, out_path, tic
         title=dict(text=f"<b>{title_p}</b><br><span style='font-size:11px;color:#475569;'>{sub_p}</span>", x=0.03, y=0.96, yanchor="top", font=dict(size=14.5, color="#0F172A", family="DejaVu Sans, sans-serif")),
         plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
         hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
-        legend=dict(orientation="h", x=0.0, y=1.01, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.0, color="#1E293B")),
-        margin=dict(l=50, r=24, t=100, b=95), height=450,
+        legend=dict(orientation="h", x=0.0, y=1.01, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=9.8, color="#1E293B")),
+        margin=dict(l=50, r=24, t=108, b=95), height=455,
         shapes=shapes or [],
         annotations=[
             dict(text=f"{src_text}{now_str}", x=0.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"),
@@ -336,7 +336,7 @@ def render_ts_chart(key, lang, months, gdp_bands, series_list, ref_lines=None, d
     step = 24 if len(months) > 120 else 12
     tick_pos = [i for i in range(0, len(months), step)]
 
-    fig, ax = plt.subplots(figsize=(8.6, 5.3), dpi=300, facecolor="white")
+    fig, ax = plt.subplots(figsize=(8.6, 5.4), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.09, right=0.92, top=0.78, bottom=0.21)
     fig.suptitle(title_t, x=0.09, y=0.96, ha="left", fontsize=11.0, fontweight="bold", color="#0F172A")
     fig.text(0.09, 0.915, sub_t, ha="left", fontsize=7.8, color="#64748B")
@@ -362,21 +362,21 @@ def render_ts_chart(key, lang, months, gdp_bands, series_list, ref_lines=None, d
 
     handles = []
     for vals, lbl, col, ls in series_list:
-        ln, = ax.plot(x, vals, color=col, lw=1.9, linestyle=ls, label=str(lbl), zorder=4)
-        handles.append(ln)
+        line_h, = ax.plot(x, vals, color=col, lw=1.9, linestyle=ls, label=str(lbl), zorder=4)
+        handles.append(line_h)
         ax.scatter([x[-1]], [vals[-1]], color=col, s=16, zorder=5)
         ax.text(x[-1] + 2.0, vals[-1], fmt_num(vals[-1], use_c, dec), fontsize=7.3, fontweight="bold", color=col, va="center", ha="left")
     for r_val, r_lbl, r_col in (ref_lines or []):
-        rln = ax.axhline(r_val, color=r_col, lw=1.4, linestyle="--", label=f"{r_lbl} ({fmt_clean(r_val, use_c, dec)})", zorder=3)
-        handles.append(rln)
+        ref_h = ax.axhline(r_val, color=r_col, lw=1.4, linestyle="--", label=f"{r_lbl} ({fmt_clean(r_val, use_c, dec)})", zorder=3)
+        handles.append(ref_h)
 
-    handles.append(Patch(facecolor="#CBD5E1", alpha=0.55, label=t["band_svr"]))
-    handles.append(Patch(facecolor="#93C5FD", alpha=0.50, label=t["band_gdp"]))
+    handles.append(Patch(facecolor="#CBD5E1", alpha=0.55, label=t["rec_grey_lbl"]))
+    handles.append(Patch(facecolor="#93C5FD", alpha=0.45, label=t["rec_blue_lbl"]))
 
     ax.set_xlim(-2, len(months) + 18)
     ax.set_xticks(tick_pos)
     ax.set_xticklabels([months[i][:7] for i in tick_pos], ha="right")
-    ax.legend(handles=handles, loc="lower left", bbox_to_anchor=(-0.01, 1.01), ncol=3, frameon=False, fontsize=7.2, columnspacing=1.0)
+    ax.legend(handles=handles, loc="lower left", bbox_to_anchor=(-0.01, 1.01), ncol=3, frameon=False, fontsize=7.3)
     fig.text(0.09, 0.015, f"{t['src']}{now_str}", fontsize=7.1, color="#64748B")
     fig.text(0.92, 0.015, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
     plt.savefig(f"static/konjunktur-arbeitsmarkt/{key}{t['sfx']}.png", dpi=300)
@@ -388,8 +388,8 @@ def render_ts_chart(key, lang, months, gdp_bands, series_list, ref_lines=None, d
         fp.add_trace(go.Scatter(x=months, y=[round(float(v), dec) for v in vals], customdata=[fmt_num(v, use_c, dec) for v in vals], name=str(lbl), mode="lines", line=dict(color=col, width=2.1, dash=dash), hovertemplate=f"{lbl}: <b>%{{customdata}}</b><extra></extra>"))
     for r_val, r_lbl, r_col in (ref_lines or []):
         fp.add_trace(go.Scatter(x=months, y=[round(float(r_val), dec)] * len(months), customdata=[fmt_num(r_val, use_c, dec)] * len(months), name=f"{r_lbl} ({fmt_clean(r_val, use_c, dec)})", mode="lines", line=dict(color=r_col, width=1.6, dash="dash"), hovertemplate=f"{r_lbl}: <b>%{{customdata}}</b><extra></extra>"))
-    fp.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(203,213,225,0.65)"), name=t["band_svr"], hoverinfo="skip"))
-    fp.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(147,197,253,0.65)"), name=t["band_gdp"], hoverinfo="skip"))
+    fp.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, color="#CBD5E1", symbol="square"), name=t["rec_grey_lbl"], hoverinfo="skip"))
+    fp.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, color="#93C5FD", symbol="square"), name=t["rec_blue_lbl"], hoverinfo="skip"))
     if use_c:
         fp.update_layout(separators=",.")
     _save_plotly(fp, months, title_t, sub_t, t["src"], now_str, f"static/konjunktur-arbeitsmarkt/{key}{t['sfx']}.html", tick_step=step, shapes=_add_rec_shapes_plotly(months, gdp_bands), zero_line=zero_line, y_range=y_range)
@@ -419,7 +419,6 @@ def render_beveridge(lang, df):
     lbl_45 = t["bev_45"]
     hist = df[df.index < "2022-01"]
     rec = df[df.index >= "2022-01"]
-
     u_max = min(13.5, float(df["u"].max()) * 1.06)
     v_max = min(4.5, max(float(df["v"].max()) * 1.25, 3.5))
     lim = max(u_max, v_max)
@@ -519,7 +518,8 @@ def main():
         render_ts_chart("gap", lang, months, gdp_bands, [(df["gap"].values, t["gap_lbl"], "#DC2626", "-")], dec=2, zero_line=True)
         render_ts_chart("rec_ind", lang, months, gdp_bands, [(df["michaillat"].values, t["rec_ind_lbl"], "#1B3A6B", "-")], ref_lines=[(thr_low, t["rec_t1"], "#D97706"), (thr_high, t["rec_t2"], "#DC2626")], dec=2, zero_line=True)
         render_ts_chart("rec_prob", lang, months, gdp_bands, [(df["prob"].values, t["rec_prob_lbl"], "#DC2626", "-")], dec=0, zero_line=True, y_range=[-4, 106])
-    print(f"[OK] Michaillat-Saez Deutschland (DE & EN) von {min(months)} bis {max(months)} erstellt (Schwellen: {thr_low}/{thr_high} pp).")
+    print(f"[OK] Michaillat-Saez Deutschland (DE & EN) von {min(months)} bis {max(months)} erstellt (BIP-Rezessionsbänder: {gdp_bands}).")
 
 if __name__ == "__main__":
     main()
+
