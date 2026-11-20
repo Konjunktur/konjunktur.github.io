@@ -1,0 +1,41 @@
+name: Update Produktionspotenzial
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '45 7 5,15,25 * *'
+
+permissions:
+  contents: write
+
+jobs:
+  update-charts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pandas numpy matplotlib plotly requests
+
+      - name: Update Produktionspotenzial Charts
+        env:
+          DESTATIS_USER: ${{ secrets.DESTATIS_USER }}
+          DESTATIS_PASS: ${{ secrets.DESTATIS_PASS }}
+        run: python scripts/update_produktionspotenzial.py
+
+      - name: Commit and push generated charts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@://github.com"
+          git add static/produktionspotenzial/
+          if ! git diff --staged --quiet; then
+            git commit -m "Update Produktionspotenzial charts"
+            git pull --rebase origin main
+            git push
+          fi
