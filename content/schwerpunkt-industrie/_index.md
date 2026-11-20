@@ -16,3 +16,6 @@ Vertiefende, monatlich automatisch aktualisierte Zeitreihen und Branchenvergleic
 
 - [**Außenhandel insgesamt und nach ausgewählten Warengruppen des Verarbeitenden Gewerbes**](/aussenhandel-industrie/)<br>
   Monatliche Entwicklung von Exporten, Importen und Außenhandelssalden insgesamt sowie für Kraftwagen, Stahl und Chemie (Welt und China).
+
+- [**Umsatz insgesamt, Umsatz Inland, Umsatz Ausland und nach ausgewählten Warengruppen des Verarbeitenden Gewerbes**](/umsatz-industrie/)
+
