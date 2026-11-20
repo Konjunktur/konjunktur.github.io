@@ -16,3 +16,5 @@ In-depth, monthly automatically updated time series and sector comparisons for G
 
 - [**Foreign Trade Total and by Selected Manufacturing Product Groups**](/en/aussenhandel-industrie/)<br>
   Monthly development of exports, imports and trade balances overall and for motor vehicles, steel and chemicals (World and China).
+
+- [**Turnover Total, Domestic Turnover, Foreign Turnover and by Selected Manufacturing Product Groups**](/en/umsatz-industrie/)
