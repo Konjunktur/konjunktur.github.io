@@ -5,7 +5,8 @@ Aktualisiert alle Grafiken (DE & EN, .png und .html) fuer die Unterrubrik:
 des Verarbeitenden Gewerbes"
 Datenbasis: Statistisches Bundesamt (Destatis GENESIS-Online), Tabelle 42111-0004
 Merkmale: UMS002 (Umsatz), UMSN2 (Inlandsumsatz), UMSN3 (Auslandsumsatz)
-Zeitraum: Januar 2019 bis aktuellster verfuegbarer Berichtsmonat, Werte in Mrd. Euro.
+Zeitraum: Januar 2019 bis aktuellster verfuegbarer Berichtsmonat, Werte in Mrd. Euro
+sowie jeweils direkt darunter die Veraenderung gegenueber dem Vorjahresmonat in %.
 """
 
 import os
@@ -54,12 +55,18 @@ TEXTS = {
         "leg_bip": "Reales BIP < 0 % gg. Vj.",
         "g1_t": "Verarbeitendes Gewerbe insgesamt: Umsatz, Inlandsumsatz und Auslandsumsatz",
         "g1_sub": "Monatswerte (Januar 2019 bis {end_lbl}), in Mrd. € | Aktuell ({end_lbl}): Ausland {f_sh} %, Inland {d_sh} %",
+        "g1_yoy_t": "Verarbeitendes Gewerbe insgesamt: Veränderung gegenüber Vorjahresmonat",
+        "g1_yoy_sub": "Monatswerte (Januar 2019 bis {end_lbl}), Veränderung gegenüber dem Vorjahresmonat in %",
         "g1_l": ["Umsatz insgesamt", "Inlandsumsatz", "Auslandsumsatz"],
         "g2_t": "Kraftwagen und Kraftwagenteile (WZ 29): Umsatz, Inlandsumsatz und Auslandsumsatz",
         "g2_sub": "Monatswerte (Januar 2019 bis {end_lbl}), in Mrd. € | Aktuell ({end_lbl}): Ausland {f_sh} %, Inland {d_sh} %",
+        "g2_yoy_t": "Kraftwagen und Kraftwagenteile (WZ 29): Veränderung gegenüber Vorjahresmonat",
+        "g2_yoy_sub": "Monatswerte (Januar 2019 bis {end_lbl}), Veränderung gegenüber dem Vorjahresmonat in %",
         "g2_l": ["Umsatz insgesamt", "Inlandsumsatz", "Auslandsumsatz"],
         "g3_t": "Metallerzeugung/-bearbeitung (WZ 24) vs. inkl. Metallerzeugnisse (WZ 24+25)",
         "g3_sub": "Monatswerte in Mrd. € | Aktuell ({end_lbl}): WZ 24 Ausland {f1_sh} % (Inland {d1_sh} %) | WZ 24+25 Ausland {f2_sh} % (Inland {d2_sh} %)",
+        "g3_yoy_t": "Metallerzeugung/-bearbeitung (WZ 24) vs. inkl. Metallerzeugnisse (WZ 24+25): Veränderung gg. Vj.",
+        "g3_yoy_sub": "Monatswerte (Januar 2019 bis {end_lbl}), Veränderung gegenüber dem Vorjahresmonat in %",
         "g3_l": [
             "Umsatz gesamt (WZ 24)",
             "Inlandsumsatz (WZ 24)",
@@ -70,6 +77,8 @@ TEXTS = {
         ],
         "g4_t": "Chemische Erzeugnisse (WZ 20) vs. Chemie inkl. Pharmazeutika (WZ 20+21)",
         "g4_sub": "Monatswerte in Mrd. € | Aktuell ({end_lbl}): WZ 20 Ausland {f1_sh} % (Inland {d1_sh} %) | WZ 20+21 Ausland {f2_sh} % (Inland {d2_sh} %)",
+        "g4_yoy_t": "Chemische Erzeugnisse (WZ 20) vs. Chemie inkl. Pharmazeutika (WZ 20+21): Veränderung gg. Vj.",
+        "g4_yoy_sub": "Monatswerte (Januar 2019 bis {end_lbl}), Veränderung gegenüber dem Vorjahresmonat in %",
         "g4_l": [
             "Umsatz gesamt (WZ 20)",
             "Inlandsumsatz (WZ 20)",
@@ -90,12 +99,18 @@ TEXTS = {
         "leg_bip": "Real GDP < 0% YoY",
         "g1_t": "Manufacturing Total: Total, Domestic and Foreign Turnover",
         "g1_sub": "Monthly values (January 2019 to {end_lbl}), in EUR bn | Latest ({end_lbl}): Foreign {f_sh}%, Domestic {d_sh}%",
+        "g1_yoy_t": "Manufacturing Total: Year-on-Year Change",
+        "g1_yoy_sub": "Monthly values (January 2019 to {end_lbl}), year-on-year change in %",
         "g1_l": ["Total turnover", "Domestic turnover", "Foreign turnover"],
         "g2_t": "Motor Vehicles, Trailers and Semi-Trailers (WZ 29): Total, Domestic and Foreign Turnover",
         "g2_sub": "Monthly values (January 2019 to {end_lbl}), in EUR bn | Latest ({end_lbl}): Foreign {f_sh}%, Domestic {d_sh}%",
+        "g2_yoy_t": "Motor Vehicles, Trailers and Semi-Trailers (WZ 29): Year-on-Year Change",
+        "g2_yoy_sub": "Monthly values (January 2019 to {end_lbl}), year-on-year change in %",
         "g2_l": ["Total turnover", "Domestic turnover", "Foreign turnover"],
         "g3_t": "Basic Metals (WZ 24) vs. Basic Metals incl. Fabricated Metal Products (WZ 24+25)",
         "g3_sub": "Monthly values in EUR bn | Latest ({end_lbl}): WZ 24 Foreign {f1_sh}% (Domestic {d1_sh}%) | WZ 24+25 Foreign {f2_sh}% (Domestic {d2_sh}%)",
+        "g3_yoy_t": "Basic Metals (WZ 24) vs. Basic Metals incl. Fabricated Metal Products (WZ 24+25): YoY Change",
+        "g3_yoy_sub": "Monthly values (January 2019 to {end_lbl}), year-on-year change in %",
         "g3_l": [
             "Total turnover (WZ 24)",
             "Domestic turnover (WZ 24)",
@@ -106,6 +121,8 @@ TEXTS = {
         ],
         "g4_t": "Chemicals and Chemical Products (WZ 20) vs. Chemicals incl. Pharmaceuticals (WZ 20+21)",
         "g4_sub": "Monthly values in EUR bn | Latest ({end_lbl}): WZ 20 Foreign {f1_sh}% (Domestic {d1_sh}%) | WZ 20+21 Foreign {f2_sh}% (Domestic {d2_sh}%)",
+        "g4_yoy_t": "Chemicals and Chemical Products (WZ 20) vs. Chemicals incl. Pharmaceuticals (WZ 20+21): YoY Change",
+        "g4_yoy_sub": "Monthly values (January 2019 to {end_lbl}), year-on-year change in %",
         "g4_l": [
             "Total turnover (WZ 20)",
             "Domestic turnover (WZ 20)",
@@ -125,6 +142,14 @@ def fmt_num(val, use_comma=True, dec=1):
     return s.replace(".", ",") if use_comma else s
 
 
+def fmt_signed(val, use_comma=True, dec=1):
+    if val is None or (isinstance(val, float) and np.isnan(val)):
+        return ""
+    v = float(val)
+    s = f"{v:+.{dec}f}"
+    return s.replace(".", ",") if use_comma else s
+
+
 def ym_label(ym, lang="de"):
     y, m = int(ym[:4]), int(ym[5:7])
     return f"{TEXTS[lang]['m'][m - 1]} {y}"
@@ -139,7 +164,7 @@ def normalize_wz(code_str):
     return s
 
 
-def _destatis_ffcsv(table, startyear="2019", extra_params=None):
+def _destatis_ffcsv(table, startyear="2018", extra_params=None):
     if not D_USER or not D_PASS:
         raise RuntimeError("DESTATIS_USER / DESTATIS_PASS fehlen in den Environment-Variablen.")
     headers = {
@@ -220,8 +245,8 @@ def _destatis_ffcsv(table, startyear="2019", extra_params=None):
 
 
 def load_destatis_turnover():
-    # Abruf exakt wie in v6 (ohne einschraenkendes classifyingvariable1, da sonst nur WZ08-X geliefert wird)
-    df = _destatis_ffcsv("42111-0004", startyear="2019")
+    # Abruf ab 2018, damit auch ab Januar 2019 direkt die Veraenderung gg. Vorjahresmonat vorliegt
+    df = _destatis_ffcsv("42111-0004", startyear="2018")
     if df.empty:
         raise RuntimeError("Destatis Tabelle 42111-0004 lieferte keine Daten.")
 
@@ -243,7 +268,7 @@ def load_destatis_turnover():
 
     df["WZ"] = df[wz_col].apply(normalize_wz)
     df = df[df["ZEIT"].astype(str).str.match(r"^20\d{2}-\d{2}$")].copy()
-    df = df[df["ZEIT"] >= "2019-01"].copy()
+    df = df[df["ZEIT"] >= "2018-01"].copy()
     df["NUM"] = pd.to_numeric(df["WERT"].astype(str).str.replace(",", "."), errors="coerce")
     df = df.dropna(subset=["NUM"]).copy()
 
@@ -275,7 +300,6 @@ def load_destatis_turnover():
         if sub.empty:
             raise RuntimeError(f"Merkmal {code_exact} ({lbl_exact}) nicht in 42111-0004 gefunden.")
 
-        # Einheit pruefen (Standard in 42111-0004 ist Tsd. EUR -> Faktor 1e-6 fuer Mrd. EUR)
         unit_scale = 1e-6
         if "value_unit" in sub.columns:
             u_str = " ".join(sub["value_unit"].dropna().astype(str).unique()).lower()
@@ -327,6 +351,18 @@ def get_destatis_bip_q():
         return pd.Series(dtype=float)
 
 
+def compute_yoy_series(s_full):
+    yoy = {}
+    for ym, vc in s_full.items():
+        if ym < "2019-01":
+            continue
+        prev_ym = f"{int(ym[:4]) - 1}{ym[4:]}"
+        vp = s_full.get(prev_ym, np.nan)
+        if not np.isnan(vp) and vp != 0:
+            yoy[ym] = (vc / vp - 1.0) * 100.0
+    return pd.Series(yoy).sort_index()
+
+
 def extract_turnover_series(ums_map, wz_list):
     out = {}
     for key in ("tot", "dom", "for"):
@@ -334,12 +370,15 @@ def extract_turnover_series(ums_map, wz_list):
         missing = [w for w in wz_list if w not in piv.columns]
         if missing:
             raise KeyError(f"Fehlende WZ-Codes {missing} in {key}. Verfuegbare: {sorted(piv.columns.tolist())}")
-        s = piv[wz_list].sum(axis=1, min_count=len(wz_list)).dropna()
-        out[key] = s
+        s_full = piv[wz_list].sum(axis=1, min_count=len(wz_list)).dropna()
+        out[f"{key}_full"] = s_full
+        out[key] = s_full[s_full.index >= "2019-01"]
+        out[f"{key}_yoy"] = compute_yoy_series(s_full)
 
     common_idx = out["tot"].index.intersection(out["dom"].index).intersection(out["for"].index).sort_values()
     for key in ("tot", "dom", "for"):
         out[key] = out[key].loc[common_idx]
+        out[f"{key}_yoy"] = out[f"{key}_yoy"].reindex(common_idx)
 
     last_ym = common_idx[-1]
     t_last = float(out["tot"].loc[last_ym])
@@ -476,15 +515,17 @@ def add_recession_shading_plotly(fig_p, months, bip_intervals, t):
         )
 
 
-def style_mpl_ax(fig, ax, title, subtitle, ymax, ystep, xlabel_text):
+def style_mpl_ax(fig, ax, title, subtitle, ymin, ymax, ystep, xlabel_text, zero_line=False):
     fig.suptitle(title, x=0.08, y=0.965, ha="left", fontsize=11.5, fontweight="bold", color="#0F172A")
     fig.text(0.08, 0.922, subtitle, ha="left", fontsize=8.4, color="#334155")
     ax.set_facecolor("#F8FAFC")
-    ax.set_ylim(0, ymax)
-    ax.set_yticks(np.arange(0, ymax + ystep * 0.5, ystep))
+    ax.set_ylim(ymin, ymax)
+    ax.set_yticks(np.arange(ymin, ymax + ystep * 0.5, ystep))
     ax.tick_params(axis="y", colors="#475569", labelsize=8.5, length=0)
     ax.tick_params(axis="x", colors="#475569", labelsize=7.8, rotation=90, length=3, color="#CBD5E1")
     ax.yaxis.grid(True, color="#E2E8F0", linewidth=0.8, zorder=0)
+    if zero_line:
+        ax.axhline(0, color="#64748B", linewidth=1.0, zorder=1)
     ax.set_axisbelow(True)
     for s in ("top", "right", "left"):
         ax.spines[s].set_visible(False)
@@ -509,7 +550,7 @@ def draw_year_groups(ax, months, m_names):
             ax.text(mid, -0.22, y, transform=ax.get_xaxis_transform(), ha="center", fontsize=8.2, color="#475569")
 
 
-def save_plotly_chart(fig_p, title_p, sub_p, src_text, now_str, fname_p, sfx, height_p=500, top_m=135):
+def save_plotly_chart(fig_p, title_p, sub_p, src_text, now_str, fname_p, sfx, height_p=500, top_m=135, tozero=True):
     fig_p.update_layout(
         title=dict(
             text=f"<b>{title_p}</b><br><span style='font-size:11.5px;color:#334155;font-weight:normal'>{sub_p}</span>",
@@ -570,21 +611,39 @@ def save_plotly_chart(fig_p, title_p, sub_p, src_text, now_str, fname_p, sfx, he
         ticktext=t_vals,
         tickfont=dict(size=10.0, color="#475569"),
     )
-    fig_p.update_yaxes(
+    yaxis_kwargs = dict(
         fixedrange=True,
-        rangemode="tozero",
         gridcolor="#E2E8F0",
         zeroline=True,
         zerolinecolor="#64748B",
         zerolinewidth=1.1,
         tickfont=dict(size=10.0, color="#475569"),
     )
+    if tozero:
+        yaxis_kwargs["rangemode"] = "tozero"
+    fig_p.update_yaxes(**yaxis_kwargs)
     out_path = f"{OUT_DIR}/{fname_p}{sfx}.html"
     fig_p.write_html(out_path, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
     with open(out_path, "r", encoding="utf-8") as fh:
         html_s = fh.read().replace("<body>", '<body style="margin:0;padding:0;overflow:hidden;">')
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(html_s)
+
+
+def calc_yoy_bounds(series_list, step=10):
+    vals = []
+    for s in series_list:
+        arr = np.asarray(s, dtype=float)
+        arr = arr[~np.isnan(arr)]
+        if arr.size > 0:
+            vals.extend([float(arr.min()), float(arr.max())])
+    if not vals:
+        return -20, 20, step
+    vmin = min(vals)
+    vmax = max(vals)
+    ymin = int(np.floor(min(vmin, -step) / step) * step)
+    ymax = int(np.ceil(max(vmax, step) / step) * step)
+    return ymin, ymax, step
 
 
 def build_single_sector_chart(lang, fname, title_key, sub_key, labels_key, data_dict, bip_intervals, ymax, ystep):
@@ -605,7 +664,7 @@ def build_single_sector_chart(lang, fname, title_key, sub_key, labels_key, data_
 
     fig, ax = plt.subplots(figsize=(8.2, 5.5), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.08, right=0.96, top=0.77, bottom=0.24)
-    style_mpl_ax(fig, ax, t[title_key], subtitle, ymax, ystep, t["x_m"])
+    style_mpl_ax(fig, ax, t[title_key], subtitle, 0, ymax, ystep, t["x_m"], zero_line=False)
     shade_patches = add_recession_shading_mpl(ax, months, bip_intervals, t)
 
     p1 = ax.plot(x, y_tot, color="#1B3A6B", lw=2.3, label=l_tot, zorder=4)
@@ -656,7 +715,78 @@ def build_single_sector_chart(lang, fname, title_key, sub_key, labels_key, data_
         )
     )
     add_recession_shading_plotly(fp, months, bip_intervals, t)
-    save_plotly_chart(fp, t[title_key], subtitle, t["src"], now_str, fname, t["sfx"], height_p=490, top_m=130)
+    save_plotly_chart(fp, t[title_key], subtitle, t["src"], now_str, fname, t["sfx"], height_p=490, top_m=130, tozero=True)
+
+
+def build_single_sector_yoy_chart(lang, fname, title_key, sub_key, labels_key, data_dict, bip_intervals, step=10):
+    t = TEXTS[lang]
+    use_c = t["comma"]
+    now_str = datetime.now().strftime(t["date_fmt"])
+    months = list(data_dict["tot_yoy"].index)
+    x = np.arange(len(months))
+    y_tot = [float(data_dict["tot_yoy"].loc[ym]) for ym in months]
+    y_dom = [float(data_dict["dom_yoy"].loc[ym]) for ym in months]
+    y_for = [float(data_dict["for_yoy"].loc[ym]) for ym in months]
+
+    ymin, ymax, ystep = calc_yoy_bounds([y_tot, y_dom, y_for], step=step)
+    end_lbl = ym_label(data_dict["last_ym"], lang)
+    subtitle = t[sub_key].format(end_lbl=end_lbl)
+    l_tot, l_dom, l_for = t[labels_key]
+
+    fig, ax = plt.subplots(figsize=(8.2, 5.5), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.08, right=0.96, top=0.77, bottom=0.24)
+    style_mpl_ax(fig, ax, t[title_key], subtitle, ymin, ymax, ystep, t["x_m"], zero_line=True)
+    shade_patches = add_recession_shading_mpl(ax, months, bip_intervals, t)
+
+    p1 = ax.plot(x, y_tot, color="#1B3A6B", lw=2.3, label=l_tot, zorder=4)
+    p2 = ax.plot(x, y_dom, color="#059669", lw=2.0, label=l_dom, zorder=3)
+    p3 = ax.plot(x, y_for, color="#D97706", lw=2.0, label=l_for, zorder=3)
+
+    draw_year_groups(ax, months, t["m"])
+    handles = p1 + p2 + p3 + shade_patches
+    ax.legend(handles=handles, loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=3, frameon=False, fontsize=7.4)
+    fig.text(0.08, 0.015, f"{t['src']}{now_str}", fontsize=6.9, color="#64748B")
+    fig.text(0.96, 0.015, "T.H.", fontsize=7.8, color="#94A3B8", ha="right")
+    plt.savefig(f"{OUT_DIR}/{fname}{t['sfx']}.png", dpi=300)
+    plt.close()
+
+    fmt_arr = lambda seq: [fmt_signed(v, use_c, 1) for v in seq]
+    fp = go.Figure()
+    fp.add_trace(
+        go.Scatter(
+            x=months,
+            y=[round(v, 2) if not np.isnan(v) else None for v in y_tot],
+            customdata=fmt_arr(y_tot),
+            name=l_tot,
+            mode="lines",
+            line=dict(color="#1B3A6B", width=2.3),
+            hovertemplate=f"{l_tot}: <b>%{{customdata}} %</b><extra></extra>",
+        )
+    )
+    fp.add_trace(
+        go.Scatter(
+            x=months,
+            y=[round(v, 2) if not np.isnan(v) else None for v in y_dom],
+            customdata=fmt_arr(y_dom),
+            name=l_dom,
+            mode="lines",
+            line=dict(color="#059669", width=2.0),
+            hovertemplate=f"{l_dom}: <b>%{{customdata}} %</b><extra></extra>",
+        )
+    )
+    fp.add_trace(
+        go.Scatter(
+            x=months,
+            y=[round(v, 2) if not np.isnan(v) else None for v in y_for],
+            customdata=fmt_arr(y_for),
+            name=l_for,
+            mode="lines",
+            line=dict(color="#D97706", width=2.0),
+            hovertemplate=f"{l_for}: <b>%{{customdata}} %</b><extra></extra>",
+        )
+    )
+    add_recession_shading_plotly(fp, months, bip_intervals, t)
+    save_plotly_chart(fp, t[title_key], subtitle, t["src"], now_str, fname, t["sfx"], height_p=490, top_m=130, tozero=False)
 
 
 def build_dual_sector_chart(lang, fname, title_key, sub_key, labels_key, d_narrow, d_broad, bip_intervals, ymax, ystep):
@@ -686,7 +816,7 @@ def build_dual_sector_chart(lang, fname, title_key, sub_key, labels_key, d_narro
 
     fig, ax = plt.subplots(figsize=(8.2, 5.7), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.08, right=0.96, top=0.73, bottom=0.23)
-    style_mpl_ax(fig, ax, t[title_key], subtitle, ymax, ystep, t["x_m"])
+    style_mpl_ax(fig, ax, t[title_key], subtitle, 0, ymax, ystep, t["x_m"], zero_line=False)
     shade_patches = add_recession_shading_mpl(ax, months, bip_intervals, t)
 
     p1 = ax.plot(x, y1_tot, color="#1B3A6B", lw=2.1, ls="--", label=l1_tot, zorder=4)
@@ -728,7 +858,74 @@ def build_dual_sector_chart(lang, fname, title_key, sub_key, labels_key, d_narro
             )
         )
     add_recession_shading_plotly(fp, months, bip_intervals, t)
-    save_plotly_chart(fp, t[title_key], subtitle, t["src"], now_str, fname, t["sfx"], height_p=525, top_m=155)
+    save_plotly_chart(fp, t[title_key], subtitle, t["src"], now_str, fname, t["sfx"], height_p=525, top_m=155, tozero=True)
+
+
+def build_dual_sector_yoy_chart(lang, fname, title_key, sub_key, labels_key, d_narrow, d_broad, bip_intervals, step=10):
+    t = TEXTS[lang]
+    use_c = t["comma"]
+    now_str = datetime.now().strftime(t["date_fmt"])
+    months = list(d_narrow["tot_yoy"].index.intersection(d_broad["tot_yoy"].index).sort_values())
+    x = np.arange(len(months))
+
+    y1_tot = [float(d_narrow["tot_yoy"].loc[ym]) for ym in months]
+    y1_dom = [float(d_narrow["dom_yoy"].loc[ym]) for ym in months]
+    y1_for = [float(d_narrow["for_yoy"].loc[ym]) for ym in months]
+
+    y2_tot = [float(d_broad["tot_yoy"].loc[ym]) for ym in months]
+    y2_dom = [float(d_broad["dom_yoy"].loc[ym]) for ym in months]
+    y2_for = [float(d_broad["for_yoy"].loc[ym]) for ym in months]
+
+    ymin, ymax, ystep = calc_yoy_bounds([y1_tot, y1_dom, y1_for, y2_tot, y2_dom, y2_for], step=step)
+    end_lbl = ym_label(months[-1], lang)
+    subtitle = t[sub_key].format(end_lbl=end_lbl)
+    l1_tot, l1_dom, l1_for, l2_tot, l2_dom, l2_for = t[labels_key]
+
+    fig, ax = plt.subplots(figsize=(8.2, 5.7), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.08, right=0.96, top=0.73, bottom=0.23)
+    style_mpl_ax(fig, ax, t[title_key], subtitle, ymin, ymax, ystep, t["x_m"], zero_line=True)
+    shade_patches = add_recession_shading_mpl(ax, months, bip_intervals, t)
+
+    p1 = ax.plot(x, y1_tot, color="#1B3A6B", lw=2.1, ls="--", label=l1_tot, zorder=4)
+    p2 = ax.plot(x, y1_dom, color="#059669", lw=1.8, ls="--", label=l1_dom, zorder=3)
+    p3 = ax.plot(x, y1_for, color="#D97706", lw=1.8, ls="--", label=l1_for, zorder=3)
+
+    p4 = ax.plot(x, y2_tot, color="#1B3A6B", lw=2.3, ls="-", label=l2_tot, zorder=5)
+    p5 = ax.plot(x, y2_dom, color="#059669", lw=2.0, ls="-", label=l2_dom, zorder=4)
+    p6 = ax.plot(x, y2_for, color="#D97706", lw=2.0, ls="-", label=l2_for, zorder=4)
+
+    draw_year_groups(ax, months, t["m"])
+    handles = p1 + p2 + p3 + p4 + p5 + p6 + shade_patches
+    ax.legend(handles=handles, loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=3, frameon=False, fontsize=6.9)
+    fig.text(0.08, 0.015, f"{t['src']}{now_str}", fontsize=6.9, color="#64748B")
+    fig.text(0.96, 0.015, "T.H.", fontsize=7.8, color="#94A3B8", ha="right")
+    plt.savefig(f"{OUT_DIR}/{fname}{t['sfx']}.png", dpi=300)
+    plt.close()
+
+    fmt_arr = lambda seq: [fmt_signed(v, use_c, 1) for v in seq]
+    fp = go.Figure()
+    traces = [
+        (y1_tot, l1_tot, "#1B3A6B", 2.0, "dash"),
+        (y1_dom, l1_dom, "#059669", 1.8, "dash"),
+        (y1_for, l1_for, "#D97706", 1.8, "dash"),
+        (y2_tot, l2_tot, "#1B3A6B", 2.3, "solid"),
+        (y2_dom, l2_dom, "#059669", 2.0, "solid"),
+        (y2_for, l2_for, "#D97706", 2.0, "solid"),
+    ]
+    for y_seq, lbl, col, wid, dsh in traces:
+        fp.add_trace(
+            go.Scatter(
+                x=months,
+                y=[round(v, 2) if not np.isnan(v) else None for v in y_seq],
+                customdata=fmt_arr(y_seq),
+                name=lbl,
+                mode="lines",
+                line=dict(color=col, width=wid, dash=dsh),
+                hovertemplate=f"{lbl}: <b>%{{customdata}} %</b><extra></extra>",
+            )
+        )
+    add_recession_shading_plotly(fp, months, bip_intervals, t)
+    save_plotly_chart(fp, t[title_key], subtitle, t["src"], now_str, fname, t["sfx"], height_p=525, top_m=155, tozero=False)
 
 
 def main():
@@ -763,17 +960,28 @@ def main():
         build_single_sector_chart(
             lang, "umsatz_gesamt", "g1_t", "g1_sub", "g1_l", s_gesamt, bip_intervals, ymax_ges, 25
         )
+        build_single_sector_yoy_chart(
+            lang, "umsatz_gesamt_yoy", "g1_yoy_t", "g1_yoy_sub", "g1_l", s_gesamt, bip_intervals, step=10
+        )
         build_single_sector_chart(
             lang, "umsatz_autos", "g2_t", "g2_sub", "g2_l", s_autos, bip_intervals, ymax_aut, 10
+        )
+        build_single_sector_yoy_chart(
+            lang, "umsatz_autos_yoy", "g2_yoy_t", "g2_yoy_sub", "g2_l", s_autos, bip_intervals, step=20
         )
         build_dual_sector_chart(
             lang, "umsatz_stahl", "g3_t", "g3_sub", "g3_l", s_stahl_24, s_stahl_2425, bip_intervals, ymax_sta, 5
         )
+        build_dual_sector_yoy_chart(
+            lang, "umsatz_stahl_yoy", "g3_yoy_t", "g3_yoy_sub", "g3_l", s_stahl_24, s_stahl_2425, bip_intervals, step=10
+        )
         build_dual_sector_chart(
             lang, "umsatz_chemie", "g4_t", "g4_sub", "g4_l", s_chemie_20, s_chemie_2021, bip_intervals, ymax_che, 5
+        )
+        build_dual_sector_yoy_chart(
+            lang, "umsatz_chemie_yoy", "g4_yoy_t", "g4_yoy_sub", "g4_l", s_chemie_20, s_chemie_2021, bip_intervals, step=10
         )
 
 
 if __name__ == "__main__":
     main()
-
