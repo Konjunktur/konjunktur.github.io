@@ -18,30 +18,31 @@ TEXTS = {
         "tot": "Umsatz insgesamt",
         "dom": "Umsatz Inland",
         "for": "Umsatz Ausland",
-        "share_for_lbl": "Anteil Ausland",
-        "share_dom_lbl": "Anteil Inland",
-        "src": "Quelle: Statistisches Bundesamt (Tabelle 42111-0004) | Stand: ",
+        "share_lbl": "Aktueller Monat",
+        "for_short": "Ausland",
+        "dom_short": "Inland",
+        "src": "Quelle: Statistisches Bundesamt (Tabellen 42111-0002 / 42111-0004) | Stand: ",
         "date_fmt": "%d.%m.%Y",
         "comma": True,
         "sfx": "",
         "charts": {
             "umsatz_gesamt": {
                 "title": "Umsatz im Verarbeitenden Gewerbe insgesamt",
-                "sub": "Umsatz insgesamt, Inlandsumsatz und Auslandsumsatz in Mrd. € (WZ08-C, Ursprungswerte)"
+                "sub": "WZ08-C: Umsatz insgesamt, Inlandsumsatz und Auslandsumsatz in Mrd. € (Ursprungswerte)"
             },
             "umsatz_autos": {
                 "title": "Umsatz: Kraftwagen und Kraftwagenteile (Autos)",
-                "sub": "Wirtschaftszweig WZ08-29 (vgl. WAM2 Kap. 87), Umsatz insgesamt, Inland und Ausland in Mrd. €"
+                "sub": "WZ08-29: Umsatz insgesamt, Inlandsumsatz und Auslandsumsatz in Mrd. €"
             },
             "umsatz_stahl": {
-                "title": "Umsatz: Metallerzeugung/-bearbeitung sowie Metallerzeugnisse (Stahl)",
-                "sub": "WZ08-24 (Metallerzeugung/-bearbeitung) vs. WZ08-24+25 (inkl. Metallerzeugnisse) in Mrd. €",
+                "title": "Umsatz: Metallerzeugung/-bearbeitung sowie Metallerzeugnisse",
+                "sub": "WZ08-24 (Metallerzeugung) vs. WZ08-24+25 (inkl. Metallerzeugnisse) in Mrd. €",
                 "lbl_a": "WZ08-24 (Metallerzeugung)",
                 "lbl_b": "WZ08-24+25 (inkl. Erz.)"
             },
             "umsatz_chemie": {
                 "title": "Umsatz: Chemische und pharmazeutische Erzeugnisse",
-                "sub": "WZ08-20 (Chemie ohne Pharma) vs. WZ08-20+21 (Chemie inkl. Pharma) in Mrd. €",
+                "sub": "WZ08-20 (Chemie o. Pharma) vs. WZ08-20+21 (Chemie inkl. Pharma) in Mrd. €",
                 "lbl_a": "Chemie o. Pharma",
                 "lbl_b": "Chemie inkl. Pharma"
             }
@@ -53,30 +54,31 @@ TEXTS = {
         "tot": "Total turnover",
         "dom": "Domestic turnover",
         "for": "Foreign turnover",
-        "share_for_lbl": "Foreign share",
-        "share_dom_lbl": "Domestic share",
-        "src": "Source: Federal Statistical Office (Table 42111-0004) | As of: ",
+        "share_lbl": "Latest month",
+        "for_short": "Foreign",
+        "dom_short": "Domestic",
+        "src": "Source: Federal Statistical Office (Tables 42111-0002 / 42111-0004) | As of: ",
         "date_fmt": "%Y-%m-%d",
         "comma": False,
         "sfx": "_en",
         "charts": {
             "umsatz_gesamt": {
                 "title": "Total Turnover in German Manufacturing",
-                "sub": "Total, domestic and foreign turnover in bn € (WZ08-C, unadjusted data)"
+                "sub": "WZ08-C: Total, domestic and foreign turnover in bn € (unadjusted data)"
             },
             "umsatz_autos": {
                 "title": "Turnover: Motor Vehicles and Parts (Automotive)",
-                "sub": "Economic sector WZ08-29 (cf. WAM2 Ch. 87), total, domestic and foreign turnover in bn €"
+                "sub": "WZ08-29: Total, domestic and foreign turnover in bn €"
             },
             "umsatz_stahl": {
-                "title": "Turnover: Basic Metals and Fabricated Metal Products (Steel)",
-                "sub": "WZ08-24 (Basic metals) vs. WZ08-24+25 (incl. fabricated metal products) in bn €",
+                "title": "Turnover: Basic Metals and Fabricated Metal Products",
+                "sub": "WZ08-24 (Basic metals) vs. WZ08-24+25 (incl. metal products) in bn €",
                 "lbl_a": "WZ08-24 (Basic metals)",
-                "lbl_b": "WZ08-24+25 (incl. prod.)"
+                "lbl_b": "WZ08-24+25 (incl. products)"
             },
             "umsatz_chemie": {
                 "title": "Turnover: Chemical and Pharmaceutical Products",
-                "sub": "WZ08-20 (Chemicals excl. pharma) vs. WZ08-20+21 (Chemicals incl. pharma) in bn €",
+                "sub": "WZ08-20 (Chemicals excl. pharma) vs. WZ08-20+21 (incl. pharma) in bn €",
                 "lbl_a": "Chemicals excl. pharma",
                 "lbl_b": "Chemicals incl. pharma"
             }
@@ -84,13 +86,11 @@ TEXTS = {
     }
 }
 
-
 def fmt_num(val, use_comma, dec=2):
     if val is None or (isinstance(val, float) and np.isnan(val)):
         return ""
     s = f"{float(val):.{dec}f}"
     return s.replace(".", ",") if use_comma else s
-
 
 def fmt_axis(val, use_comma, dec=2):
     if val is None or (isinstance(val, float) and np.isnan(val)):
@@ -101,32 +101,30 @@ def fmt_axis(val, use_comma, dec=2):
     s = f"{v:.{dec}f}".rstrip("0").rstrip(".")
     return s.replace(".", ",") if use_comma else s
 
-
 def _unpack(resp):
     if resp.content[:2] == b"PK":
         with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
             return zf.read(next(n for n in zf.namelist() if n.endswith(".csv"))).decode("utf-8", errors="replace")
     return resp.text
 
+def normalize_wz(val):
+    s = str(val).strip()
+    m = re.search(r"WZ08-([A-Z]|\d{2,4})", s, flags=re.IGNORECASE)
+    if not m:
+        return ""
+    code = m.group(1).upper()
+    if code.isdigit() and len(code) == 3 and code.startswith("0"):
+        code = code[1:]
+    return f"WZ08-{code}"
 
-def normalize_wz(code):
-    c = str(code).strip().upper()
-    c = re.sub(r"^WZ08-0+(\d+)$", r"WZ08-\1", c)
-    return c
-
-
-def fetch_genesis_turnover(table="42111-0004", startyear="2019"):
+def fetch_genesis_turnover(table, startyear="2019", cvar1=None, ckey1=None):
     if not D_USER or not D_PASS:
         raise RuntimeError("DESTATIS_USER oder DESTATIS_PASS fehlt.")
     headers = {"username": D_USER, "password": D_PASS, "Content-Type": "application/x-www-form-urlencoded"}
-    data = {
-        "name": table,
-        "area": "all",
-        "compress": "false",
-        "format": "ffcsv",
-        "language": "de",
-        "startyear": startyear
-    }
+    data = {"name": table, "area": "all", "compress": "false", "format": "ffcsv", "language": "de", "startyear": startyear}
+    if cvar1 and ckey1:
+        data["classifyingvariable1"] = cvar1
+        data["classifyingkey1"] = ckey1
     r = requests.post(f"{G_BASE}/tablefile", headers=headers, data=data, timeout=90)
     r.raise_for_status()
     raw = _unpack(r)
@@ -139,24 +137,17 @@ def fetch_genesis_turnover(table="42111-0004", startyear="2019"):
         raw = ""
         for _ in range(120):
             time.sleep(3)
-            txt = _unpack(requests.post(
-                f"{G_BASE}/resultfile",
-                headers=headers,
-                data={"name": m.group(1), "area": "all", "compress": "false", "language": "de"},
-                timeout=90
-            ))
+            txt = _unpack(requests.post(f"{G_BASE}/resultfile", headers=headers, data={"name": m.group(1), "area": "all", "compress": "false", "language": "de"}, timeout=90))
             if not txt.lstrip().startswith("{"):
                 raw = txt
                 break
         if not raw:
             raise RuntimeError(f"Job für {table} nicht rechtzeitig beendet.")
-
     rows = [row for row in csv.reader(io.StringIO(raw), delimiter=";", quotechar='"') if len(row) >= 5]
     if len(rows) < 3:
-        raise RuntimeError(f"Tabelle {table} lieferte zu wenig Zeilen.")
+        raise RuntimeError(f"Tabelle {table} lieferte zu wenig Zeilen: {raw[:250]}")
     hdr = [h.strip() for h in rows.pop(0)]
     df = pd.DataFrame([row[:len(hdr)] for row in rows if len(row) >= len(hdr)], columns=hdr)
-
     col_map = {c.lower(): c for c in df.columns}
     t_col = col_map.get("time") or col_map.get("zeit")
     v_col = col_map.get("value") or col_map.get("wert")
@@ -174,15 +165,16 @@ def fetch_genesis_turnover(table="42111-0004", startyear="2019"):
             break
     df["YM"] = zeit_s
 
-    code_cols = [c for c in df.columns if c.endswith("_code") and c not in {"statistics_code", "time_code", "value_variable_code"}]
     df["WZ"] = ""
-    for c in code_cols:
-        s_c = df[c].astype(str).str.strip()
-        if s_c.str.match(r"^WZ08-", case=False).any():
-            df["WZ"] = s_c.apply(normalize_wz)
+    for c in df.columns:
+        if c in (t_col, v_col, "YM", "WZ"):
+            continue
+        norm_s = df[c].map(normalize_wz)
+        if (norm_s != "").any():
+            df["WZ"] = norm_s
             break
 
-    df = df[df["YM"].str.match(r"^\d{4}-\d{2}$")].copy()
+    df = df[(df["YM"].str.match(r"^\d{4}-\d{2}$")) & (df["WZ"] != "")].copy()
     if var_col:
         df = df[df[var_col].isin(["UMS002", "UMS003", "UMS004"])].copy()
 
@@ -198,45 +190,27 @@ def fetch_genesis_turnover(table="42111-0004", startyear="2019"):
     df["MRD"] = val_num / divisor
     return df
 
-
-def build_pivot(df):
-    piv = df.pivot_table(
-        index="YM",
-        columns=["value_variable_code", "WZ"],
-        values="MRD",
-        aggfunc="first",
-        dropna=True
-    ).sort_index()
-    piv = piv[piv.index >= "2019-01"]
-    return piv
-
-
-def extract_turnover_series(raw_piv, wz_list):
-    avail = list(raw_piv["UMS003"].columns) if "UMS003" in raw_piv.columns.get_level_values(0) else []
-    missing = [w for w in wz_list if w not in avail]
-    if missing:
-        raise KeyError(f"Fehlende WZ-Codes {missing}. Verfügbare WZ-Codes: {sorted(avail)}")
-
-    dom = raw_piv["UMS003"][wz_list].sum(axis=1, min_count=len(wz_list)).dropna()
-    for_s = raw_piv["UMS004"][wz_list].sum(axis=1, min_count=len(wz_list)).dropna()
-
-    if "UMS002" in raw_piv.columns.get_level_values(0) and all(w in raw_piv["UMS002"].columns for w in wz_list):
-        tot = raw_piv["UMS002"][wz_list].sum(axis=1, min_count=len(wz_list)).dropna()
-    else:
-        tot = (dom + for_s).dropna()
-
-    common = tot.index.intersection(dom.index).intersection(for_s.index)
-    tot = tot.loc[common]
-    dom = dom.loc[common]
-    for_s = for_s.loc[common]
-
-    valid = (tot > 0) & (dom >= 0) & (for_s >= 0)
-    tot, dom, for_s = tot.loc[valid], dom.loc[valid], for_s.loc[valid]
-
-    share_for = (for_s / tot) * 100.0
-    share_dom = (dom / tot) * 100.0
-    return tot, dom, for_s, share_for, share_dom
-
+def extract_turnover_series(df, wz_list):
+    sub = df[df["WZ"].isin(wz_list)].copy()
+    piv = sub.pivot_table(index=["YM", "WZ"], columns="value_variable_code", values="MRD", aggfunc="first").reset_index()
+    for col in ("UMS002", "UMS003", "UMS004"):
+        if col not in piv.columns:
+            piv[col] = np.nan
+    piv = piv.dropna(subset=["UMS002", "UMS003", "UMS004"])
+    grp = piv.groupby("YM")[["UMS002", "UMS003", "UMS004", "WZ"]].agg({
+        "UMS002": "sum",
+        "UMS003": "sum",
+        "UMS004": "sum",
+        "WZ": "nunique"
+    }).sort_index()
+    grp = grp[(grp.index >= "2019-01") & (grp["WZ"] == len(wz_list)) & (grp["UMS002"] > 0)].copy()
+    if grp.empty:
+        avail = sorted(df["WZ"].unique().tolist())
+        raise KeyError(f"Keine vollständigen Daten für {wz_list}. Verfügbare WZ-Codes: {avail}")
+    tot = grp["UMS002"]
+    dom = grp["UMS003"]
+    for_s = grp["UMS004"]
+    return tot, dom, for_s
 
 def _write_clean_html(fig, path):
     fig.write_html(path, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
@@ -245,38 +219,41 @@ def _write_clean_html(fig, path):
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(html_s)
 
-
-def render_single(key, lang, tot, dom, for_s, share_for, share_dom):
+def render_single(key, lang, tot, dom, for_s):
     t = TEXTS[lang]
     ct = t["charts"][key]
     use_c = t["comma"]
     plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
     now_str = datetime.now().strftime(t["date_fmt"])
-
     months = list(tot.index)
     x = np.arange(len(months))
     vt, vd, vf = tot.values, dom.values, for_s.values
 
-    last_ym = months[-1]
-    sf_last = fmt_num(share_for.iloc[-1], use_c, 1)
-    sd_last = fmt_num(share_dom.iloc[-1], use_c, 1)
-    share_note = f"{last_ym}: {t['share_for_lbl']} {sf_last} % | {t['share_dom_lbl']} {sd_last} %"
+    latest_ym = months[-1]
+    for_share = (vf[-1] / vt[-1]) * 100.0 if vt[-1] else 0.0
+    dom_share = (vd[-1] / vt[-1]) * 100.0 if vt[-1] else 0.0
+    share_badge = (
+        f"{t['share_lbl']} ({latest_ym}): "
+        f"{t['for_short']} {fmt_num(for_share, use_c, 1)} % | "
+        f"{t['dom_short']} {fmt_num(dom_share, use_c, 1)} %"
+    )
+    sub_full = f"{ct['sub']}  •  {share_badge}"
 
     all_vals = np.concatenate([vt, vd, vf, [0.0]])
-    hi_raw = float(np.max(all_vals))
+    lo_raw, hi_raw = float(np.min(all_vals)), float(np.max(all_vals))
+    span = max(hi_raw - lo_raw, 0.2)
     ymin = 0.0
-    ymax = max(hi_raw * 1.15, 0.5)
-    dec = 1 if ymax >= 15 else 2
+    ymax = hi_raw + span * 0.14
+    dec = 1 if (ymax - ymin) >= 15 else 2
     tick_pos = [i for i, ym in enumerate(months) if ym.endswith("-01") or ym.endswith("-07")]
 
     fig, ax = plt.subplots(figsize=(8.6, 5.3), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.91, top=0.77, bottom=0.22)
+    plt.subplots_adjust(left=0.09, right=0.92, top=0.78, bottom=0.23)
     fig.suptitle(ct["title"], x=0.09, y=0.96, ha="left", fontsize=11.0, fontweight="bold", color="#0F172A")
-    fig.text(0.09, 0.915, f"{ct['sub']}  |  {share_note}", ha="left", fontsize=7.5, color="#475569")
-
+    fig.text(0.09, 0.915, sub_full, ha="left", fontsize=7.5, color="#475569")
     ax.set_facecolor("#F8FAFC")
     ax.set_ylim(ymin, ymax)
-    ax.set_xlim(-0.8, len(months) + 3.4)
+    ax.set_xlim(-0.8, len(months) + 3.2)
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_axis(v, use_c, dec)))
     ax.tick_params(axis="y", colors="#475569", labelsize=8.2, length=0)
     ax.tick_params(axis="x", colors="#475569", labelsize=7.8, rotation=45, length=3, color="#CBD5E1")
@@ -287,12 +264,12 @@ def render_single(key, lang, tot, dom, for_s, share_for, share_dom):
         ax.spines[s].set_visible(False)
     ax.spines["bottom"].set_color("#94A3B8")
 
-    ax.plot(x, vt, color="#1B3A6B", lw=2.3, label=t["tot"], zorder=4)
-    ax.plot(x, vf, color="#059669", lw=2.0, label=t["for"], zorder=3)
-    ax.plot(x, vd, color="#D97706", lw=2.0, label=t["dom"], zorder=3)
+    ax.plot(x, vt, color="#0F172A", lw=2.3, label=t["tot"], zorder=4)
+    ax.plot(x, vf, color="#1B3A6B", lw=2.1, label=t["for"], zorder=4)
+    ax.plot(x, vd, color="#0D9488", lw=2.1, label=t["dom"], zorder=4)
 
-    end_items = sorted([(vt[-1], "#1B3A6B"), (vf[-1], "#059669"), (vd[-1], "#D97706")], key=lambda z: z[0])
-    min_gap = (ymax - ymin) * 0.052
+    end_items = sorted([(vt[-1], "#0F172A"), (vf[-1], "#1B3A6B"), (vd[-1], "#0D9488")], key=lambda z: z)
+    min_gap = (ymax - ymin) * 0.048
     placed_y = []
     for val_y, col in end_items:
         y_pos = val_y
@@ -306,36 +283,37 @@ def render_single(key, lang, tot, dom, for_s, share_for, share_dom):
     ax.set_xticklabels([months[i] for i in tick_pos], ha="right")
     ax.text(0.5, -0.22, t["xlabel"], transform=ax.transAxes, ha="center", va="top", fontsize=8.2, color="#475569")
     ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.01), ncol=3, frameon=False, fontsize=7.8, columnspacing=1.4)
-
     fig.text(0.09, 0.015, f"{t['src']}{now_str}", fontsize=7.1, color="#64748B")
-    fig.text(0.91, 0.015, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
+    fig.text(0.92, 0.015, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
     plt.savefig(f"static/umsatz-industrie/{key}{t['sfx']}.png", dpi=300)
     plt.close()
 
     t_vals = [months[i] for i in tick_pos]
+    for_pct_arr = [fmt_num((vf[i] / vt[i]) * 100.0, use_c, 1) if vt[i] else "" for i in range(len(months))]
+    dom_pct_arr = [fmt_num((vd[i] / vt[i]) * 100.0, use_c, 1) if vt[i] else "" for i in range(len(months))]
+
     fp = go.Figure()
     fp.add_trace(go.Scatter(
         x=months, y=[round(v, dec) for v in vt],
         customdata=[fmt_num(v, use_c, dec) for v in vt],
-        name=t["tot"], mode="lines", line=dict(color="#1B3A6B", width=2.4),
+        name=t["tot"], mode="lines", line=dict(color="#0F172A", width=2.4),
         hovertemplate=f"{t['tot']}: <b>%{{customdata}} {t['unit']}</b><extra></extra>"
     ))
     fp.add_trace(go.Scatter(
         x=months, y=[round(v, dec) for v in vf],
-        customdata=[[fmt_num(v, use_c, dec), fmt_num(s, use_c, 1)] for v, s in zip(vf, share_for.values)],
-        name=t["for"], mode="lines", line=dict(color="#059669", width=2.1),
-        hovertemplate=f"{t['for']}: <b>%{{customdata[0]}} {t['unit']}</b> (%{{customdata[1]}} %)<extra></extra>"
+        customdata=list(zip([fmt_num(v, use_c, dec) for v in vf], for_pct_arr)),
+        name=t["for"], mode="lines", line=dict(color="#1B3A6B", width=2.2),
+        hovertemplate=f"{t['for']}: <b>%{{customdata[0]}} {t['unit']} (%{{customdata[1]}} %)</b><extra></extra>"
     ))
     fp.add_trace(go.Scatter(
         x=months, y=[round(v, dec) for v in vd],
-        customdata=[[fmt_num(v, use_c, dec), fmt_num(s, use_c, 1)] for v, s in zip(vd, share_dom.values)],
-        name=t["dom"], mode="lines", line=dict(color="#D97706", width=2.1),
-        hovertemplate=f"{t['dom']}: <b>%{{customdata[0]}} {t['unit']}</b> (%{{customdata[1]}} %)<extra></extra>"
+        customdata=list(zip([fmt_num(v, use_c, dec) for v in vd], dom_pct_arr)),
+        name=t["dom"], mode="lines", line=dict(color="#0D9488", width=2.2),
+        hovertemplate=f"{t['dom']}: <b>%{{customdata[0]}} {t['unit']} (%{{customdata[1]}} %)</b><extra></extra>"
     ))
-
     fp.update_layout(
         title=dict(
-            text=f"<b>{ct['title']}</b><br><span style='font-size:11.2px;color:#475569;'>{ct['sub']} | <b>{share_note}</b></span>",
+            text=f"<b>{ct['title']}</b><br><span style='font-size:11px;color:#475569;'>{sub_full}</span>",
             x=0.03, y=0.96, yanchor="top", font=dict(size=15, color="#0F172A", family="DejaVu Sans, sans-serif")
         ),
         plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
@@ -353,43 +331,46 @@ def render_single(key, lang, tot, dom, for_s, share_for, share_dom):
         fp.update_layout(separators=",.")
     _write_clean_html(fp, f"static/umsatz-industrie/{key}{t['sfx']}.html")
 
-
-def render_dual(key, lang, tot_a, dom_a, for_a, sf_a, sd_a, tot_b, dom_b, for_b, sf_b, sd_b):
+def render_dual(key, lang, tot_a, dom_a, for_a, tot_b, dom_b, for_b):
     t = TEXTS[lang]
     ct = t["charts"][key]
     use_c = t["comma"]
     plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
     now_str = datetime.now().strftime(t["date_fmt"])
-
     months = list(tot_a.index)
     x = np.arange(len(months))
     vta, vda, vfa = tot_a.values, dom_a.values, for_a.values
     vtb, vdb, vfb = tot_b.values, dom_b.values, for_b.values
 
-    last_ym = months[-1]
-    sfa_l, sda_l = fmt_num(sf_a.iloc[-1], use_c, 1), fmt_num(sd_a.iloc[-1], use_c, 1)
-    sfb_l, sdb_l = fmt_num(sf_b.iloc[-1], use_c, 1), fmt_num(sd_b.iloc[-1], use_c, 1)
-    share_note = (
-        f"{last_ym} – {ct['lbl_a']}: {t['share_for_lbl']} {sfa_l} % / {t['share_dom_lbl']} {sda_l} %  |  "
-        f"{ct['lbl_b']}: {t['share_for_lbl']} {sfb_l} % / {t['share_dom_lbl']} {sdb_l} %"
+    latest_ym = months[-1]
+    fa_pct = (vfa[-1] / vta[-1]) * 100.0 if vta[-1] else 0.0
+    da_pct = (vda[-1] / vta[-1]) * 100.0 if vta[-1] else 0.0
+    fb_pct = (vfb[-1] / vtb[-1]) * 100.0 if vtb[-1] else 0.0
+    db_pct = (vdb[-1] / vtb[-1]) * 100.0 if vtb[-1] else 0.0
+
+    share_line = (
+        f"{t['share_lbl']} ({latest_ym}): "
+        f"{ct['lbl_a']}: {t['for_short']} {fmt_num(fa_pct, use_c, 1)} % / {t['dom_short']} {fmt_num(da_pct, use_c, 1)} %  |  "
+        f"{ct['lbl_b']}: {t['for_short']} {fmt_num(fb_pct, use_c, 1)} % / {t['dom_short']} {fmt_num(db_pct, use_c, 1)} %"
     )
 
     all_vals = np.concatenate([vta, vda, vfa, vtb, vdb, vfb, [0.0]])
-    hi_raw = float(np.max(all_vals))
+    lo_raw, hi_raw = float(np.min(all_vals)), float(np.max(all_vals))
+    span = max(hi_raw - lo_raw, 0.2)
     ymin = 0.0
-    ymax = max(hi_raw * 1.15, 0.5)
-    dec = 1 if ymax >= 15 else 2
+    ymax = hi_raw + span * 0.14
+    dec = 1 if (ymax - ymin) >= 15 else 2
     tick_pos = [i for i, ym in enumerate(months) if ym.endswith("-01") or ym.endswith("-07")]
 
     fig, ax = plt.subplots(figsize=(8.6, 5.8), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.91, top=0.71, bottom=0.20)
+    plt.subplots_adjust(left=0.09, right=0.92, top=0.71, bottom=0.21)
     fig.suptitle(ct["title"], x=0.09, y=0.96, ha="left", fontsize=11.0, fontweight="bold", color="#0F172A")
-    fig.text(0.09, 0.920, ct["sub"], ha="left", fontsize=7.5, color="#64748B")
-    fig.text(0.09, 0.892, share_note, ha="left", fontsize=7.1, fontweight="bold", color="#334155")
+    fig.text(0.09, 0.918, ct["sub"], ha="left", fontsize=7.5, color="#64748B")
+    fig.text(0.09, 0.885, share_line, ha="left", fontsize=7.1, color="#1E293B", fontweight="bold")
 
     ax.set_facecolor("#F8FAFC")
     ax.set_ylim(ymin, ymax)
-    ax.set_xlim(-0.8, len(months) + 3.4)
+    ax.set_xlim(-0.8, len(months) + 3.2)
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: fmt_axis(v, use_c, dec)))
     ax.tick_params(axis="y", colors="#475569", labelsize=8.2, length=0)
     ax.tick_params(axis="x", colors="#475569", labelsize=7.8, rotation=45, length=3, color="#CBD5E1")
@@ -400,18 +381,18 @@ def render_dual(key, lang, tot_a, dom_a, for_a, sf_a, sd_a, tot_b, dom_b, for_b,
         ax.spines[s].set_visible(False)
     ax.spines["bottom"].set_color("#94A3B8")
 
-    ax.plot(x, vta, color="#1B3A6B", lw=2.1, label=f"{t['tot']} – {ct['lbl_a']}", zorder=4)
-    ax.plot(x, vtb, color="#3B82F6", lw=1.9, linestyle="--", label=f"{t['tot']} – {ct['lbl_b']}", zorder=4)
-    ax.plot(x, vfa, color="#047857", lw=1.9, label=f"{t['for']} – {ct['lbl_a']}", zorder=3)
-    ax.plot(x, vfb, color="#10B981", lw=1.7, linestyle="--", label=f"{t['for']} – {ct['lbl_b']}", zorder=3)
-    ax.plot(x, vda, color="#B45309", lw=1.9, label=f"{t['dom']} – {ct['lbl_a']}", zorder=3)
-    ax.plot(x, vdb, color="#F59E0B", lw=1.7, linestyle="--", label=f"{t['dom']} – {ct['lbl_b']}", zorder=3)
+    ax.plot(x, vta, color="#0F172A", lw=2.1, label=f"{t['tot']} – {ct['lbl_a']}", zorder=4)
+    ax.plot(x, vtb, color="#64748B", lw=1.9, linestyle="--", label=f"{t['tot']} – {ct['lbl_b']}", zorder=4)
+    ax.plot(x, vfa, color="#1B3A6B", lw=2.0, label=f"{t['for']} – {ct['lbl_a']}", zorder=4)
+    ax.plot(x, vfb, color="#3B82F6", lw=1.8, linestyle="--", label=f"{t['for']} – {ct['lbl_b']}", zorder=4)
+    ax.plot(x, vda, color="#0D9488", lw=2.0, label=f"{t['dom']} – {ct['lbl_a']}", zorder=4)
+    ax.plot(x, vdb, color="#F97316", lw=1.8, linestyle="--", label=f"{t['dom']} – {ct['lbl_b']}", zorder=4)
 
     end_items = sorted([
-        (vta[-1], "#1B3A6B"), (vtb[-1], "#3B82F6"),
-        (vfa[-1], "#047857"), (vfb[-1], "#10B981"),
-        (vda[-1], "#B45309"), (vdb[-1], "#F59E0B")
-    ], key=lambda z: z[0])
+        (vta[-1], "#0F172A"), (vtb[-1], "#64748B"),
+        (vfa[-1], "#1B3A6B"), (vfb[-1], "#3B82F6"),
+        (vda[-1], "#0D9488"), (vdb[-1], "#F97316")
+    ], key=lambda z: z)
     min_gap = (ymax - ymin) * 0.042
     placed_y = []
     for val_y, col in end_items:
@@ -426,25 +407,29 @@ def render_dual(key, lang, tot_a, dom_a, for_a, sf_a, sd_a, tot_b, dom_b, for_b,
     ax.set_xticklabels([months[i] for i in tick_pos], ha="right")
     ax.text(0.5, -0.20, t["xlabel"], transform=ax.transAxes, ha="center", va="top", fontsize=8.2, color="#475569")
     ax.legend(loc="lower left", bbox_to_anchor=(-0.01, 1.01), ncol=2, frameon=False, fontsize=7.0, columnspacing=1.2)
-
     fig.text(0.09, 0.015, f"{t['src']}{now_str}", fontsize=7.1, color="#64748B")
-    fig.text(0.91, 0.015, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
+    fig.text(0.92, 0.015, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
     plt.savefig(f"static/umsatz-industrie/{key}{t['sfx']}.png", dpi=300)
     plt.close()
 
     t_vals = [months[i] for i in tick_pos]
+    fa_arr = [fmt_num((vfa[i] / vta[i]) * 100.0, use_c, 1) if vta[i] else "" for i in range(len(months))]
+    da_arr = [fmt_num((vda[i] / vta[i]) * 100.0, use_c, 1) if vta[i] else "" for i in range(len(months))]
+    fb_arr = [fmt_num((vfb[i] / vtb[i]) * 100.0, use_c, 1) if vtb[i] else "" for i in range(len(months))]
+    db_arr = [fmt_num((vdb[i] / vtb[i]) * 100.0, use_c, 1) if vtb[i] else "" for i in range(len(months))]
+
     fp = go.Figure()
-    fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vta], customdata=[fmt_num(v, use_c, dec) for v in vta], name=f"{t['tot']} – {ct['lbl_a']}", mode="lines", line=dict(color="#1B3A6B", width=2.2), hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
-    fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vtb], customdata=[fmt_num(v, use_c, dec) for v in vtb], name=f"{t['tot']} – {ct['lbl_b']}", mode="lines", line=dict(color="#3B82F6", width=1.9, dash="dash"), hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
-    fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vfa], customdata=[[fmt_num(v, use_c, dec), fmt_num(s, use_c, 1)] for v, s in zip(vfa, sf_a.values)], name=f"{t['for']} – {ct['lbl_a']}", mode="lines", line=dict(color="#047857", width=2.0), hovertemplate="%{customdata[0]} " + t["unit"] + " (%{customdata[1]} %)<extra></extra>"))
-    fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vfb], customdata=[[fmt_num(v, use_c, dec), fmt_num(s, use_c, 1)] for v, s in zip(vfb, sf_b.values)], name=f"{t['for']} – {ct['lbl_b']}", mode="lines", line=dict(color="#10B981", width=1.8, dash="dash"), hovertemplate="%{customdata[0]} " + t["unit"] + " (%{customdata[1]} %)<extra></extra>"))
-    fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vda], customdata=[[fmt_num(v, use_c, dec), fmt_num(s, use_c, 1)] for v, s in zip(vda, sd_a.values)], name=f"{t['dom']} – {ct['lbl_a']}", mode="lines", line=dict(color="#B45309", width=2.0), hovertemplate="%{customdata[0]} " + t["unit"] + " (%{customdata[1]} %)<extra></extra>"))
-    fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vdb], customdata=[[fmt_num(v, use_c, dec), fmt_num(s, use_c, 1)] for v, s in zip(vdb, sd_b.values)], name=f"{t['dom']} – {ct['lbl_b']}", mode="lines", line=dict(color="#F59E0B", width=1.8, dash="dash"), hovertemplate="%{customdata[0]} " + t["unit"] + " (%{customdata[1]} %)<extra></extra>"))
+    fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vta], customdata=[fmt_num(v, use_c, dec) for v in vta], name=f"{t['tot']} – {ct['lbl_a']}", mode="lines", line=dict(color="#0F172A", width=2.2), hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
+    fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vtb], customdata=[fmt_num(v, use_c, dec) for v in vtb], name=f"{t['tot']} – {ct['lbl_b']}", mode="lines", line=dict(color="#64748B", width=1.9, dash="dash"), hovertemplate="%{customdata} " + t["unit"] + "<extra></extra>"))
+    fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vfa], customdata=list(zip([fmt_num(v, use_c, dec) for v in vfa], fa_arr)), name=f"{t['for']} – {ct['lbl_a']}", mode="lines", line=dict(color="#1B3A6B", width=2.2), hovertemplate="%{customdata[0]} " + t["unit"] + " (%{customdata[1]} %)<extra></extra>"))
+    fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vfb], customdata=list(zip([fmt_num(v, use_c, dec) for v in vfb], fb_arr)), name=f"{t['for']} – {ct['lbl_b']}", mode="lines", line=dict(color="#3B82F6", width=1.9, dash="dash"), hovertemplate="%{customdata[0]} " + t["unit"] + " (%{customdata[1]} %)<extra></extra>"))
+    fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vda], customdata=list(zip([fmt_num(v, use_c, dec) for v in vda], da_arr)), name=f"{t['dom']} – {ct['lbl_a']}", mode="lines", line=dict(color="#0D9488", width=2.2), hovertemplate="%{customdata[0]} " + t["unit"] + " (%{customdata[1]} %)<extra></extra>"))
+    fp.add_trace(go.Scatter(x=months, y=[round(v, dec) for v in vdb], customdata=list(zip([fmt_num(v, use_c, dec) for v in vdb], db_arr)), name=f"{t['dom']} – {ct['lbl_b']}", mode="lines", line=dict(color="#F97316", width=1.9, dash="dash"), hovertemplate="%{customdata[0]} " + t["unit"] + " (%{customdata[1]} %)<extra></extra>"))
 
     fp.update_layout(
         title=dict(
-            text=f"<b>{ct['title']}</b><br><span style='font-size:11px;color:#475569;'>{ct['sub']}<br><b>{share_note}</b></span>",
-            x=0.03, y=0.96, yanchor="top", font=dict(size=15, color="#0F172A", family="DejaVu Sans, sans-serif")
+            text=f"<b>{ct['title']}</b><br><span style='font-size:10.5px;color:#475569;'>{ct['sub']}</span><br><span style='font-size:10.5px;color:#1E293B;'>{share_line}</span>",
+            x=0.03, y=0.97, yanchor="top", font=dict(size=15, color="#0F172A", family="DejaVu Sans, sans-serif")
         ),
         plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
         hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
@@ -461,23 +446,22 @@ def render_dual(key, lang, tot_a, dom_a, for_a, sf_a, sd_a, tot_b, dom_b, for_b,
         fp.update_layout(separators=",.")
     _write_clean_html(fp, f"static/umsatz-industrie/{key}{t['sfx']}.html")
 
-
 def main():
-    df = fetch_genesis_turnover("42111-0004", "2019")
-    raw_piv = build_pivot(df)
+    df_tot = fetch_genesis_turnover("42111-0002", "2019", "WZ08", "WZ08-C")
+    df_wz = fetch_genesis_turnover("42111-0004", "2019", "WZ08", "WZ08-29,WZ08-24,WZ08-25,WZ08-20,WZ08-21")
 
     singles = {
-        "umsatz_gesamt": extract_turnover_series(raw_piv, ["WZ08-C"]),
-        "umsatz_autos": extract_turnover_series(raw_piv, ["WZ08-29"]),
+        "umsatz_gesamt": extract_turnover_series(df_tot, ["WZ08-C"]),
+        "umsatz_autos": extract_turnover_series(df_wz, ["WZ08-29"]),
     }
     duals = {
         "umsatz_stahl": (
-            *extract_turnover_series(raw_piv, ["WZ08-24"]),
-            *extract_turnover_series(raw_piv, ["WZ08-24", "WZ08-25"])
+            *extract_turnover_series(df_wz, ["WZ08-24"]),
+            *extract_turnover_series(df_wz, ["WZ08-24", "WZ08-25"])
         ),
         "umsatz_chemie": (
-            *extract_turnover_series(raw_piv, ["WZ08-20"]),
-            *extract_turnover_series(raw_piv, ["WZ08-20", "WZ08-21"])
+            *extract_turnover_series(df_wz, ["WZ08-20"]),
+            *extract_turnover_series(df_wz, ["WZ08-20", "WZ08-21"])
         ),
     }
 
@@ -488,7 +472,6 @@ def main():
             render_dual(k, lang, *vals)
 
     print("Industrie-Umsatz-Grafiken erfolgreich erstellt.")
-
 
 if __name__ == "__main__":
     main()
