@@ -2,7 +2,7 @@ import os, io, re, csv, json, time, zipfile, requests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
+from matplotlib.patches import Patch
 from datetime import datetime
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -11,7 +11,7 @@ os.makedirs("static/spannungszahl", exist_ok=True)
 
 D_USER = os.environ.get("DESTATIS_USER", "")
 D_PASS = os.environ.get("DESTATIS_PASS", "")
-G_BASE = "https://www-genesis." + "destatis.de/genesisWS/rest/2020/data"
+G_BASE = "https://www-genesis.destatis.de/genesisWS/rest/2020/data"
 
 DE_RECESSIONS = [
     ("2008-04", "2009-06"),
@@ -28,25 +28,30 @@ TEXTS = {
         "date_fmt": "%d.%m.%Y",
         "comma": True,
         "sfx": "",
-        "m": ["Jan.", "Feb.", "März", "April", "Mai", "Juni", "Juli", "Aug.", "Sept.", "Okt.", "Nov.", "Dez."],
-        "x_m": "Monate / Jahre",
-        "x_mq": "Monate / Quartale / Jahre",
+        "m": ["Jan", "Feb", "Mrz", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"],
+        "x_m": "Berichtsmonat",
+        "x_mq": "Berichtsmonat / Quartal",
         "rec_svr": "Rezession/Schwäche (SVR/BBK)",
         "rec_bip": "Reales BIP < 0 % gg. Vj.",
-        "p1_t": "Einfache Spannungszahl (in Tsd.)",
-        "p1_l": "Einfache Spannungszahl",
-        "p2_t": "Einfache Spannungszahl – Aktueller 13-Monats-Verlauf (in Tsd.)",
-        "p2_l1": "Einfache Spannungszahl",
-        "p2_l_vj": "bei unveränderter Differenz gegenüber Vorjahresmonat",
-        "p2_l_prefix": "bei unveränderter Differenz ab ",
-        "p3_t": "Erweiterte Spannungszahl (in Tsd.)",
-        "p3_l": "Erweiterte Spannungszahl",
-        "p4_t": "Erweiterte Spannungszahl – Aktueller 13-Monats-Verlauf (in Tsd.)",
-        "p4_l": ("Erweiterte Spannungszahl", "bei unveränderter Differenz gegenüber Vorjahresmonat"),
-        "p5_t": "Spannungszahl und reales BIP",
-        "p5_yl": "Zuwachsrate reales BIP\ngg. Vorjahr in %",
+        "p1_t": "Einfache Spannungszahl (in Tsd., Gesamtzeitraum)",
+        "p1_l": "Einfache Spannungszahl (Diff. gg. Vj.)",
+        "p2_t": "Einfache Spannungszahl (in Tsd., aktueller 13-Monats-Verlauf)",
+        "p2_l1": "Einfache Spannungszahl (Diff. gg. Vj.)",
+        "p2_l_vj": "bei unveränderter Aktivität gg. Vorjahresmonat",
+        "p2_l_prefix": "bei unveränderter Aktivität ab ",
+        "p3_t": "Erweiterte Spannungszahl (in Tsd., Gesamtzeitraum)",
+        "p3_l": "Erweiterte Spannungszahl (inkl. Kurzarbeit, Diff. gg. Vj.)",
+        "p4_t": "Erweiterte Spannungszahl (in Tsd., aktueller 13-Monats-Verlauf)",
+        "p4_l1": "Erweiterte Spannungszahl (inkl. Kurzarbeit, Diff. gg. Vj.)",
+        "p4_l_vj": "bei unveränderter Aktivität gg. Vorjahresmonat",
+        "p5_t": "Spannungszahl (in Tsd.) und reales BIP (gg. Vj. in %)",
+        "p5_yl": "Reales BIP\n(gg. Vj. in %)",
         "p5_yr": "Spannungszahl\n(in Tsd.)",
-        "p5_l": ("Reales BIP gg. Vj. (%)", "Einfache Spannungszahl (rechte Achse)", "Erweiterte Spannungszahl (rechte Achse)"),
+        "p5_l": [
+            "Reales BIP gg. Vj. (%)",
+            "Einfache Spannungszahl (rechte Achse)",
+            "Erweiterte Spannungszahl (rechte Achse)",
+        ],
     },
     "en": {
         "src_ba": "Source: Federal Statistical Office (BA data) | As of: ",
@@ -56,26 +61,32 @@ TEXTS = {
         "comma": False,
         "sfx": "_en",
         "m": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-        "x_m": "Months / Years",
-        "x_mq": "Months / Quarters / Years",
-        "rec_svr": "Recession/Slowdown (GCEE/BBK)",
+        "x_m": "Reporting month",
+        "x_mq": "Reporting month / quarter",
+        "rec_svr": "Recession/Slowdown (GCEE/BBk)",
         "rec_bip": "Real GDP < 0% YoY",
-        "p1_t": "Simple Economic Tension Number (in thousands)",
-        "p1_l": "Simple Economic Tension Number",
-        "p2_t": "Simple Economic Tension Number – Current 13-Month Trend (in thousands)",
-        "p2_l1": "Simple Economic Tension Number",
-        "p2_l_vj": "with unchanged difference vs. prior-year month",
-        "p2_l_prefix": "with unchanged difference from ",
-        "p3_t": "Extended Economic Tension Number (in thousands)",
-        "p3_l": "Extended Economic Tension Number",
-        "p4_t": "Extended Economic Tension Number – Current 13-Month Trend (in thousands)",
-        "p4_l": ("Extended Economic Tension Number", "with unchanged difference vs. prior-year month"),
-        "p5_t": "Economic Tension Number and Real GDP",
-        "p5_yl": "Real GDP growth\nYoY in %",
+        "p1_t": "Simple Economic Tension Number (in thousands, full history)",
+        "p1_l": "Simple Economic Tension Number (YoY diff.)",
+        "p2_t": "Simple Economic Tension Number (in thousands, 13-month trend)",
+        "p2_l1": "Simple Economic Tension Number (YoY diff.)",
+        "p2_l_vj": "unchanged economic activity vs. prior-year month",
+        "p2_l_prefix": "unchanged economic activity from ",
+        "p3_t": "Extended Economic Tension Number (in thousands, full history)",
+        "p3_l": "Extended Economic Tension Number (incl. short-time work, YoY diff.)",
+        "p4_t": "Extended Economic Tension Number (in thousands, 13-month trend)",
+        "p4_l1": "Extended Economic Tension Number (incl. short-time work, YoY diff.)",
+        "p4_l_vj": "unchanged economic activity vs. prior-year month",
+        "p5_t": "Economic Tension Number (in thousands) and Real GDP (YoY in %)",
+        "p5_yl": "Real GDP\n(YoY in %)",
         "p5_yr": "Economic Tension Number\n(in thousands)",
-        "p5_l": ("Real GDP YoY (%)", "Simple Economic Tension Number (right axis)", "Extended Economic Tension Number (right axis)"),
-    }
+        "p5_l": [
+            "Real GDP YoY (%)",
+            "Simple Economic Tension Number (right axis)",
+            "Extended Economic Tension Number (right axis)",
+        ],
+    },
 }
+
 
 def fmt_num(val, use_comma, dec=1):
     if val is None or (isinstance(val, float) and np.isnan(val)):
@@ -83,16 +94,19 @@ def fmt_num(val, use_comma, dec=1):
     s = f"{float(val):.{dec}f}"
     return s.replace(".", ",") if use_comma else s
 
+
 def _destatis_ffcsv(table, startyear="2005"):
     if not D_USER or not D_PASS:
         return pd.DataFrame()
     headers = {"username": D_USER, "password": D_PASS, "Content-Type": "application/x-www-form-urlencoded"}
     data = {"name": table, "area": "all", "compress": "false", "format": "ffcsv", "language": "de", "startyear": startyear}
+
     def _unpack(resp):
         if resp.content[:2] == b"PK":
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 return zf.read(next(n for n in zf.namelist() if n.endswith(".csv"))).decode("utf-8", errors="replace")
         return resp.text
+
     r = requests.post(f"{G_BASE}/tablefile", headers=headers, data=data, timeout=90)
     raw = _unpack(r)
     if raw.lstrip().startswith("{"):
@@ -103,7 +117,14 @@ def _destatis_ffcsv(table, startyear="2005"):
         raw = ""
         for _ in range(45):
             time.sleep(2.5)
-            txt = _unpack(requests.post(f"{G_BASE}/resultfile", headers=headers, data={"name": m.group(1), "area": "all", "compress": "false", "language": "de"}, timeout=90))
+            txt = _unpack(
+                requests.post(
+                    f"{G_BASE}/resultfile",
+                    headers=headers,
+                    data={"name": m.group(1), "area": "all", "compress": "false", "language": "de"},
+                    timeout=90,
+                )
+            )
             if not txt.lstrip().startswith("{"):
                 raw = txt
                 break
@@ -111,7 +132,7 @@ def _destatis_ffcsv(table, startyear="2005"):
     if len(rows) < 3:
         return pd.DataFrame()
     hdr = [str(h).strip() for h in rows.pop(0)]
-    df = pd.DataFrame([row[:len(hdr)] for row in rows if len(row) >= len(hdr)], columns=hdr)
+    df = pd.DataFrame([row[: len(hdr)] for row in rows if len(row) >= len(hdr)], columns=hdr)
     col_map = {c.lower(): c for c in df.columns}
     t_col, v_col = col_map.get("time") or col_map.get("zeit"), col_map.get("value") or col_map.get("wert")
     zeit_s = df[t_col].astype(str).str.strip()
@@ -132,6 +153,7 @@ def _destatis_ffcsv(table, startyear="2005"):
     df["_CODES"] = df.loc[:, code_cols].fillna("").astype(str).apply(lambda r: set(x.strip() for x in r if x.strip()), axis=1)
     return df
 
+
 def load_labor_market():
     s_alo = pd.Series(dtype=float)
     s_ste = pd.Series(dtype=float)
@@ -147,14 +169,15 @@ def load_labor_market():
             if not sub.empty:
                 vals = sub["V"].values
                 scale = 0.001 if np.nanmedian(vals) > 20000 else 1.0
-                s_new = pd.Series(vals * scale, index=sub["ZEIT"].astype(str).str.strip().values).sort_index()
+                ser = pd.Series(vals * scale, index=sub["ZEIT"].astype(str).str.strip().values).sort_index()
                 if target_s == "ste":
-                    s_ste = s_new
+                    s_ste = ser
                 elif target_s == "alo":
-                    s_alo = s_new
+                    s_alo = ser
                 else:
-                    s_kug = s_new
+                    s_kug = ser
     return s_ste, s_alo, s_kug
+
 
 def get_destatis_bip_q():
     try:
@@ -166,16 +189,20 @@ def get_destatis_bip_q():
         if sub.empty:
             lbl_cols = [c for c in df.columns if "label" in c.lower()]
             if lbl_cols:
-                txt = df[lbl_cols].fillna("").astype(str).agg(" | ".join, axis=1).str.lower()
-                mask = txt.str.contains("originalwerte") & txt.str.contains("preisbereinigt") & txt.str.contains("bruttoinlandsprodukt")
-                sub = df[mask].copy()
+                txt_all = df[lbl_cols].fillna("").astype(str).agg(" | ".join, axis=1).str.lower()
+                mask = (
+                    txt_all.str.contains("originalwerte")
+                    & txt_all.str.contains("preisbereinigt")
+                    & txt_all.str.contains("bruttoinlandsprodukt")
+                    & ~txt_all.str.contains("je einwohner")
+                    & ~txt_all.str.contains("je erwerbst")
+                )
+                sub = df.loc[mask].copy()
         sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
-        sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first").sort_values("ZEIT")
+        sub = sub[sub["ZEIT"].astype(str).str.contains("-Q")].dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first").sort_values("ZEIT")
         idx_map = dict(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"]))
         out = {}
         for z, vc in idx_map.items():
-            if "-Q" not in z:
-                continue
             prev_z = f"{int(z[:4]) - 1}{z[4:]}"
             vp = idx_map.get(prev_z, np.nan)
             if not np.isnan(vp) and vp != 0:
@@ -184,19 +211,15 @@ def get_destatis_bip_q():
     except Exception:
         return pd.Series(dtype=float)
 
-def build_gdp_recession_bands(bip_q):
-    q_months = {
-        "Q1": ("01", "03"),
-        "Q2": ("04", "06"),
-        "Q3": ("07", "09"),
-        "Q4": ("10", "12"),
-    }
-    neg_qs = sorted([q for q, val in bip_q.items() if "-Q" in str(q) and not np.isnan(val) and float(val) < 0.0])
+
+def get_gdp_neg_bands(bip_q):
+    q_months = {"Q1": ("01", "03"), "Q2": ("04", "06"), "Q3": ("07", "09"), "Q4": ("10", "12")}
+    neg_qs = [q for q, v in bip_q.items() if not pd.isna(v) and float(v) < 0.0 and q[-2:] in q_months]
     if not neg_qs:
         return []
     bands = []
     cur_s, cur_e, prev_idx = None, None, None
-    for q in neg_qs:
+    for q in sorted(neg_qs):
         yr = int(q[:4])
         qn = int(q[-1])
         q_idx = yr * 4 + qn
@@ -213,38 +236,83 @@ def build_gdp_recession_bands(bip_q):
         bands.append((cur_s, cur_e))
     return bands
 
-def add_recession_bands_ax(ax, months, gdp_bands):
+
+def _add_rec_bands_ax(ax, months, gdp_bands):
     m_map = {ym: i for i, ym in enumerate(months)}
     for r_s, r_e in DE_RECESSIONS:
         vis = [i for ym, i in m_map.items() if r_s <= ym <= r_e]
         if vis:
             ax.axvspan(min(vis) - 0.5, max(vis) + 0.5, color="#CBD5E1", alpha=0.45, zorder=0)
-    for b_s, b_e in gdp_bands:
-        vis = [i for ym, i in m_map.items() if b_s <= ym <= b_e]
+    for g_s, g_e in gdp_bands:
+        vis = [i for ym, i in m_map.items() if g_s <= ym <= g_e]
         if vis:
             ax.axvspan(min(vis) - 0.5, max(vis) + 0.5, color="#93C5FD", alpha=0.35, zorder=0)
 
-def build_plotly_rec_shapes(months, gdp_bands):
+
+def _add_rec_shapes_plotly(months, gdp_bands):
     m_set = set(months)
     shapes = []
     for r_s, r_e in DE_RECESSIONS:
         vis = sorted([ym for ym in m_set if r_s <= ym <= r_e])
         if vis:
-            shapes.append(dict(type="rect", xref="x", yref="paper", x0=vis[0], x1=vis[-1], y0=0, y1=1, fillcolor="#CBD5E1", opacity=0.35, line_width=0, layer="below"))
-    for b_s, b_e in gdp_bands:
-        vis = sorted([ym for ym in m_set if b_s <= ym <= b_e])
+            shapes.append(
+                dict(
+                    type="rect",
+                    xref="x",
+                    yref="paper",
+                    x0=vis[0],
+                    x1=vis[-1],
+                    y0=0,
+                    y1=1,
+                    fillcolor="#CBD5E1",
+                    opacity=0.35,
+                    line_width=0,
+                    layer="below",
+                )
+            )
+    for g_s, g_e in gdp_bands:
+        vis = sorted([ym for ym in m_set if g_s <= ym <= g_e])
         if vis:
-            shapes.append(dict(type="rect", xref="x", yref="paper", x0=vis[0], x1=vis[-1], y0=0, y1=1, fillcolor="#93C5FD", opacity=0.30, line_width=0, layer="below"))
+            shapes.append(
+                dict(
+                    type="rect",
+                    xref="x",
+                    yref="paper",
+                    x0=vis[0],
+                    x1=vis[-1],
+                    y0=0,
+                    y1=1,
+                    fillcolor="#93C5FD",
+                    opacity=0.30,
+                    line_width=0,
+                    layer="below",
+                )
+            )
     return shapes
 
-def add_plotly_band_legend(fig_p, months, gdp_bands, t):
-    m_set = set(months)
-    has_svr = any(any(r_s <= ym <= r_e for ym in m_set) for r_s, r_e in DE_RECESSIONS)
-    has_bip = any(any(b_s <= ym <= b_e for ym in m_set) for b_s, b_e in gdp_bands)
-    if has_svr:
-        fig_p.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(symbol="square", size=10, color="#CBD5E1"), name=t["rec_svr"], hoverinfo="skip"))
-    if has_bip:
-        fig_p.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(symbol="square", size=10, color="#93C5FD"), name=t["rec_bip"], hoverinfo="skip"))
+
+def _add_plotly_band_legend(fig_p, t):
+    fig_p.add_trace(
+        go.Scatter(
+            x=[None],
+            y=[None],
+            mode="markers",
+            marker=dict(size=10, symbol="square", color="rgba(203, 213, 225, 0.7)"),
+            name=t["rec_svr"],
+            hoverinfo="skip",
+        )
+    )
+    fig_p.add_trace(
+        go.Scatter(
+            x=[None],
+            y=[None],
+            mode="markers",
+            marker=dict(size=10, symbol="square", color="rgba(147, 197, 253, 0.65)"),
+            name=t["rec_bip"],
+            hoverinfo="skip",
+        )
+    )
+
 
 def style_sz_ax(fig, ax, title, ymin, ymax, yticks, xlabel_text, xlabel_y=-0.31):
     fig.suptitle(title, x=0.09, y=0.96, ha="left", fontsize=12.0, fontweight="bold", color="#0F172A")
@@ -252,7 +320,7 @@ def style_sz_ax(fig, ax, title, ymin, ymax, yticks, xlabel_text, xlabel_y=-0.31)
     ax.set_ylim(ymin, ymax)
     ax.set_yticks(yticks)
     ax.tick_params(axis="y", colors="#475569", labelsize=8.5, length=0)
-    ax.tick_params(axis="x", colors="#475569", labelsize=7.6, rotation=90, length=3, color="#CBD5E1")
+    ax.tick_params(axis="x", colors="#475569", labelsize=7.5, rotation=90, length=3, color="#CBD5E1")
     ax.yaxis.grid(True, color="#E2E8F0", linewidth=0.8, zorder=0)
     ax.axhline(0, color="#64748B", linewidth=1.0, zorder=1)
     ax.set_axisbelow(True)
@@ -261,23 +329,25 @@ def style_sz_ax(fig, ax, title, ymin, ymax, yticks, xlabel_text, xlabel_y=-0.31)
     ax.spines["bottom"].set_color("#94A3B8")
     ax.text(0.5, xlabel_y, xlabel_text, transform=ax.transAxes, ha="center", va="top", fontsize=8.2, color="#475569")
 
-def draw_year_groups(ax, months, m_names, step=6, year_y=-0.24):
+
+def draw_year_groups(ax, months, m_names, step=6, year_y=-0.24, year_step=1):
     ticks, labels = [], []
     for i, ym in enumerate(months):
         m = int(ym[5:7])
-        if step == 1 or (step == 3 and m in (1, 4, 7, 10)) or (step >= 6 and m in (1, 7)):
+        if step == 1 or (step == 3 and m in (1, 4, 7, 10)) or (step == 6 and m in (1, 7)) or (step == 12 and m == 1):
             ticks.append(i)
             labels.append(m_names[m - 1])
     ax.set_xticks(ticks)
     ax.set_xticklabels(labels)
     years = sorted(list({ym[:4] for ym in months}))
     for idx_y, y in enumerate(years):
-        if len(years) > 14 and step >= 6 and idx_y % 2 == 1:
+        if year_step > 1 and (idx_y % year_step != 0):
             continue
         idxs = [i for i, ym in enumerate(months) if ym.startswith(y)]
         if idxs:
             mid = (min(idxs) + max(idxs)) / 2.0
             ax.text(mid, year_y, y, transform=ax.get_xaxis_transform(), ha="center", fontsize=7.8, color="#475569")
+
 
 def line_unv(diff_series, anchor_ym, months):
     if anchor_ym not in diff_series.index:
@@ -294,26 +364,31 @@ def line_unv(diff_series, anchor_ym, months):
             out[ym] = d_t0 - float(diff_series.loc[vj])
     return pd.Series(out)
 
+
 def save_sz_plotly(fig_p, title_p, src_text, now_str, fname_p, sfx, height_p=470, top_m=105, tick_step=12, shapes=None):
     fig_p.update_layout(
         title=dict(text=f"<b>{title_p}</b>", x=0.03, y=0.96, yanchor="top", font=dict(size=15, color="#0F172A", family="DejaVu Sans, sans-serif")),
-        plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
+        plot_bgcolor="#F8FAFC",
+        paper_bgcolor="white",
+        hovermode="x unified",
+        dragmode=False,
         hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
-        legend=dict(orientation="h", x=0.0, y=1.01, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=9.8, color="#1E293B")),
-        margin=dict(l=52, r=24, t=top_m, b=95), height=height_p,
+        legend=dict(orientation="h", x=0.0, y=1.01, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.0, color="#1E293B")),
+        margin=dict(l=52, r=24, t=top_m, b=95),
+        height=height_p,
         shapes=shapes or [],
         annotations=[
             dict(text=f"{src_text}{now_str}", x=0.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"),
-            dict(text="T.H.", x=1.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")
-        ]
+            dict(text="T.H.", x=1.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right"),
+        ],
     )
-    xaxis_kw = dict(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10, color="#475569"))
+    xaxis_kw = dict(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.0, color="#475569"))
     if tick_step > 1 and fig_p.data and fig_p.data[0].x is not None:
         all_x = list(fig_p.data[0].x)
         t_vals = [x for i, x in enumerate(all_x) if i % tick_step == 0]
         xaxis_kw.update(tickmode="array", tickvals=t_vals, ticktext=t_vals)
     fig_p.update_xaxes(**xaxis_kw)
-    fig_p.update_yaxes(fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, tickfont=dict(size=10, color="#475569"))
+    fig_p.update_yaxes(fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, tickfont=dict(size=10.0, color="#475569"))
     out_path = f"static/spannungszahl/{fname_p}{sfx}.html"
     fig_p.write_html(out_path, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
     with open(out_path, "r", encoding="utf-8") as fh:
@@ -321,19 +396,27 @@ def save_sz_plotly(fig_p, title_p, src_text, now_str, fname_p, sfx, height_p=470
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(html_s)
 
-def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q, gdp_bands):
+
+def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q):
     t = TEXTS[lang]
     use_c = t["comma"]
     plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
     now_str = datetime.now().strftime(t["date_fmt"])
     fmt_arr = lambda seq: [fmt_num(v, use_c) for v in seq]
 
-    months_all = [ym for ym in sz_einf.index if ym >= "2005-01"]
+    gdp_bands = get_gdp_neg_bands(bip_q)
+    band_patches = [
+        Patch(facecolor="#CBD5E1", alpha=0.55, label=t["rec_svr"]),
+        Patch(facecolor="#93C5FD", alpha=0.45, label=t["rec_bip"]),
+    ]
+
+    months_all = [ym for ym in sz_einf.index if ym >= "2006-01"]
     if len(months_all) < 2:
         months_all = list(sz_einf.index)
     x_all = np.arange(len(months_all))
     y_einf = [float(sz_einf.loc[ym]) for ym in months_all]
     y_erw = [float(sz_erw.loc[ym]) if ym in sz_erw.index else np.nan for ym in months_all]
+    shapes_all = _add_rec_shapes_plotly(months_all, gdp_bands)
 
     def save_fig(fig, src_text, fname):
         fig.text(0.09, 0.015, f"{src_text}{now_str}", fontsize=7.0, color="#64748B")
@@ -341,127 +424,202 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q, gdp_bands
         plt.savefig(f"static/spannungszahl/{fname}{t['sfx']}.png", dpi=300)
         plt.close()
 
-    def build_ax_legend(ax, extra_handles=None, ncol=3, fontsize=7.2):
-        handles, labels = ax.get_legend_handles_labels()
-        if extra_handles:
-            handles.extend(extra_handles)
-        handles.append(mpatches.Patch(color="#CBD5E1", alpha=0.55, label=t["rec_svr"]))
-        handles.append(mpatches.Patch(color="#93C5FD", alpha=0.45, label=t["rec_bip"]))
-        ax.legend(handles=handles, loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=ncol, frameon=False, fontsize=fontsize)
-
-    # 1. Einfache Spannungszahl (Gesamtzeitraum ab 2006)
+    # 1. Einfache Spannungszahl (Gesamtzeitraum ab 2006, ohne Trendlinien, mit beiden Schattierungen)
     fig, ax = plt.subplots(figsize=(8.4, 5.4), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.09, right=0.95, top=0.78, bottom=0.25)
     ymin_1 = min(-1200, int(np.floor((min(y_einf) - 300) / 300.0) * 300))
     ymax_1 = max(1200, int(np.ceil((max(y_einf) + 300) / 300.0) * 300))
     style_sz_ax(fig, ax, t["p1_t"], ymin_1, ymax_1, range(ymin_1, ymax_1 + 300, 300), t["x_m"], xlabel_y=-0.31)
-    add_recession_bands_ax(ax, months_all, gdp_bands)
-    ax.plot(x_all, y_einf, color="#1B3A6B", lw=2.0, label=t["p1_l"], zorder=3)
-    draw_year_groups(ax, months_all, t["m"], step=6, year_y=-0.24)
-    build_ax_legend(ax, ncol=3, fontsize=7.2)
+    _add_rec_bands_ax(ax, months_all, gdp_bands)
+    l1_a = t["p1_l"]
+    (ln1,) = ax.plot(x_all, y_einf, color="#1B3A6B", lw=2.1, label=l1_a, zorder=4)
+    draw_year_groups(ax, months_all, t["m"], step=12, year_y=-0.24, year_step=2)
+    handles_1 = [ln1] + band_patches
+    ax.legend(handles=handles_1, labels=[h.get_label() for h in handles_1], loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=3, frameon=False, fontsize=7.3)
     save_fig(fig, t["src_ba"], "01_einfache_spannungszahl")
 
     fp1 = go.Figure()
-    fp1.add_trace(go.Scatter(x=months_all, y=[round(v, 1) for v in y_einf], customdata=fmt_arr(y_einf), name=t["p1_l"], mode="lines", line=dict(color="#1B3A6B", width=2.1), hovertemplate=f"{t['p1_l']}: <b>%{{customdata}}</b><extra></extra>"))
-    add_plotly_band_legend(fp1, months_all, gdp_bands, t)
-    save_sz_plotly(fp1, t["p1_t"], t["src_ba"], now_str, "01_einfache_spannungszahl", t["sfx"], height_p=470, top_m=105, tick_step=12, shapes=build_plotly_rec_shapes(months_all, gdp_bands))
+    fp1.add_trace(
+        go.Scatter(
+            x=months_all,
+            y=[round(v, 1) for v in y_einf],
+            customdata=fmt_arr(y_einf),
+            name=l1_a,
+            mode="lines",
+            line=dict(color="#1B3A6B", width=2.2),
+            hovertemplate=f"{l1_a}: <b>%{{customdata}}</b><extra></extra>",
+        )
+    )
+    _add_plotly_band_legend(fp1, t)
+    save_sz_plotly(fp1, t["p1_t"], t["src_ba"], now_str, "01_einfache_spannungszahl", t["sfx"], height_p=470, top_m=105, tick_step=24, shapes=shapes_all)
 
-    # 2. Einfache Spannungszahl (Zoom 13 Monate mit Linien unveraenderter wirtschaftlicher Aktivitaet)
+    # 2. Einfache Spannungszahl (Aktueller 13-Monats-Verlauf, mit mehreren Linien unveränderter Aktivität)
     months_z = months_all[-13:]
     xz = np.arange(len(months_z))
     yz = [float(sz_einf.loc[ym]) for ym in months_z]
-    fig, ax = plt.subplots(figsize=(8.4, 5.8), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.95, top=0.68, bottom=0.28)
-    all_z_vals = list(yz)
-    for anc_ym in (months_z[0], months_z[max(0, len(months_z) - 7)], months_z[max(0, len(months_z) - 4)], months_z[max(0, len(months_z) - 2)]):
-        su_tmp = line_unv(d_einf, anc_ym, months_z)
-        if len(su_tmp) >= 2:
-            all_z_vals.extend([float(v) for v in su_tmp.values])
-    ymin_z = int(np.floor((min(all_z_vals) - 100) / 100.0) * 100)
-    ymax_z = int(np.ceil((max(all_z_vals) + 100) / 100.0) * 100)
-    style_sz_ax(fig, ax, t["p2_t"], ymin_z, ymax_z, range(ymin_z, ymax_z + 100, 100), t["x_m"], xlabel_y=-0.38)
-    add_recession_bands_ax(ax, months_z, gdp_bands)
-
-    ax.plot(xz, yz, color="#1B3A6B", lw=2.4, marker="o", ms=3.5, label=t["p2_l1"], zorder=4)
-    fp2 = go.Figure()
-    fp2.add_trace(go.Scatter(x=months_z, y=[round(v, 1) for v in yz], customdata=fmt_arr(yz), name=t["p2_l1"], mode="lines+markers", marker=dict(size=5), line=dict(color="#1B3A6B", width=2.4), hovertemplate=f"{t['p2_l1']}: <b>%{{customdata}}</b><extra></extra>"))
+    shapes_z = _add_rec_shapes_plotly(months_z, gdp_bands)
 
     anchors_z = [
         (months_z[0], t["p2_l_vj"], "#D97706", "--"),
         (months_z[max(0, len(months_z) - 7)], f"{t['p2_l_prefix']}{t['m'][int(months_z[max(0, len(months_z) - 7)][5:7]) - 1]} {months_z[max(0, len(months_z) - 7)][:4]}", "#059669", ":"),
         (months_z[max(0, len(months_z) - 4)], f"{t['p2_l_prefix']}{t['m'][int(months_z[max(0, len(months_z) - 4)][5:7]) - 1]} {months_z[max(0, len(months_z) - 4)][:4]}", "#7C3AED", "-."),
-        (months_z[max(0, len(months_z) - 2)], f"{t['p2_l_prefix']}{t['m'][int(months_z[max(0, len(months_z) - 2)][5:7]) - 1]} {months_z[max(0, len(months_z) - 2)][:4]}", "#DC2626", "--")
+        (months_z[max(0, len(months_z) - 2)], f"{t['p2_l_prefix']}{t['m'][int(months_z[max(0, len(months_z) - 2)][5:7]) - 1]} {months_z[max(0, len(months_z) - 2)][:4]}", "#DC2626", "--"),
     ]
+
+    all_z_vals = list(yz)
+    for anc_ym, _, _, _ in anchors_z:
+        su_tmp = line_unv(d_einf, anc_ym, months_z)
+        if len(su_tmp) >= 2:
+            all_z_vals.extend([float(v) for v in su_tmp.values])
+
+    fig, ax = plt.subplots(figsize=(8.4, 5.8), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.09, right=0.95, top=0.70, bottom=0.28)
+    ymin_z = int(np.floor((min(all_z_vals) - 100) / 100.0) * 100)
+    ymax_z = int(np.ceil((max(all_z_vals) + 100) / 100.0) * 100)
+    step_z = 200 if (ymax_z - ymin_z) > 1200 else 100
+    style_sz_ax(fig, ax, t["p2_t"], ymin_z, ymax_z, range(ymin_z, ymax_z + step_z, step_z), t["x_m"], xlabel_y=-0.38)
+    _add_rec_bands_ax(ax, months_z, gdp_bands)
+
+    (ln2_main,) = ax.plot(xz, yz, color="#1B3A6B", lw=2.4, marker="o", ms=3.5, label=t["p2_l1"], zorder=5)
+    fp2 = go.Figure()
+    fp2.add_trace(
+        go.Scatter(
+            x=months_z,
+            y=[round(v, 1) for v in yz],
+            customdata=fmt_arr(yz),
+            name=t["p2_l1"],
+            mode="lines+markers",
+            marker=dict(size=5),
+            line=dict(color="#1B3A6B", width=2.4),
+            hovertemplate=f"{t['p2_l1']}: <b>%{{customdata}}</b><extra></extra>",
+        )
+    )
+
+    unv_handles_2 = []
     for anc_ym, anc_lbl, anc_col, anc_ls in anchors_z:
         su = line_unv(d_einf, anc_ym, months_z)
         if len(su) >= 2:
             xsu = [months_z.index(ym) for ym in su.index]
-            ax.plot(xsu, su.values, color=anc_col, lw=1.7, ls=anc_ls, label=anc_lbl, zorder=3)
+            (ln_u,) = ax.plot(xsu, su.values, color=anc_col, lw=1.8, ls=anc_ls, label=anc_lbl, zorder=4)
+            unv_handles_2.append(ln_u)
             ysu = [round(float(v), 1) for v in su.values]
             p_dash = "dash" if anc_ls == "--" else ("dot" if anc_ls == ":" else "dashdot")
-            fp2.add_trace(go.Scatter(x=list(su.index), y=ysu, customdata=fmt_arr(ysu), name=anc_lbl, mode="lines", line=dict(color=anc_col, width=1.8, dash=p_dash), hovertemplate=f"{anc_lbl}: <b>%{{customdata}}</b><extra></extra>"))
+            fp2.add_trace(
+                go.Scatter(
+                    x=list(su.index),
+                    y=ysu,
+                    customdata=fmt_arr(ysu),
+                    name=anc_lbl,
+                    mode="lines",
+                    line=dict(color=anc_col, width=1.9, dash=p_dash),
+                    hovertemplate=f"{anc_lbl}: <b>%{{customdata}}</b><extra></extra>",
+                )
+            )
 
     draw_year_groups(ax, months_z, t["m"], step=1, year_y=-0.31)
-    build_ax_legend(ax, ncol=2, fontsize=6.4)
+    handles_2 = [ln2_main] + unv_handles_2 + band_patches
+    ax.legend(handles=handles_2, labels=[h.get_label() for h in handles_2], loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=2, frameon=False, fontsize=6.6)
     save_fig(fig, t["src_ba"], "02_einfache_spannungszahl_zoom")
-    add_plotly_band_legend(fp2, months_z, gdp_bands, t)
-    save_sz_plotly(fp2, t["p2_t"], t["src_ba"], now_str, "02_einfache_spannungszahl_zoom", t["sfx"], height_p=560, top_m=175, tick_step=1, shapes=build_plotly_rec_shapes(months_z, gdp_bands))
+    _add_plotly_band_legend(fp2, t)
+    save_sz_plotly(fp2, t["p2_t"], t["src_ba"], now_str, "02_einfache_spannungszahl_zoom", t["sfx"], height_p=555, top_m=165, tick_step=1, shapes=shapes_z)
 
-    # 3. Erweiterte Spannungszahl (Gesamtzeitraum ab 2006)
-    months_erw = [ym for ym in sz_erw.index if ym >= "2005-01"]
+    # 3. Erweiterte Spannungszahl (Gesamtzeitraum ab 2006, ohne Trendlinien, mit beiden Schattierungen)
+    months_erw = [ym for ym in sz_erw.index if ym >= "2006-01"]
     if len(months_erw) < 2:
         months_erw = list(sz_erw.index)
     x_erw = np.arange(len(months_erw))
     y_erw_v = [float(sz_erw.loc[ym]) for ym in months_erw]
+    shapes_erw = _add_rec_shapes_plotly(months_erw, gdp_bands)
+
     fig, ax = plt.subplots(figsize=(8.4, 5.4), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.09, right=0.95, top=0.78, bottom=0.25)
     ymin_3 = min(-8000, int(np.floor((min(y_erw_v) - 500) / 1000.0) * 1000))
     ymax_3 = max(4000, int(np.ceil((max(y_erw_v) + 500) / 1000.0) * 1000))
     style_sz_ax(fig, ax, t["p3_t"], ymin_3, ymax_3, range(ymin_3, ymax_3 + 1000, 1000), t["x_m"], xlabel_y=-0.31)
-    add_recession_bands_ax(ax, months_erw, gdp_bands)
-    ax.plot(x_erw, y_erw_v, color="#D97706", lw=2.0, label=t["p3_l"], zorder=3)
-    draw_year_groups(ax, months_erw, t["m"], step=6, year_y=-0.24)
-    build_ax_legend(ax, ncol=3, fontsize=7.2)
+    _add_rec_bands_ax(ax, months_erw, gdp_bands)
+    l3_a = t["p3_l"]
+    (ln3,) = ax.plot(x_erw, y_erw_v, color="#D97706", lw=2.1, label=l3_a, zorder=4)
+    draw_year_groups(ax, months_erw, t["m"], step=12, year_y=-0.24, year_step=2)
+    handles_3 = [ln3] + band_patches
+    ax.legend(handles=handles_3, labels=[h.get_label() for h in handles_3], loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=3, frameon=False, fontsize=7.3)
     save_fig(fig, t["src_ba_kug"], "03_erweiterte_spannungszahl")
 
     fp3 = go.Figure()
-    fp3.add_trace(go.Scatter(x=months_erw, y=[round(v, 1) for v in y_erw_v], customdata=fmt_arr(y_erw_v), name=t["p3_l"], mode="lines", line=dict(color="#D97706", width=2.1), hovertemplate=f"{t['p3_l']}: <b>%{{customdata}}</b><extra></extra>"))
-    add_plotly_band_legend(fp3, months_erw, gdp_bands, t)
-    save_sz_plotly(fp3, t["p3_t"], t["src_ba_kug"], now_str, "03_erweiterte_spannungszahl", t["sfx"], height_p=470, top_m=105, tick_step=12, shapes=build_plotly_rec_shapes(months_erw, gdp_bands))
+    fp3.add_trace(
+        go.Scatter(
+            x=months_erw,
+            y=[round(v, 1) for v in y_erw_v],
+            customdata=fmt_arr(y_erw_v),
+            name=l3_a,
+            mode="lines",
+            line=dict(color="#D97706", width=2.2),
+            hovertemplate=f"{l3_a}: <b>%{{customdata}}</b><extra></extra>",
+        )
+    )
+    _add_plotly_band_legend(fp3, t)
+    save_sz_plotly(fp3, t["p3_t"], t["src_ba_kug"], now_str, "03_erweiterte_spannungszahl", t["sfx"], height_p=470, top_m=105, tick_step=24, shapes=shapes_erw)
 
-    # 4. Erweiterte Spannungszahl (Zoom 13 Monate mit Linie unveraenderter wirtschaftlicher Aktivitaet)
+    # 4. Erweiterte Spannungszahl (Aktueller 13-Monats-Verlauf, mit genau einer Linie unveränderter Aktivität ab Vorjahresmonat)
     months_ez = months_erw[-13:]
     xez = np.arange(len(months_ez))
     yez = [float(sz_erw.loc[ym]) for ym in months_ez]
-    l4_a, l4_b = t["p4_l"]
-    fig, ax = plt.subplots(figsize=(8.4, 5.5), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.95, top=0.73, bottom=0.28)
+    shapes_ez = _add_rec_shapes_plotly(months_ez, gdp_bands)
     su4 = line_unv(d_erw, months_ez[0], months_ez)
     all_ez_vals = list(yez) + ([float(v) for v in su4.values] if len(su4) >= 2 else [])
+
+    fig, ax = plt.subplots(figsize=(8.4, 5.5), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.09, right=0.95, top=0.75, bottom=0.28)
     ymin_4 = int(np.floor((min(all_ez_vals) - 100) / 100.0) * 100)
     ymax_4 = int(np.ceil((max(all_ez_vals) + 100) / 100.0) * 100)
-    style_sz_ax(fig, ax, t["p4_t"], ymin_4, ymax_4, range(ymin_4, ymax_4 + 100, 100), t["x_m"], xlabel_y=-0.38)
-    add_recession_bands_ax(ax, months_ez, gdp_bands)
+    step_4 = 200 if (ymax_4 - ymin_4) > 1200 else 100
+    style_sz_ax(fig, ax, t["p4_t"], ymin_4, ymax_4, range(ymin_4, ymax_4 + step_4, step_4), t["x_m"], xlabel_y=-0.38)
+    _add_rec_bands_ax(ax, months_ez, gdp_bands)
 
-    ax.plot(xez, yez, color="#D97706", lw=2.4, marker="o", ms=3.5, label=l4_a, zorder=4)
+    (ln4_main,) = ax.plot(xez, yez, color="#D97706", lw=2.4, marker="o", ms=3.5, label=t["p4_l1"], zorder=5)
     fp4 = go.Figure()
-    fp4.add_trace(go.Scatter(x=months_ez, y=[round(v, 1) for v in yez], customdata=fmt_arr(yez), name=l4_a, mode="lines+markers", marker=dict(size=5), line=dict(color="#D97706", width=2.4), hovertemplate=f"{l4_a}: <b>%{{customdata}}</b><extra></extra>"))
+    fp4.add_trace(
+        go.Scatter(
+            x=months_ez,
+            y=[round(v, 1) for v in yez],
+            customdata=fmt_arr(yez),
+            name=t["p4_l1"],
+            mode="lines+markers",
+            marker=dict(size=5),
+            line=dict(color="#D97706", width=2.4),
+            hovertemplate=f"{t['p4_l1']}: <b>%{{customdata}}</b><extra></extra>",
+        )
+    )
+
+    handles_4 = [ln4_main]
     if len(su4) >= 2:
         xsu4 = [months_ez.index(ym) for ym in su4.index]
-        ax.plot(xsu4, su4.values, color="#1B3A6B", lw=1.7, ls="--", label=l4_b, zorder=3)
+        (ln4_unv,) = ax.plot(xsu4, su4.values, color="#1B3A6B", lw=1.8, ls="--", label=t["p4_l_vj"], zorder=4)
+        handles_4.append(ln4_unv)
         ysu4 = [round(float(v), 1) for v in su4.values]
-        fp4.add_trace(go.Scatter(x=list(su4.index), y=ysu4, customdata=fmt_arr(ysu4), name=l4_b, mode="lines", line=dict(color="#1B3A6B", width=1.8, dash="dash"), hovertemplate=f"{l4_b}: <b>%{{customdata}}</b><extra></extra>"))
-    draw_year_groups(ax, months_ez, t["m"], step=1, year_y=-0.31)
-    build_ax_legend(ax, ncol=2, fontsize=6.8)
-    save_fig(fig, t["src_ba_kug"], "04_erweiterte_spannungszahl_zoom")
-    add_plotly_band_legend(fp4, months_ez, gdp_bands, t)
-    save_sz_plotly(fp4, t["p4_t"], t["src_ba_kug"], now_str, "04_erweiterte_spannungszahl_zoom", t["sfx"], height_p=490, top_m=125, tick_step=1, shapes=build_plotly_rec_shapes(months_ez, gdp_bands))
+        fp4.add_trace(
+            go.Scatter(
+                x=list(su4.index),
+                y=ysu4,
+                customdata=fmt_arr(ysu4),
+                name=t["p4_l_vj"],
+                mode="lines",
+                line=dict(color="#1B3A6B", width=1.9, dash="dash"),
+                hovertemplate=f"{t['p4_l_vj']}: <b>%{{customdata}}</b><extra></extra>",
+            )
+        )
 
-    # 5. Spannungszahl und reales BIP (Gesamtzeitraum ab 2006)
-    fig, ax1 = plt.subplots(figsize=(8.4, 5.6), dpi=300, facecolor="white")
+    draw_year_groups(ax, months_ez, t["m"], step=1, year_y=-0.31)
+    handles_4.extend(band_patches)
+    ax.legend(handles=handles_4, labels=[h.get_label() for h in handles_4], loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=2, frameon=False, fontsize=7.0)
+    save_fig(fig, t["src_ba_kug"], "04_erweiterte_spannungszahl_zoom")
+    _add_plotly_band_legend(fp4, t)
+    save_sz_plotly(fp4, t["p4_t"], t["src_ba_kug"], now_str, "04_erweiterte_spannungszahl_zoom", t["sfx"], height_p=485, top_m=120, tick_step=1, shapes=shapes_ez)
+
+    # 5. Spannungszahl und reales BIP (Dual-Achse, Gesamtzeitraum ab 2006, mit beiden Schattierungen)
+    fig, ax1 = plt.subplots(figsize=(8.4, 5.5), dpi=300, facecolor="white")
     plt.subplots_adjust(left=0.10, right=0.88, top=0.73, bottom=0.25)
     style_sz_ax(fig, ax1, t["p5_t"], -12, 12, range(-12, 16, 4), t["x_mq"], xlabel_y=-0.31)
-    add_recession_bands_ax(ax1, months_all, gdp_bands)
+    _add_rec_bands_ax(ax1, months_all, gdp_bands)
     ax1.set_ylabel(t["p5_yl"], fontsize=8.0, color="#475569")
     ax2 = ax1.twinx()
     ax2.set_ylim(-8000, 8000)
@@ -481,28 +639,60 @@ def build_charts_for_lang(lang, d_einf, d_erw, sz_einf, sz_erw, bip_q, gdp_bands
             bx.append(months_all.index(ym_key))
             by.append(float(v))
             bip_map[ym_key] = round(float(v), 1)
-    p_bip = ax1.plot(bx, by, color="#059669", lw=2.0, label=l5_bip, zorder=4)
+    p_bip = ax1.plot(bx, by, color="#059669", lw=2.0, label=l5_bip, zorder=5)
     p_einf = ax2.plot(x_all, y_einf, color="#1B3A6B", lw=1.9, label=l5_einf, zorder=3)
-    p_erw = ax2.plot(x_all, y_erw, color="#D97706", lw=1.9, label=l5_erw, zorder=3)
-    draw_year_groups(ax1, months_all, t["m"], step=6, year_y=-0.24)
-    lines = p_bip + p_einf + p_erw
-    handles = list(lines) + [
-        mpatches.Patch(color="#CBD5E1", alpha=0.55, label=t["rec_svr"]),
-        mpatches.Patch(color="#93C5FD", alpha=0.45, label=t["rec_bip"])
-    ]
-    ax1.legend(handles=handles, loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=2, frameon=False, fontsize=7.0)
+    p_erw = ax2.plot(x_all, y_erw, color="#D97706", lw=1.9, label=l5_erw, zorder=4)
+    draw_year_groups(ax1, months_all, t["m"], step=12, year_y=-0.24, year_step=2)
+    handles_5 = p_bip + p_einf + p_erw + band_patches
+    ax1.legend(handles=handles_5, labels=[h.get_label() for h in handles_5], loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=3, frameon=False, fontsize=7.0)
     save_fig(fig, t["src_all"], "05_spannungszahl_bip")
 
     y_bip_full = [bip_map.get(ym, None) for ym in months_all]
     fp5 = make_subplots(specs=[[{"secondary_y": True}]])
-    fp5.add_trace(go.Scatter(x=months_all, y=y_bip_full, customdata=fmt_arr(y_bip_full), name=l5_bip, mode="lines+markers", marker=dict(size=5), line=dict(color="#059669", width=2.1), connectgaps=True, hovertemplate=f"{l5_bip}: <b>%{{customdata}} %</b><extra></extra>"), secondary_y=False)
-    fp5.add_trace(go.Scatter(x=months_all, y=[round(v, 1) for v in y_einf], customdata=fmt_arr(y_einf), name=l5_einf, mode="lines", line=dict(color="#1B3A6B", width=2.0), hovertemplate=f"{l5_einf}: <b>%{{customdata}}</b><extra></extra>"), secondary_y=True)
+    fp5.add_trace(
+        go.Scatter(
+            x=months_all,
+            y=y_bip_full,
+            customdata=fmt_arr(y_bip_full),
+            name=l5_bip,
+            mode="lines+markers",
+            marker=dict(size=5),
+            line=dict(color="#059669", width=2.2),
+            connectgaps=True,
+            hovertemplate=f"{l5_bip}: <b>%{{customdata}} %</b><extra></extra>",
+        ),
+        secondary_y=False,
+    )
+    fp5.add_trace(
+        go.Scatter(
+            x=months_all,
+            y=[round(v, 1) for v in y_einf],
+            customdata=fmt_arr(y_einf),
+            name=l5_einf,
+            mode="lines",
+            line=dict(color="#1B3A6B", width=2.0),
+            hovertemplate=f"{l5_einf}: <b>%{{customdata}}</b><extra></extra>",
+        ),
+        secondary_y=True,
+    )
     y_erw_clean = [None if np.isnan(v) else round(float(v), 1) for v in y_erw]
-    fp5.add_trace(go.Scatter(x=months_all, y=y_erw_clean, customdata=fmt_arr(y_erw_clean), name=l5_erw, mode="lines", line=dict(color="#D97706", width=2.0), hovertemplate=f"{l5_erw}: <b>%{{customdata}}</b><extra></extra>"), secondary_y=True)
-    add_plotly_band_legend(fp5, months_all, gdp_bands, t)
+    fp5.add_trace(
+        go.Scatter(
+            x=months_all,
+            y=y_erw_clean,
+            customdata=fmt_arr(y_erw_clean),
+            name=l5_erw,
+            mode="lines",
+            line=dict(color="#D97706", width=2.0),
+            hovertemplate=f"{l5_erw}: <b>%{{customdata}}</b><extra></extra>",
+        ),
+        secondary_y=True,
+    )
+    _add_plotly_band_legend(fp5, t)
     fp5.update_yaxes(title_text=t["p5_yl"].replace("\n", " "), range=[-12, 12], dtick=4, fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, secondary_y=False)
     fp5.update_yaxes(title_text=t["p5_yr"].replace("\n", " "), range=[-8000, 8000], dtick=2000, fixedrange=True, showgrid=False, secondary_y=True)
-    save_sz_plotly(fp5, t["p5_t"], t["src_all"], now_str, "05_spannungszahl_bip", t["sfx"], height_p=500, top_m=125, tick_step=12, shapes=build_plotly_rec_shapes(months_all, gdp_bands))
+    save_sz_plotly(fp5, t["p5_t"], t["src_all"], now_str, "05_spannungszahl_bip", t["sfx"], height_p=495, top_m=125, tick_step=24, shapes=shapes_all)
+
 
 def main():
     s_stellen, s_alo, s_kug = load_labor_market()
@@ -518,9 +708,11 @@ def main():
     print(f"[RESULT] Einfache SZ bis {sz_einf.index[-1]} ({sz_einf.values[-1]:.1f}) | Erweiterte SZ bis {sz_erw.index[-1]} ({sz_erw.values[-1]:.1f})")
 
     bip_q = get_destatis_bip_q()
-    gdp_bands = build_gdp_recession_bands(bip_q)
-    build_charts_for_lang("de", d_einf, d_erw, sz_einf, sz_erw, bip_q, gdp_bands)
-    build_charts_for_lang("en", d_einf, d_erw, sz_einf, sz_erw, bip_q, gdp_bands)
+    print(f"[DESTATIS BIP] Quartale geladen: {len(bip_q)}")
+    build_charts_for_lang("de", d_einf, d_erw, sz_einf, sz_erw, bip_q)
+    build_charts_for_lang("en", d_einf, d_erw, sz_einf, sz_erw, bip_q)
+
 
 if __name__ == "__main__":
     main()
+
