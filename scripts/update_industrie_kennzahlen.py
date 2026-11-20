@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 os.makedirs("static/industrie", exist_ok=True)
+
 D_USER = os.environ.get("DESTATIS_USER", "")
 D_PASS = os.environ.get("DESTATIS_PASS", "")
 G_BASE = "https://www-genesis." + "destatis.de/genesisWS/rest/2020/data"
@@ -53,7 +54,6 @@ TEXTS = {
             "Bruttolöhne/-gehälter je Beschäftigten (linke Skala)",
             "Beschäftigte (rechte Skala)"
         ),
-        "y_axis": "Veränderung gg. Vorjahresmonat\nin %",
         "xlabel": "Monatswerte",
         "src": "Quelle: Statistisches Bundesamt, eigene Berechnungen | Stand: ",
         "date_fmt": "%d.%m.%Y",
@@ -70,7 +70,6 @@ TEXTS = {
             "Gross wages and salaries per employee (left scale)",
             "Employees (right scale)"
         ),
-        "y_axis": "Year-on-year change\nin %",
         "xlabel": "Monthly values",
         "src": "Source: Federal Statistical Office, own calculations | As of: ",
         "date_fmt": "%Y-%m-%d",
@@ -79,11 +78,13 @@ TEXTS = {
     }
 }
 
+
 def fmt_rate(val, use_comma):
     if val is None or (isinstance(val, float) and np.isnan(val)):
         return ""
     s = f"{float(val):.1f}"
     return s.replace(".", ",") if use_comma else s
+
 
 def fmt_axis(val, use_comma):
     if val is None or (isinstance(val, float) and np.isnan(val)):
@@ -94,11 +95,13 @@ def fmt_axis(val, use_comma):
     s = f"{v:.1f}".rstrip("0").rstrip(".")
     return s.replace(".", ",") if use_comma else s
 
+
 def _extract_payload(resp):
     if resp.content[:2] == b"PK":
         with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
             return zf.read(next(n for n in zf.namelist() if n.endswith(".csv"))).decode("utf-8", errors="replace")
     return resp.text
+
 
 def fetch_42111_0004_multi():
     if not D_USER or not D_PASS:
@@ -123,18 +126,15 @@ def fetch_42111_0004_multi():
                 break
         if not raw:
             raise RuntimeError("Destatis Job für 42111-0004 nicht rechtzeitig fertig.")
-
     rows = [row for row in csv.reader(io.StringIO(raw), delimiter=";", quotechar='"') if len(row) >= 5]
     hdr = [str(h).strip() for h in rows.pop(0)]
     df = pd.DataFrame([row[:len(hdr)] for row in rows if len(row) >= len(hdr)], columns=hdr)
-
     target_vars = {"UMS002", "ARBST1", "ERW012", "VST003"}
     df = df[
         (df["2_variable_attribute_code"].astype(str).str.strip() == "DG") &
         (df["3_variable_attribute_code"].astype(str).str.strip() == "BETRIEBE") &
         (df["value_variable_code"].astype(str).str.strip().isin(target_vars))
     ].copy()
-
     m_num = df["1_variable_attribute_code"].astype(str).str.extract(r"(\d+)", expand=False).str.zfill(2)
     df["ZEIT"] = df["time"].astype(str).str.strip() + "-" + m_num
     df["WZ"] = df["4_variable_attribute_code"].astype(str).str.strip()
@@ -142,7 +142,6 @@ def fetch_42111_0004_multi():
     df["V"] = pd.to_numeric(df["value"].astype(str).str.replace(",", "."), errors="coerce")
     df = df.dropna(subset=["V"])
     df = df[df["ZEIT"] >= "2018-01"].copy()
-
     wz_codes = [c for c, _, _ in WZ_META]
     raw_piv = {}
     for var_code in target_vars:
@@ -152,11 +151,9 @@ def fetch_42111_0004_multi():
         piv = piv[avail].dropna(how="all")
         piv["WZ08-C"] = piv[avail].sum(axis=1, min_count=len(avail))
         raw_piv[var_code] = piv
-
     common_idx = raw_piv["ERW012"].index.intersection(raw_piv["UMS002"].index).intersection(raw_piv["ARBST1"].index).intersection(raw_piv["VST003"].index).sort_values()
     for var_code in target_vars:
         raw_piv[var_code] = raw_piv[var_code].reindex(common_idx)
-
     wage_per_emp = raw_piv["VST003"] / raw_piv["ERW012"]
     yoy = {}
     for key, mat in (("ums", raw_piv["UMS002"]), ("hrs", raw_piv["ARBST1"]), ("emp", raw_piv["ERW012"]), ("wag", wage_per_emp)):
@@ -164,6 +161,7 @@ def fetch_42111_0004_multi():
         yoy[key] = yoy_mat[yoy_mat.index >= "2019-01"]
     yoy["emp_lvl"] = raw_piv["ERW012"][raw_piv["ERW012"].index >= "2019-01"]
     return yoy
+
 
 def nice_sym_range(vals):
     clean = [abs(float(v)) for v in vals if v is not None and not np.isnan(v)]
@@ -176,6 +174,7 @@ def nice_sym_range(vals):
     step = 250.0
     lim = np.ceil(m / step) * step
     return -lim, lim, step
+
 
 def draw_year_groups(ax, months, m_names, step=4, year_y=-0.30):
     ticks, labels = [], []
@@ -193,30 +192,28 @@ def draw_year_groups(ax, months, m_names, step=4, year_y=-0.30):
             mid = (min(idxs) + max(idxs)) / 2.0
             ax.text(mid, year_y, y, transform=ax.get_xaxis_transform(), ha="center", fontsize=8.3, color="#475569")
 
+
 def render_multi_charts(lang, slug, code, title_name, s_ums, s_hrs, s_wag, s_emp):
     t = TEXTS[lang]
     use_c = t["comma"]
     plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
     now_str = datetime.now().strftime(t["date_fmt"])
-
     months = list(s_emp.dropna().index)
     v_ums = [float(s_ums.get(m, np.nan)) for m in months]
     v_hrs = [float(s_hrs.get(m, np.nan)) for m in months]
     v_wag = [float(s_wag.get(m, np.nan)) for m in months]
     v_emp = [float(s_emp.get(m, np.nan)) for m in months]
     x_idx = np.arange(len(months))
-
     l_min, l_max, l_step = nice_sym_range(v_ums + v_hrs + v_wag)
     r_min, r_max, r_step = nice_sym_range(v_emp)
-
     c_ums, c_hrs, c_wag, c_emp = "#1B3A6B", "#7FA6C9", "#5C9E31", "#E03C31"
     full_title = f"{title_name} ({code})"
 
+    # 1. PNG-Grafik (ohne Y-Achsenbeschriftung über den vertikalen Achsen)
     fig, ax1 = plt.subplots(figsize=(8.2, 5.8), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.11, right=0.88, top=0.72, bottom=0.27)
+    plt.subplots_adjust(left=0.11, right=0.88, top=0.74, bottom=0.27)
     fig.suptitle(full_title, x=0.11, y=0.96, ha="left", fontsize=11.5, fontweight="bold", color="#0F172A")
     fig.text(0.11, 0.915, t["title_sub"], ha="left", fontsize=8.3, color="#475569")
-
     ax1.set_facecolor("#F8FAFC")
     ax1.set_ylim(l_min, l_max)
     ax1.set_yticks(np.arange(l_min, l_max + l_step * 0.1, l_step))
@@ -265,9 +262,6 @@ def render_multi_charts(lang, slug, code, title_name, s_ums, s_hrs, s_wag, s_emp
             color=col, ha="left", va="center", zorder=6
         )
 
-    ax1.text(-0.01, 1.02, t["y_axis"], transform=ax1.transAxes, ha="right", va="bottom", fontsize=7.5, color="#475569")
-    ax2.text(1.01, 1.02, t["y_axis"], transform=ax2.transAxes, ha="left", va="bottom", fontsize=7.5, color="#475569")
-
     draw_year_groups(ax1, months, t["m"], step=4, year_y=-0.30)
     ax1.text(0.5, -0.37, t["xlabel"], transform=ax1.transAxes, ha="center", va="top", fontsize=8.3, color="#475569")
     ax1.legend(handles=[l1, l2, l3, l4], loc="lower left", bbox_to_anchor=(-0.01, 1.03), ncol=2, frameon=False, fontsize=7.4, columnspacing=1.2, handlelength=1.8)
@@ -276,6 +270,7 @@ def render_multi_charts(lang, slug, code, title_name, s_ums, s_hrs, s_wag, s_emp
     plt.savefig(f"static/industrie/{slug}{t['sfx']}.png", dpi=300)
     plt.close()
 
+    # 2. Interaktive Plotly-HTML-Grafik (unverändert)
     fp = make_subplots(specs=[[{"secondary_y": True}]])
     for vals, name, col, sec_y in (
         (v_ums, t["leg"][0], c_ums, False),
@@ -292,7 +287,6 @@ def render_multi_charts(lang, slug, code, title_name, s_ums, s_hrs, s_wag, s_emp
             ),
             secondary_y=sec_y
         )
-
     t_vals = [m for m in months if m.endswith("-01") or m.endswith("-07")]
     fp.update_layout(
         title=dict(text=f"<b>{full_title}</b><br><span style='font-size:11.5px;color:#475569;'>{t['title_sub']}</span>", x=0.03, y=0.96, yanchor="top", font=dict(size=15, color="#0F172A", family="DejaVu Sans, sans-serif")),
@@ -317,22 +311,20 @@ def render_multi_charts(lang, slug, code, title_name, s_ums, s_hrs, s_wag, s_emp
     with open(out_html, "w", encoding="utf-8") as fh:
         fh.write(html_s)
 
+
 def main():
     yoy_data = fetch_42111_0004_multi()
     emp_lvl = yoy_data["emp_lvl"]
     latest_row = emp_lvl.iloc[-1]
-
     ranked_wz = sorted(
         [(code, de_lbl, en_lbl, float(latest_row.get(code, 0.0))) for code, de_lbl, en_lbl in WZ_META if code in emp_lvl.columns],
         key=itemgetter(3),
         reverse=True
     )
-
     ordered_items = [("00_wz08_c_gesamt", "WZ08-C", TEXTS["de"]["total_name"], TEXTS["en"]["total_name"])]
     for rank_idx, (code, de_lbl, en_lbl, _) in enumerate(ranked_wz, start=1):
         slug = f"{rank_idx:02d}_{code.lower().replace('-', '_')}"
         ordered_items.append((slug, code, de_lbl, en_lbl))
-
     meta_out = []
     for slug, code, de_lbl, en_lbl in ordered_items:
         render_multi_charts(
@@ -344,11 +336,10 @@ def main():
             yoy_data["ums"][code], yoy_data["hrs"][code], yoy_data["wag"][code], yoy_data["emp"][code]
         )
         meta_out.append({"slug": slug, "code": code, "de": de_lbl, "en": en_lbl})
-
     with open("static/industrie/order.json", "w", encoding="utf-8") as fh:
         json.dump(meta_out, fh, ensure_ascii=False, indent=2)
     print(f"[OK] {len(ordered_items)} Industrie-Kennzahlen-Grafiken (DE & EN) bis {emp_lvl.index[-1]} erzeugt.")
 
+
 if __name__ == "__main__":
     main()
-
