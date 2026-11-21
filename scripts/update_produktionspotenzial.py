@@ -829,77 +829,299 @@ def build_chart_08_09_notwendig(lang, df_nec, fname, title_key, sub_tpl):
     ))
     _finalize_plotly_layout(fp, t[title_key], subtitle, t["src"], now_str, fname, t["sfx"], y_range=[0, ymax], y_dtick=1, height_p=470, top_m=136)
 
-import matplotlib.pyplot as plt
-import pandas as pd
+def build_dual_axis_chart(
+    lang,
+    fname,
+    title_key,
+    sub_key,
+    line_lbl_key,
+    bar_lbl_key,
+    labels,
+    line_vals,
+    bar_vals,
+    bip_neg_flags,
+    y1_lim,
+    y1_step,
+    y2_lim,
+    y2_step,
+    bar_color,
+    y1_unit="Ppkt.",
+    y2_unit="%",
+):
+    t = TEXTS[lang]
+    use_c = t["comma"]
+    now_str = datetime.now().strftime(t["date_fmt"])
+    x = np.arange(len(labels))
 
-# Voraussetzung: 'df' ist der geladene DataFrame mit den entsprechenden Daten
+    y1_arr = [np.nan if (v is None or pd.isna(v)) else float(v) for v in line_vals]
+    y2_arr = [np.nan if (v is None or pd.isna(v)) else float(v) for v in bar_vals]
 
-def plot_doppelachse_3(df):
-    fig, ax1 = plt.subplots(figsize=(10, 5))
+    fig, ax1 = plt.subplots(figsize=(8.4, 5.4), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.08, right=0.91, top=0.75, bottom=0.22)
+
+    fig.suptitle(t[title_key], x=0.08, y=0.965, ha="left", fontsize=11.0, fontweight="bold", color="#0F172A")
+    fig.text(0.08, 0.918, t[sub_key], ha="left", fontsize=8.2, color="#334155")
+
+    ax1.set_facecolor("#F8FAFC")
+    ax1.set_ylim(-y1_lim, y1_lim)
+    ax1.set_yticks(np.arange(-y1_lim, y1_lim + y1_step * 0.5, y1_step))
+    ax1.axhline(0, color="#64748B", linewidth=1.0, zorder=2)
+    ax1.yaxis.grid(True, color="#E2E8F0", linewidth=0.8, zorder=0)
+    ax1.set_axisbelow(True)
+    ax1.tick_params(axis="y", colors="#1B3A6B", labelsize=8.3, length=0)
+    ax1.tick_params(axis="x", colors="#475569", labelsize=7.6, rotation=90, length=3, color="#CBD5E1")
+
     ax2 = ax1.twinx()
-    # Beispiel-Logik für Grafik 3
-    ax1.plot(df['Datum'], df['Metrik_A'], color='blue', label='Metrik A')
-    ax2.bar(df['Datum'], df['Metrik_B'], color='orange', alpha=0.3, label='Metrik B')
-    ax1.set_xlabel('Datum')
-    ax1.set_ylabel('Metrik A', color='blue')
-    ax2.set_ylabel('Metrik B', color='orange')
-    plt.title('Doppelachsen-Grafik 3')
-    plt.tight_layout()
-    plt.savefig('doppelachse_3.png')
+    ax2.set_ylim(-y2_lim, y2_lim)
+    ax2.set_yticks(np.arange(-y2_lim, y2_lim + y2_step * 0.5, y2_step))
+    ax2.tick_params(axis="y", colors=bar_color, labelsize=8.3, length=0)
+
+    for s in ("top", "right", "left"):
+        ax1.spines[s].set_visible(False)
+        ax2.spines[s].set_visible(False)
+    ax1.spines["bottom"].set_color("#94A3B8")
+    ax2.spines["bottom"].set_visible(False)
+
+    shade_patches = add_recession_shading_mpl(ax1, labels, bip_neg_flags, t)
+
+    bar_clean = [0.0 if np.isnan(v) else v for v in y2_arr]
+    b1 = ax2.bar(x, bar_clean, width=0.58, color=bar_color, alpha=0.82, label=t[bar_lbl_key], zorder=2)
+    l1 = ax1.plot(x, y1_arr, color="#1B3A6B", lw=2.3, marker="o", markersize=3.2, label=t[line_lbl_key], zorder=5)
+
+    step_x = 2 if len(labels) > 22 else 1
+    tick_idx = [i for i in range(len(labels)) if i % step_x == 0]
+    ax1.set_xticks(tick_idx)
+    ax1.set_xticklabels([labels[i] for i in tick_idx])
+
+    handles = [l1[0], mpatches.Patch(color=bar_color, alpha=0.82, label=t[bar_lbl_key])] + shade_patches
+    ax1.legend(handles=handles, loc="lower left", bbox_to_anchor=(-0.01, 1.03), ncol=2, frameon=False, fontsize=7.3)
+
+    fig.text(0.08, 0.015, f"{t['src']}{now_str}", fontsize=6.9, color="#64748B")
+    fig.text(0.91, 0.015, "T.H.", fontsize=7.8, color="#94A3B8", ha="right")
+    plt.savefig(f"{OUT_DIR}/{fname}{t['sfx']}.png", dpi=300)
     plt.close()
 
-def plot_doppelachse_4(df):
-    fig, ax1 = plt.subplots(figsize=(10, 5))
-    ax2 = ax1.twinx()
-    ax1.plot(df['Datum'], df['Wert1'], color='green', label='Wert 1')
-    ax2.plot(df['Datum'], df['Wert2'], color='red', linestyle='--', label='Wert 2')
-    ax1.set_xlabel('Datum')
-    ax1.set_ylabel('Wert 1', color='green')
-    ax2.set_ylabel('Wert 2', color='red')
-    plt.title('Doppelachsen-Grafik 4')
-    plt.tight_layout()
-    plt.savefig('doppelachse_4.png')
-    plt.close()
+    fp = go.Figure()
+    bar_text = [fmt_num(v, use_c, 1) if not np.isnan(v) else "" for v in y2_arr]
+    line_text = [fmt_num(v, use_c, 1) if not np.isnan(v) else "" for v in y1_arr]
 
-def plot_doppelachse_6(df):
-    fig, ax1 = plt.subplots(figsize=(10, 5))
-    ax2 = ax1.twinx()
-    ax1.bar(df['Datum'], df['Kategorie_X'], color='purple', label='Kategorie X')
-    ax2.plot(df['Datum'], df['Kategorie_Y'], color='brown', marker='o', label='Kategorie Y')
-    ax1.set_xlabel('Datum')
-    ax1.set_ylabel('Kategorie X', color='purple')
-    ax2.set_ylabel('Kategorie Y', color='brown')
-    plt.title('Doppelachsen-Grafik 6')
-    plt.tight_layout()
-    plt.savefig('doppelachse_6.png')
-    plt.close()
+    fp.add_trace(
+        go.Bar(
+            x=labels,
+            y=[None if np.isnan(v) else round(v, 2) for v in y2_arr],
+            customdata=bar_text,
+            name=t[bar_lbl_key],
+            yaxis="y2",
+            marker=dict(color=bar_color, opacity=0.82),
+            hovertemplate=f"{t[bar_lbl_key]}: <b>%{{customdata}} {y2_unit}</b><extra></extra>",
+        )
+    )
+    fp.add_trace(
+        go.Scatter(
+            x=labels,
+            y=[None if np.isnan(v) else round(v, 2) for v in y1_arr],
+            customdata=line_text,
+            name=t[line_lbl_key],
+            yaxis="y",
+            mode="lines+markers",
+            line=dict(color="#1B3A6B", width=2.4),
+            marker=dict(size=4.5, color="#1B3A6B"),
+            hovertemplate=f"{t[line_lbl_key]}: <b>%{{customdata}} {y1_unit}</b><extra></extra>",
+        )
+    )
 
-def plot_doppelachse_7(df):
-    fig, ax1 = plt.subplots(figsize=(10, 5))
-    ax2 = ax1.twinx()
-    ax1.plot(df['Datum'], df['Indicator_A'], color='cyan', label='Indicator A')
-    ax2.fill_between(df['Datum'], df['Indicator_B'], color='magenta', alpha=0.2, label='Indicator B')
-    ax1.set_xlabel('Datum')
-    ax1.set_ylabel('Indicator A', color='cyan')
-    ax2.set_ylabel('Indicator B', color='magenta')
-    plt.title('Doppelachsen-Grafik 7')
-    plt.tight_layout()
-    plt.savefig('doppelachse_7.png')
-    plt.close()
+    add_recession_shading_plotly(fp, labels, bip_neg_flags, t)
+
+    t_vals = [labels[i] for i in range(len(labels)) if i % step_x == 0]
+    fp.update_layout(
+        title=dict(
+            text=f"<b>{t[title_key]}</b><br><span style='font-size:11.2px;color:#334155;font-weight:normal'>{t[sub_key]}</span>",
+            x=0.02,
+            y=0.97,
+            yanchor="top",
+            font=dict(size=14.0, color="#0F172A", family="DejaVu Sans, sans-serif"),
+        ),
+        plot_bgcolor="#F8FAFC",
+        paper_bgcolor="white",
+        hovermode="x unified",
+        dragmode=False,
+        hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
+        legend=dict(
+            orientation="h",
+            x=0.0,
+            y=1.02,
+            xanchor="left",
+            yanchor="bottom",
+            bgcolor="rgba(255,255,255,0)",
+            font=dict(size=9.8, color="#1E293B"),
+        ),
+        margin=dict(l=48, r=48, t=155, b=78),
+        height=495,
+        xaxis=dict(
+            type="category",
+            fixedrange=True,
+            tickangle=-45,
+            showgrid=False,
+            linecolor="#94A3B8",
+            tickmode="array",
+            tickvals=t_vals,
+            ticktext=t_vals,
+            tickfont=dict(size=9.8, color="#475569"),
+        ),
+        yaxis=dict(
+            fixedrange=True,
+            range=[-y1_lim, y1_lim],
+            dtick=y1_step,
+            gridcolor="#E2E8F0",
+            zeroline=True,
+            zerolinecolor="#64748B",
+            zerolinewidth=1.1,
+            tickfont=dict(size=9.8, color="#1B3A6B"),
+        ),
+        yaxis2=dict(
+            fixedrange=True,
+            overlaying="y",
+            side="right",
+            range=[-y2_lim, y2_lim],
+            dtick=y2_step,
+            showgrid=False,
+            zeroline=False,
+            tickfont=dict(size=9.8, color=bar_color),
+        ),
+        annotations=[
+            dict(
+                text=f"{t['src']}{now_str}",
+                x=0.0,
+                y=-0.24,
+                xref="paper",
+                yref="paper",
+                showarrow=False,
+                font=dict(size=9.6, color="#64748B"),
+                xanchor="left",
+            ),
+            dict(
+                text="T.H.",
+                x=1.0,
+                y=-0.24,
+                xref="paper",
+                yref="paper",
+                showarrow=False,
+                font=dict(size=10.0, color="#94A3B8"),
+                xanchor="right",
+            ),
+        ],
+    )
+
+    out_path = f"{OUT_DIR}/{fname}{t['sfx']}.html"
+    fp.write_html(out_path, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
+    with open(out_path, "r", encoding="utf-8") as fh:
+        html_s = fh.read().replace("<body>", '<body style="margin:0;padding:0;overflow:hidden;">')
+    with open(out_path, "w", encoding="utf-8") as fh:
+        fh.write(html_s)
+
 
 def main():
-    print("Starte Generierung der Doppelachsen-Grafiken...")
-    # Pfad zu deiner Datenquelle anpassen
-    file_path = 'produktionspotenzial_daten.csv'
-    try:
-        df = pd.read_csv(file_path)
-        plot_doppelachse_3(df)
-        plot_doppelachse_4(df)
-        plot_doppelachse_6(df)
-        plot_doppelachse_7(df)
-        print("Alle Grafiken (3, 4, 6, 7) wurden erfolgreich erstellt.")
-    except Exception as e:
-        print(f"Fehler bei der Verarbeitung: {e}")
+    os.makedirs(OUT_DIR, exist_ok=True)
+    plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
 
-if __name__ == '__main__':
+    macro = load_all_macro_data()
+    series = build_potential_datasets(macro)
+
+    long_df = series["long"]
+    short_df = series["short"]
+    nec_year = series["nec_year"]
+    nec_quart = series["nec_quart"]
+
+    print(
+        f"[OK] Lange Reihe: {long_df['label'].iloc[0]} bis {long_df['label'].iloc[-1]} ({len(long_df)} Punkte) | "
+        f"Kurze Reihe: {short_df['label'].iloc[0]} bis {short_df['label'].iloc[-1]} | "
+        f"wY* (5J-Ø): {nec_year['wy_star']:.2f} %"
+    )
+
+    for lang in ("de", "en"):
+        build_potential_level_chart(lang, long_df)
+        build_utilization_chart(lang, "02_auslastung_lang", "g2_t", "g2_sub", long_df, show_mean_1991_2019=True)
+        build_dual_axis_chart(
+            lang,
+            "03_angemessen_alo_lang",
+            "g3_t",
+            "g3_sub",
+            "g3_l1",
+            "g3_l2",
+            list(long_df["label"]),
+            list(long_df["diff_growth"]),
+            list(long_df["alo_yoy"]),
+            list(long_df["bip_neg"]),
+            y1_lim=3.0,
+            y1_step=1.0,
+            y2_lim=30.0,
+            y2_step=10.0,
+            bar_color="#D97706",
+            y1_unit="Ppkt." if lang == "de" else "pp",
+            y2_unit="%",
+        )
+        build_dual_axis_chart(
+            lang,
+            "04_angemessen_staat_lang",
+            "g4_t",
+            "g4_sub",
+            "g4_l1",
+            "g4_l2",
+            list(long_df["label"]),
+            list(long_df["diff_growth"]),
+            list(long_df["fin_gdp"]),
+            list(long_df["bip_neg"]),
+            y1_lim=3.0,
+            y1_step=1.0,
+            y2_lim=12.0,
+            y2_step=4.0,
+            bar_color="#059669",
+            y1_unit="Ppkt." if lang == "de" else "pp",
+            y2_unit="%",
+        )
+        build_utilization_chart(lang, "05_auslastung_kurz", "g5_t", "g5_sub", short_df, show_mean_1991_2019=False)
+        build_dual_axis_chart(
+            lang,
+            "06_angemessen_alo_kurz",
+            "g6_t",
+            "g6_sub",
+            "g6_l1",
+            "g6_l2",
+            list(short_df["label"]),
+            list(short_df["diff_growth"]),
+            list(short_df["alo_yoy"]),
+            list(short_df["bip_neg"]),
+            y1_lim=3.0,
+            y1_step=1.0,
+            y2_lim=20.0,
+            y2_step=5.0,
+            bar_color="#D97706",
+            y1_unit="Ppkt." if lang == "de" else "pp",
+            y2_unit="%",
+        )
+        build_dual_axis_chart(
+            lang,
+            "07_angemessen_staat_kurz",
+            "g7_t",
+            "g7_sub",
+            "g7_l1",
+            "g7_l2",
+            list(short_df["label"]),
+            list(short_df["diff_growth"]),
+            list(short_df["fin_gdp"]),
+            list(short_df["bip_neg"]),
+            y1_lim=3.0,
+            y1_step=1.0,
+            y2_lim=12.0,
+            y2_step=4.0,
+            bar_color="#059669",
+            y1_unit="Ppkt." if lang == "de" else "pp",
+            y2_unit="%",
+        )
+        build_necessary_growth_chart(lang, "08_notwendig_jahr", "g8_t", "g8_sub", nec_year)
+        build_necessary_growth_chart(lang, "09_notwendig_quartal", "g9_t", "g9_sub", nec_quart)
+
+
+if __name__ == "__main__":
     main()
+
