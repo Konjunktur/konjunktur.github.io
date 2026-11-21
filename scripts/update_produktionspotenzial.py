@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Aktualisiert alle 9 Grafiken (DE & EN, .png & .html) fuer die Rubrik:
-"Produktionspotenzial, Auslastung des Produktionspotenzials, angemessenes/nicht angemessenes Wirtschaftswachstum, notwendiges Wirtschaftswachstum"
+Aktualisiert alle 9 Grafiken (DE & EN, .png und .html) fuer die Rubrik:
+"Produktionspotenzial, Auslastung des Produktionspotenzials,
+angemessenes/nicht angemessenes Wirtschaftswachstum, notwendiges Wirtschaftswachstum"
 Methode: Claus Koehler / Thorsten Hild
-Datenbasis: Statistisches Bundesamt (Destatis GENESIS-Online: 81000-0001, 81000-0002,
-            81000-0011, 81000-0012, 81000-0031, 13211-0002)
+Datenbasis: Statistisches Bundesamt (GENESIS-Online)
 """
 
 import os
@@ -33,17 +33,24 @@ D_PASS = os.environ.get("DESTATIS_PASS", "").strip()
 
 OUT_DIR = "static/produktionspotenzial"
 
-SVR_PHASES = [
-    ("1992-Q1", "1993-Q2"),
-    ("2001-Q1", "2003-Q2"),
-    ("2008-Q2", "2009-Q2"),
-    ("2020-Q1", "2020-Q2"),
-    ("2022-Q4", "2025-Q4"),
+# SVR / Deutsche Bundesbank Rezessions- und Schwaechephasen ab 1991
+SVR_PHASES_Y = [
+    (1992, 1993),
+    (2001, 2003),
+    (2008, 2009),
+    (2020, 2020),
+    (2022, 2025),
 ]
 
-ROMAN_Q = {"Q1": "I", "Q2": "II", "Q3": "III", "Q4": "IV"}
+SVR_PHASES_M = [
+    ("1992-01", "1993-04"),
+    ("2001-01", "2003-06"),
+    ("2008-01", "2009-04"),
+    ("2020-02", "2020-04"),
+    ("2022-10", "2025-12"),
+]
 
-TXT = {
+TEXTS = {
     "de": {
         "sfx": "",
         "comma": True,
@@ -52,32 +59,33 @@ TXT = {
         "src": "Quelle: Statistisches Bundesamt | Stand: ",
         "leg_svr": "Rezession/Schwäche (SVR/BBK)",
         "leg_bip": "Reales BIP < 0 % gg. Vj.",
-        "c1_t": "Produktionspotenzial in Deutschland",
-        "c1_s": "Jahreswerte ab 1991 bis zum zuletzt abgeschlossenen Jahr, danach Quartalswerte, in Mrd. €",
-        "c1_l": ["Produktionspotenzial (Mrd. €)"],
-        "c2_t": "Auslastung des Produktionspotenzials",
-        "c2_s": "Reales BIP in % des Produktionspotenzials (Jahreswerte ab 1991 + aktuelle Quartale)",
-        "c2_l": ["Auslastung des Produktionspotenzials (%)", "Mittelwert 1991–2019"],
-        "c3_t": "Angemessenes/nicht angemessenes Wachstum und Arbeitslosigkeit",
-        "c3_s": "Links: Zuwachsrate reales BIP − Potenzial (Ppkt.) | Rechts: Arbeitslose gg. Vj. (%)",
-        "c3_l": ["Angemessenes (+) / nicht angemessenes (−) Wachstum (Ppkt., links)", "Zuwachsrate Arbeitslose (%, rechts)"],
-        "c4_t": "Angemessenes/nicht angemessenes Wachstum und Öffentliche Haushalte",
-        "c4_s": "Links: Zuwachsrate reales BIP − Potenzial (Ppkt.) | Rechts: Finanzierungssaldo (% nom. BIP)",
-        "c4_l": ["Angemessenes (+) / nicht angemessenes (−) Wachstum (Ppkt., links)", "Finanzierungssaldo des Staates (% nom. BIP, rechts)"],
-        "c5_t": "Auslastung des Produktionspotenzials",
-        "c5_s": "Reales BIP in % des Produktionspotenzials (Jahreswerte ab 2019 und aktuelle Quartale)",
-        "c5_l": ["Reales BIP in % des Produktionspotenzials"],
-        "c6_t": "Angemessenes/nicht angemessenes Wachstum und Arbeitslosigkeit",
-        "c6_s": "Links: Angemessenes (+) / nicht angemessenes (−) Wachstum (Ppkt.) | Rechts: Arbeitslose gg. Vj. (%)",
-        "c6_l": ["Angemessenes (+) / nicht angemessenes (−) Wachstum (Ppkt., links)", "Zuwachsrate Arbeitslose (%, rechts)"],
-        "c7_t": "Angemessenes/nicht angemessenes Wachstum und Öffentliche Haushalte",
-        "c7_s": "Links: Angemessenes (+) / nicht angemessenes (−) Wachstum (Ppkt.) | Rechts: Finanzierungssaldo (% nom. BIP)",
-        "c7_l": ["Angemessenes (+) / nicht angemessenes (−) Wachstum (Ppkt., links)", "Finanzierungssaldo des Staates (% nom. BIP, rechts)"],
-        "c8_t": "Notwendiges Wirtschaftswachstum zum Abbau der Arbeitslosigkeit (Jahresbasis)",
-        "c8_s": "Ausgangspunkt {start_lbl} (ALQ {alq0} %) | Abbau um 1 Ppkt./Jahr bis ≤ 3,0 % | wY* (5J-Ø) = {wy} %",
-        "c9_t": "Notwendiges Wirtschaftswachstum zum Abbau der Arbeitslosigkeit (Quartal)",
-        "c9_s": "Ausgangspunkt {start_lbl} (ALQ {alq0} %) | Abbau um 1 Ppkt./Jahr bis ≤ 3,0 % | wY* (5J-Ø) = {wy} %",
-        "cn_l": ["Arbeitslosenquote (%)", "Notwendiges Wirtschaftswachstum (%)"],
+        "g1_t": "Produktionspotenzial in Deutschland",
+        "g1_sub": "In Mrd. € | Jahreswerte ab 1991 bis zum zuletzt abgeschlossenen Jahr, danach Quartalswerte (4-Quartals-Summe)",
+        "g1_l": ["Produktionspotenzial (Basis)", "Produktionspotenzial (inkl. Kurzarbeit)"],
+        "g2_t": "Auslastung des Produktionspotenzials",
+        "g2_sub": "Reales BIP in % des Produktionspotenzials | Jahreswerte ab 1991 bis zum zuletzt abgeschlossenen Jahr, danach Quartalswerte",
+        "g2_l": ["Auslastung (Basis)", "Auslastung (inkl. Kurzarbeit)", "Mittelwert 1991–2019"],
+        "g3_t": "Angemessenes/nicht angemessenes Wachstum und Arbeitslosigkeit",
+        "g3_sub": "Links: Angemessenes (+) / nicht angemessenes (−) Wachstum (Ppkt.) | Rechts: Zuwachsrate Arbeitslose (%)",
+        "g3_l": ["Angemessenes (+)/nicht angemessenes (−) Wachstum (Ppkt., links)", "Zuwachsrate Arbeitslose (%, rechts)"],
+        "g4_t": "Angemessenes/nicht angemessenes Wachstum und Öffentliche Haushalte",
+        "g4_sub": "Links: Angemessenes (+) / nicht angemessenes (−) Wachstum (Ppkt.) | Rechts: Finanzierungssaldo (% nom. BIP)",
+        "g4_l": ["Angemessenes (+)/nicht angemessenes (−) Wachstum (Ppkt., links)", "Finanzierungssaldo des Staates (% nom. BIP, rechts)"],
+        "g5_t": "Auslastung des Produktionspotenzials",
+        "g5_sub": "Reales BIP in % des Produktionspotenzials | Jahreswerte ab 2019 bis zum zuletzt abgeschlossenen Jahr, danach Quartalswerte",
+        "g5_l": ["Auslastung des Produktionspotenzials (%)"],
+        "g6_t": "Angemessenes/nicht angemessenes Wachstum und Arbeitslosigkeit",
+        "g6_sub": "Links: Angemessenes (+) / nicht angemessenes (−) Wachstum (Ppkt.) | Rechts: Zuwachsrate Arbeitslose (%)",
+        "g6_l": ["Angemessenes (+)/nicht angemessenes (−) Wachstum (Ppkt., links)", "Zuwachsrate Arbeitslose (%, rechts)"],
+        "g7_t": "Angemessenes/nicht angemessenes Wachstum und Öffentliche Haushalte",
+        "g7_sub": "Links: Angemessenes (+) / nicht angemessenes (−) Wachstum (Ppkt.) | Rechts: Finanzierungssaldo (% nom. BIP)",
+        "g7_l": ["Angemessenes (+)/nicht angemessenes (−) Wachstum (Ppkt., links)", "Finanzierungssaldo des Staates (% nom. BIP, rechts)"],
+        "g8_t": "Notwendiges Wirtschaftswachstum zum Abbau der Arbeitslosigkeit (Jahresbasis)",
+        "g8_sub": "Ausgangspunkt {start_lbl} (ALQ {alq0} %) | Abbau um 1 Ppkt./Jahr bis ≤ 3,0 % | wY* (5J-Ø {wy_span}) = {wy_star} %",
+        "g8_l": ["Arbeitslosenquote (%)", "Notwendiges Wirtschaftswachstum (%)"],
+        "g9_t": "Notwendiges Wirtschaftswachstum zum Abbau der Arbeitslosigkeit (Quartal)",
+        "g9_sub": "Ausgangspunkt {start_lbl} (ALQ {alq0} %) | Abbau um 1 Ppkt./Jahr bis ≤ 3,0 % | wY* (5J-Ø {wy_span}) = {wy_star} %",
+        "g9_l": ["Arbeitslosenquote (%)", "Notwendiges Wirtschaftswachstum (%)"],
     },
     "en": {
         "sfx": "_en",
@@ -87,687 +95,811 @@ TXT = {
         "src": "Source: Federal Statistical Office | As of: ",
         "leg_svr": "Recession/Weakness (GCEE/BBK)",
         "leg_bip": "Real GDP < 0% YoY",
-        "c1_t": "Potential Output in Germany",
-        "c1_s": "Annual values from 1991 up to the last completed year, followed by quarterly values, in EUR bn",
-        "c1_l": ["Potential output (EUR bn)"],
-        "c2_t": "Capacity Utilization of Potential Output",
-        "c2_s": "Real GDP as a percentage of potential output (annual values from 1991 + latest quarters)",
-        "c2_l": ["Utilization of potential output (%)", "Average 1991–2019"],
-        "c3_t": "Suitable/Unsuitable Economic Growth and Unemployment",
-        "c3_s": "Left: Real GDP growth − potential growth (pp) | Right: Unemployed persons YoY (%)",
-        "c3_l": ["Suitable (+) / not suitable (−) real GDP growth (pp, left)", "Number of unemployed persons, YoY (%, right)"],
-        "c4_t": "Suitable/Unsuitable Economic Growth and Public Finances",
-        "c4_s": "Left: Real GDP growth − potential growth (pp) | Right: Government net lending/borrowing (% of nom. GDP)",
-        "c4_l": ["Suitable (+) / not suitable (−) real GDP growth (pp, left)", "Government deficit/surplus (% of nom. GDP, right)"],
-        "c5_t": "Utilization of Potential Output",
-        "c5_s": "Real GDP as a percentage of potential output (annual values from 2019 and latest quarters)",
-        "c5_l": ["Real GDP as a percentage of potential output"],
-        "c6_t": "Suitable/Unsuitable GDP Growth and Unemployment",
-        "c6_s": "Left: Suitable (+) / not suitable (−) real GDP growth (pp) | Right: Unemployed persons YoY (%)",
-        "c6_l": ["Suitable (+) / not suitable (−) real GDP growth (pp, left)", "Number of unemployed persons, YoY (%, right)"],
-        "c7_t": "Suitable/Unsuitable GDP Growth and Public Finances",
-        "c7_s": "Left: Suitable (+) / not suitable (−) real GDP growth (pp) | Right: Government deficit (% of nom. GDP)",
-        "c7_l": ["Suitable (+) / not suitable (−) real GDP growth (pp, left)", "Government deficit (% of nom. GDP, right)"],
-        "c8_t": "Necessary Economic Growth to Reduce Unemployment (Annual Basis)",
-        "c8_s": "Starting point {start_lbl} (UR {alq0}%) | Reduction by 1 pp/year to ≤ 3.0% | wY* (5Y avg) = {wy}%",
-        "c9_t": "Necessary Economic Growth to Reduce Unemployment (Quarterly Update)",
-        "c9_s": "Starting point {start_lbl} (UR {alq0}%) | Reduction by 1 pp/year to ≤ 3.0% | wY* (5Y avg) = {wy}%",
-        "cn_l": ["Unemployment rate (%)", "Necessary economic growth (%)"],
+        "g1_t": "Potential Output in Germany",
+        "g1_sub": "In EUR bn | Annual values from 1991 to the last completed year, followed by quarterly values (4-quarter sum)",
+        "g1_l": ["Potential output (baseline)", "Potential output (incl. short-time work)"],
+        "g2_t": "Capacity Utilization of Potential Output",
+        "g2_sub": "Real GDP as a % of potential output | Annual values from 1991 to the last completed year, followed by quarterly values",
+        "g2_l": ["Utilization (baseline)", "Utilization (incl. short-time work)", "1991–2019 mean"],
+        "g3_t": "Appropriate/Inappropriate Growth and Unemployment",
+        "g3_sub": "Left: Appropriate (+) / inappropriate (−) growth (pp) | Right: Unemployment growth rate (%)",
+        "g3_l": ["Appropriate (+)/inappropriate (−) growth (pp, left)", "Unemployment growth rate (%, right)"],
+        "g4_t": "Appropriate/Inappropriate Growth and Public Budgets",
+        "g4_sub": "Left: Appropriate (+) / inappropriate (−) growth (pp) | Right: Government net lending/borrowing (% of nom. GDP)",
+        "g4_l": ["Appropriate (+)/inappropriate (−) growth (pp, left)", "Government balance (% of nom. GDP, right)"],
+        "g5_t": "Capacity Utilization of Potential Output",
+        "g5_sub": "Real GDP as a % of potential output | Annual values from 2019 to the last completed year, followed by quarterly values",
+        "g5_l": ["Capacity utilization of potential output (%)"],
+        "g6_t": "Appropriate/Inappropriate Growth and Unemployment",
+        "g6_sub": "Left: Appropriate (+) / inappropriate (−) growth (pp) | Right: Unemployment growth rate (%)",
+        "g6_l": ["Appropriate (+)/inappropriate (−) growth (pp, left)", "Unemployment growth rate (%, right)"],
+        "g7_t": "Appropriate/Inappropriate Growth and Public Budgets",
+        "g7_sub": "Left: Appropriate (+) / inappropriate (−) growth (pp) | Right: Government net lending/borrowing (% of nom. GDP)",
+        "g7_l": ["Appropriate (+)/inappropriate (−) growth (pp, left)", "Government balance (% of nom. GDP, right)"],
+        "g8_t": "Necessary Economic Growth to Reduce Unemployment (Annual Basis)",
+        "g8_sub": "Starting point {start_lbl} (UR {alq0}%) | Reduction by 1 pp/year to ≤ 3.0% | wY* (5Y-avg {wy_span}) = {wy_star}%",
+        "g8_l": ["Unemployment rate (%)", "Necessary economic growth (%)"],
+        "g9_t": "Necessary Economic Growth to Reduce Unemployment (Quarterly Update)",
+        "g9_sub": "Starting point {start_lbl} (UR {alq0}%) | Reduction by 1 pp/year to ≤ 3.0% | wY* (5Y-avg {wy_span}) = {wy_star}%",
+        "g9_l": ["Unemployment rate (%)", "Necessary economic growth (%)"],
     },
 }
 
 
-def fmt_v(val, comma=True, dec=1):
+def fmt_num(val, use_comma=True, dec=1):
     if val is None or (isinstance(val, float) and np.isnan(val)):
         return ""
     s = f"{float(val):.{dec}f}"
-    return s.replace(".", ",") if comma else s
+    return s.replace(".", ",") if use_comma else s
 
 
-def _destatis_ffcsv(table, startyear="1991", extra=None):
+def roman_q(q_str):
+    return {"Q1": "I", "Q2": "II", "Q3": "III", "Q4": "IV"}.get(q_str, q_str)
+
+
+def _destatis_ffcsv(table, startyear="1991", extra_params=None):
     if not D_USER or not D_PASS:
         raise RuntimeError("DESTATIS_USER / DESTATIS_PASS fehlen in den Environment-Variablen.")
-    headers = {"username": D_USER, "password": D_PASS, "Content-Type": "application/x-www-form-urlencoded"}
-    data = {"name": table, "area": "all", "compress": "false", "format": "ffcsv", "language": "de", "startyear": startyear}
-    if extra:
-        data.update(extra)
+    headers = {
+        "username": D_USER,
+        "password": D_PASS,
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+    data = {
+        "name": table,
+        "area": "all",
+        "compress": "false",
+        "format": "ffcsv",
+        "language": "de",
+        "startyear": startyear,
+    }
+    if extra_params:
+        data.update(extra_params)
 
     def _unpack(resp):
         if resp.content[:2] == b"PK":
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-                cname = next(n for n in zf.namelist() if n.endswith(".csv"))
-                return zf.read(cname).decode("utf-8", errors="replace")
+                csv_name = next(n for n in zf.namelist() if n.endswith(".csv"))
+                return zf.read(csv_name).decode("utf-8", errors="replace")
         return resp.text
 
-    raw = _unpack(requests.post(f"{G_BASE}/tablefile", headers=headers, data=data, timeout=90))
+    r = requests.post(f"{G_BASE}/tablefile", headers=headers, data=data, timeout=90)
+    raw = _unpack(r)
     if raw.lstrip().startswith("{"):
         rj = requests.post(f"{G_BASE}/tablefile", headers=headers, data={**data, "job": "true"}, timeout=90)
-        st = str(json.loads(rj.text).get("Status", {}).get("Content", ""))
-        m = re.search(r"([0-9A-Z\-]+_[0-9]+)", st)
+        status_txt = str(json.loads(rj.text).get("Status", {}).get("Content", ""))
+        m = re.search(r"([0-9A-Z\-]+_[0-9]+)", status_txt)
         if not m:
-            raise RuntimeError(f"Destatis Job-ID nicht gefunden ({table}): {st[:180]}")
-        jid = m.group(1)
+            raise RuntimeError(f"Destatis Job-ID nicht gefunden fuer {table}: {status_txt[:200]}")
+        job_id = m.group(1)
         raw = ""
         for _ in range(36):
             time.sleep(2.5)
-            txt = _unpack(requests.post(
+            resp_res = requests.post(
                 f"{G_BASE}/resultfile",
                 headers=headers,
-                data={"name": jid, "area": "all", "compress": "false", "language": "de"},
+                data={"name": job_id, "area": "all", "compress": "false", "language": "de"},
                 timeout=90,
-            ))
+            )
+            txt = _unpack(resp_res)
             if not txt.lstrip().startswith("{"):
                 raw = txt
                 break
         if not raw:
-            raise RuntimeError(f"Destatis Job-Timeout ({table} / {jid})")
+            raise RuntimeError(f"Destatis Job-Timeout fuer {table} ({job_id})")
 
-    rows = [r for r in csv.reader(io.StringIO(raw), delimiter=";", quotechar='"') if len(r) >= 5]
+    rows = [row for row in csv.reader(io.StringIO(raw), delimiter=";", quotechar='"') if len(row) >= 5]
     if len(rows) < 3:
         return pd.DataFrame()
     hdr = [str(h).strip() for h in rows.pop(0)]
-    df = pd.DataFrame([r[:len(hdr)] for r in rows if len(r) >= len(hdr)], columns=hdr)
-    cmap = {c.lower(): c for c in df.columns}
-    t_col = cmap.get("time") or cmap.get("zeit")
-    v_col = cmap.get("value") or cmap.get("wert")
+    df = pd.DataFrame([row[:len(hdr)] for row in rows if len(row) >= len(hdr)], columns=hdr)
+
+    col_map = {c.lower(): c for c in df.columns}
+    t_col = col_map.get("time") or col_map.get("zeit")
+    v_col = col_map.get("value") or col_map.get("wert")
     zeit_s = df[t_col].astype(str).str.strip()
 
     for c in df.columns:
         if c in (t_col, v_col) or "label" in c.lower():
             continue
-        sc = df[c].astype(str).str.strip()
-        if sc.str.match(r"^QUART0?[1-4]$", case=False).any():
-            qe = sc.str.extract(r"([1-4])", expand=False)
-            zeit_s = pd.Series(np.where(qe.notna(), zeit_s + "-Q" + qe.fillna(""), zeit_s), index=df.index)
+        s_code = df[c].astype(str).str.strip()
+        if s_code.str.match(r"^QUART0?[1-4]$", case=False).any():
+            q_ext = s_code.str.extract(r"([1-4])", expand=False)
+            zeit_s = pd.Series(np.where(q_ext.notna(), zeit_s + "-Q" + q_ext.fillna(""), zeit_s), index=df.index)
             break
-        if sc.str.match(r"^MONAT0?(?:[1-9]|1[0-2])$", case=False).any():
-            me = sc.str.extract(r"([0-9]+)", expand=False).str.zfill(2)
-            zeit_s = pd.Series(np.where(me.notna(), zeit_s + "-" + me.fillna(""), zeit_s), index=df.index)
+        if s_code.str.match(r"^MONAT0?(?:[1-9]|1[0-2])$", case=False).any():
+            m_ext = s_code.str.extract(r"([0-9]+)", expand=False).str.zfill(2)
+            zeit_s = pd.Series(np.where(m_ext.notna(), zeit_s + "-" + m_ext.fillna(""), zeit_s), index=df.index)
             break
 
     df["ZEIT"] = zeit_s
-    df["NUM"] = pd.to_numeric(df[v_col].astype(str).str.replace(",", "."), errors="coerce")
-    return df.dropna(subset=["NUM"]).copy()
+    df["WERT"] = df[v_col]
+    return df
 
 
-def _filter_series(df, req_codes, lbl_terms, z_regex, excl_terms=None, pick="max"):
-    ccols = [c for c in df.columns if c.endswith("_code") and c not in {"statistics_code", "time_code"}]
-    sub = pd.DataFrame()
-    if req_codes and ccols:
-        csets = df[ccols].fillna("").astype(str).apply(lambda r: {x.strip().upper() for x in r if x.strip()}, axis=1)
-        sub = df[csets.apply(lambda s: req_codes.issubset(s))].copy()
-    if sub.empty and lbl_terms:
-        lcols = [c for c in df.columns if "label" in c.lower()]
-        ltxt = df[lcols].fillna("").astype(str).agg(" | ".join, axis=1).str.lower()
-        mask = pd.Series(True, index=df.index)
-        for term in lbl_terms:
-            mask &= ltxt.str.contains(term.lower(), regex=False)
-        if excl_terms:
-            for eterm in excl_terms:
-                mask &= ~ltxt.str.contains(eterm.lower(), regex=False)
-        sub = df[mask].copy()
-    sub = sub[sub["ZEIT"].astype(str).str.match(z_regex)].copy()
-    if sub.empty:
+def _filter_total_series(df, req_codes, label_keywords, time_regex, min_plausible=None, max_plausible=None):
+    if df.empty:
         return pd.Series(dtype=float)
-    if pick == "max":
-        s = sub.groupby("ZEIT")["NUM"].max()
-    elif pick == "min":
-        s = sub.groupby("ZEIT")["NUM"].min()
-    else:
-        s = sub.drop_duplicates(subset=["ZEIT"], keep="first").set_index("ZEIT")["NUM"]
-    return s.sort_index()
+    code_cols = [c for c in df.columns if c.endswith("_code") and c not in {"statistics_code", "time_code"}]
+    lbl_cols = [c for c in df.columns if "label" in c.lower()]
+
+    df = df[df["ZEIT"].astype(str).str.match(time_regex)].copy()
+    if df.empty:
+        return pd.Series(dtype=float)
+
+    df["_CODES"] = df.loc[:, code_cols].fillna("").astype(str).apply(
+        lambda r: {x.strip().upper() for x in r if x.strip()}, axis=1
+    )
+    sub = df[df["_CODES"].apply(lambda s: req_codes.issubset(s))].copy()
+    if sub.empty and label_keywords:
+        lbl_txt = df.loc[:, lbl_cols].fillna("").astype(str).agg(" | ".join, axis=1).str.lower()
+        mask = pd.Series(True, index=df.index)
+        for kw in label_keywords:
+            mask &= lbl_txt.str.contains(kw, regex=False)
+        sub = df[mask].copy()
+
+    # Ausschluss von Teilaggregaten (z. B. Saisonbereinigt BV4.1/X13, Teilsektoren)
+    if not sub.empty and lbl_cols:
+        lbl_sub = sub.loc[:, lbl_cols].fillna("").astype(str).agg(" | ".join, axis=1).str.lower()
+        sub = sub[~lbl_sub.str.contains("saisonbereinigt|x13|bv4|verarbeitendes|landwirtschaft|dienstleist")].copy()
+
+    sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
+    sub = sub.dropna(subset=["V"]).copy()
+    if min_plausible is not None:
+        sub = sub[sub["V"] >= min_plausible].copy()
+    if max_plausible is not None:
+        sub = sub[sub["V"] <= max_plausible].copy()
+
+    # Bei verbleibenden Mehrfachzeilen je Zeitpunkt den Gesamtwert (Maximum des Betrags) waehlen
+    sub["ABS_V"] = sub["V"].abs()
+    sub = sub.sort_values(["ZEIT", "ABS_V"], ascending=[True, False]).drop_duplicates(subset=["ZEIT"], keep="first")
+    return pd.Series(sub["V"].values, index=sub["ZEIT"].astype(str).str.strip()).sort_index()
 
 
 def load_all_macro_data():
-    df_bip_y = _destatis_ffcsv("81000-0001", "1991")
-    df_bip_q = _destatis_ffcsv("81000-0002", "1991")
+    # 1. Reales & nominales BIP (Jahre: 81000-0001, Quartale: 81000-0002)
+    df_bip_y = _destatis_ffcsv("81000-0001", startyear="1991")
+    bip_real_y = _filter_total_series(
+        df_bip_y, {"WERTORG", "VGR014"}, ["originalwerte", "preisbereinigt", "bruttoinlandsprodukt"],
+        r"^199\d$|^20\d{2}$", min_plausible=1500.0
+    )
+    bip_nom_y = _filter_total_series(
+        df_bip_y, {"WERTORG", "VGR012"}, ["originalwerte", "jeweiligen preisen", "bruttoinlandsprodukt"],
+        r"^199\d$|^20\d{2}$", min_plausible=1400.0
+    )
 
-    bip_real_y = _filter_series(df_bip_y, {"WERTORG", "VGR014"}, ["originalwerte", "preisbereinigt", "bruttoinlandsprodukt"], r"^\d{4}$", pick="max")
-    if bip_real_y.empty:
-        bip_real_y = _filter_series(df_bip_y, {"VGR014"}, ["preisbereinigt", "bruttoinlandsprodukt"], r"^\d{4}$", pick="max")
+    df_bip_q = _destatis_ffcsv("81000-0002", startyear="1991")
+    bip_real_q = _filter_total_series(
+        df_bip_q, {"WERTORG", "VGR014"}, ["originalwerte", "preisbereinigt", "bruttoinlandsprodukt"],
+        r"^(199\d|20\d{2})-Q[1-4]$", min_plausible=350.0
+    )
+    bip_nom_q = _filter_total_series(
+        df_bip_q, {"WERTORG", "VGR012"}, ["originalwerte", "jeweiligen preisen", "bruttoinlandsprodukt"],
+        r"^(199\d|20\d{2})-Q[1-4]$", min_plausible=300.0
+    )
 
-    bip_nom_y = _filter_series(df_bip_y, {"WERTORG", "VGR013"}, ["originalwerte", "jeweiligen preisen", "bruttoinlandsprodukt"], r"^\d{4}$", pick="max")
-    if bip_nom_y.empty:
-        bip_nom_y = _filter_series(df_bip_y, {"VGR013"}, ["jeweiligen preisen", "bruttoinlandsprodukt"], r"^\d{4}$", pick="max")
+    # 2. Erwerbstaetige Inland in Tsd. (Jahre: 81000-0011, Quartale: 81000-0012)
+    df_et_y = _destatis_ffcsv("81000-0011", startyear="1991")
+    et_y = _filter_total_series(
+        df_et_y, {"WERTORG", "ERW060"}, ["originalwerte", "erwerbstätige"],
+        r"^199\d$|^20\d{2}$", min_plausible=30000.0, max_plausible=55000.0
+    )
 
-    bip_real_q = _filter_series(df_bip_q, {"WERTORG", "VGR014"}, ["originalwerte", "preisbereinigt", "bruttoinlandsprodukt"], r"^\d{4}-Q[1-4]$", pick="max")
-    if bip_real_q.empty:
-        bip_real_q = _filter_series(df_bip_q, {"VGR014"}, ["preisbereinigt", "bruttoinlandsprodukt"], r"^\d{4}-Q[1-4]$", pick="max")
+    df_et_q = _destatis_ffcsv("81000-0012", startyear="1991")
+    et_q = _filter_total_series(
+        df_et_q, {"WERTORG", "ERW060"}, ["originalwerte", "erwerbstätige"],
+        r"^(199\d|20\d{2})-Q[1-4]$", min_plausible=30000.0, max_plausible=55000.0
+    )
 
-    bip_nom_q = _filter_series(df_bip_q, {"WERTORG", "VGR013"}, ["originalwerte", "jeweiligen preisen", "bruttoinlandsprodukt"], r"^\d{4}-Q[1-4]$", pick="max")
-    if bip_nom_q.empty:
-        bip_nom_q = _filter_series(df_bip_q, {"VGR013"}, ["jeweiligen preisen", "bruttoinlandsprodukt"], r"^\d{4}-Q[1-4]$", pick="max")
+    # 3. Arbeitslose BA in Tsd. & BA-Arbeitslosenquote bezogen auf alle zivilen Erwerbspersonen (%)
+    # Lange Jahresreihe ab 1991 aus 13211-0001 + Monatsreihe ab 2005 aus 13211-0002
+    df_alo_y = _destatis_ffcsv("13211-0001", startyear="1991")
+    alo_y_hist = _filter_total_series(
+        df_alo_y, {"ERW011"}, ["arbeitslose"], r"^199\d$|^20\d{2}$", min_plausible=1500.0, max_plausible=6000.0
+    )
 
-    bip_chain_q = _filter_series(df_bip_q, {"WERTORG", "VGRPKM"}, ["originalwerte", "preisbereinigt", "verkettet"], r"^\d{4}-Q[1-4]$", pick="max")
-    bip_chain_yoy = (bip_chain_q / bip_chain_q.shift(4) - 1.0) * 100.0
+    df_alo_m = _destatis_ffcsv("13211-0002", startyear="2005")
+    alo_m = _filter_total_series(
+        df_alo_m, {"ERW011"}, ["arbeitslose"], r"^20\d{2}-\d{2}$", min_plausible=1500.0, max_plausible=6000.0
+    )
+    # Offizielle BA-Arbeitslosenquote bezogen auf alle zivilen Erwerbspersonen (nicht abhaengige!)
+    lbl_cols_m = [c for c in df_alo_m.columns if "label" in c.lower()]
+    lbl_m_txt = df_alo_m.loc[:, lbl_cols_m].fillna("").astype(str).agg(" | ".join, axis=1).str.lower()
+    df_alq_all = df_alo_m[
+        lbl_m_txt.str.contains("arbeitslosenquote")
+        & lbl_m_txt.str.contains("alle zivilen erwerbspersonen")
+    ].copy()
+    if df_alq_all.empty:
+        df_alq_all = df_alo_m[lbl_m_txt.str.contains("arbeitslosenquote") & ~lbl_m_txt.str.contains("abhängige")].copy()
+    df_alq_all = df_alq_all[df_alq_all["ZEIT"].astype(str).str.match(r"^20\d{2}-\d{2}$")].copy()
+    df_alq_all["V"] = pd.to_numeric(df_alq_all["WERT"].astype(str).str.replace(",", "."), errors="coerce")
+    df_alq_all = df_alq_all.dropna(subset=["V"]).sort_values(["ZEIT", "V"]).drop_duplicates(subset=["ZEIT"], keep="first")
+    alq_m = pd.Series(df_alq_all["V"].values, index=df_alq_all["ZEIT"].astype(str).str.strip()).sort_index()
 
-    df_et_y = _destatis_ffcsv("81000-0011", "1991")
-    df_et_q = _destatis_ffcsv("81000-0012", "1991")
+    # Jahreswerte Arbeitslose aus Monatswerten ab 2005 mit historischer Jahresreihe 1991-2004 verknuepfen
+    alo_m_df = alo_m.to_frame("V")
+    alo_m_df["Y"] = alo_m_df.index.str[:4]
+    alo_y_from_m = alo_m_df.groupby("Y").filter(lambda g: len(g) == 12).groupby("Y")["V"].mean()
+    alo_y = alo_y_hist.combine_first(alo_y_from_m).sort_index()
+    for y_k, v_k in alo_y_from_m.items():
+        alo_y.loc[y_k] = v_k
 
-    et_y = _filter_series(df_et_y, {"WERTORG", "ERW060"}, ["originalwerte", "erwerbstätige", "inland"], r"^\d{4}$", pick="max")
-    if et_y.empty:
-        et_y = _filter_series(df_et_y, set(), ["erwerbstätige", "inland"], r"^\d{4}$", pick="max")
+    # Quartalswerte Arbeitslose ab 2005 (nur vollstaendige 3-Monats-Quartale)
+    q_map = {"01": "Q1", "02": "Q1", "03": "Q1", "04": "Q2", "05": "Q2", "06": "Q2",
+             "07": "Q3", "08": "Q3", "09": "Q3", "10": "Q4", "11": "Q4", "12": "Q4"}
+    alo_m_df["YQ"] = alo_m_df.index.str[:4] + "-" + alo_m_df.index.str[5:7].map(q_map)
+    alo_q = alo_m_df.groupby("YQ").filter(lambda g: len(g) == 3).groupby("YQ")["V"].mean().sort_index()
 
-    et_q = _filter_series(df_et_q, {"WERTORG", "ERW060"}, ["originalwerte", "erwerbstätige", "inland"], r"^\d{4}-Q[1-4]$", pick="max")
-    if et_q.empty:
-        et_q = _filter_series(df_et_q, set(), ["erwerbstätige", "inland"], r"^\d{4}-Q[1-4]$", pick="max")
+    # 4. Konjunkturelle Kurzarbeiter in Tsd. (Destatis 13211 / BA, ab 2009 verfuegbar, davor 0)
+    kug_y = pd.Series(0.0, index=bip_real_y.index)
+    kug_q = pd.Series(0.0, index=bip_real_q.index)
+    try:
+        df_kug = _destatis_ffcsv("13211-0005", startyear="2009")
+        if not df_kug.empty:
+            kug_m = _filter_total_series(
+                df_kug, set(), ["kurzarbeiter"], r"^20\d{2}-\d{2}$", min_plausible=0.0, max_plausible=8000.0
+            )
+            if not kug_m.empty:
+                kdf = kug_m.to_frame("V")
+                kdf["Y"] = kdf.index.str[:4]
+                kdf["YQ"] = kdf.index.str[:4] + "-" + kdf.index.str[5:7].map(q_map)
+                for yk, vk in kdf.groupby("Y").filter(lambda g: len(g) == 12).groupby("Y")["V"].mean().items():
+                    if yk in kug_y.index:
+                        kug_y.loc[yk] = vk
+                for qk, vk in kdf.groupby("YQ").filter(lambda g: len(g) == 3).groupby("YQ")["V"].mean().items():
+                    if qk in kug_q.index:
+                        kug_q.loc[qk] = vk
+    except Exception as exc:
+        print(f"[INFO] Kurzarbeiter-Abruf optional uebersprungen: {exc}")
 
-    df_alo = _destatis_ffcsv("13211-0002", "1991")
-    alo_m_raw = _filter_series(df_alo, {"ARB001"}, ["arbeitslose"], r"^\d{4}-\d{2}$", excl_terms=["quote"], pick="max")
-    if alo_m_raw.empty:
-        alo_m_raw = _filter_series(df_alo, set(), ["arbeitslose"], r"^\d{4}-\d{2}$", excl_terms=["quote"], pick="max")
-    alo_m = alo_m_raw / 1000.0 if alo_m_raw.median() > 50000 else alo_m_raw
-
-    # Offizielle BA-Arbeitslosenquote bezogen auf alle zivilen Erwerbspersonen (immer die niedrigere der beiden Quoten)
-    alq_m = _filter_series(df_alo, set(), ["arbeitslosenquote", "alle zivilen"], r"^\d{4}-\d{2}$", pick="min")
-    if alq_m.empty:
-        alq_m = _filter_series(df_alo, set(), ["arbeitslosenquote"], r"^\d{4}-\d{2}$", excl_terms=["abhängig"], pick="min")
-    if alq_m.empty:
-        alq_m = _filter_series(df_alo, {"ALQ001"}, ["arbeitslosenquote"], r"^\d{4}-\d{2}$", pick="min")
-
-    alo_q = alo_m.groupby(lambda z: f"{z[:4]}-Q{(int(z[5:7]) - 1)//3 + 1}").mean()
-    alo_y = alo_m.groupby(lambda z: z[:4]).mean()
-
-    df_fin = _destatis_ffcsv("81000-0031", "1991")
-    fin_y = _filter_series(df_fin, {"WERTORG"}, ["originalwerte", "finanzierungssaldo", "staat"], r"^\d{4}$", pick="first")
-    if fin_y.empty:
-        fin_y = _filter_series(df_fin, set(), ["finanzierungssaldo", "staat"], r"^\d{4}$", pick="first")
-
-    fin_q = _filter_series(df_fin, {"WERTORG"}, ["originalwerte", "finanzierungssaldo", "staat"], r"^\d{4}-Q[1-4]$", pick="first")
-    if fin_q.empty:
-        fin_q = _filter_series(df_fin, set(), ["finanzierungssaldo", "staat"], r"^\d{4}-Q[1-4]$", pick="first")
+    # 5. Finanzierungssaldo des Staates (81000-0031: Destatis liefert Mill. EUR -> Umrechnung in Mrd. EUR!)
+    df_fin = _destatis_ffcsv("81000-0031", startyear="1991")
+    fin_y_raw = _filter_total_series(
+        df_fin, {"WERTORG"}, ["finanzierungssaldo", "staat"], r"^199\d$|^20\d{2}$"
+    )
+    fin_q_raw = _filter_total_series(
+        df_fin, {"WERTORG"}, ["finanzierungssaldo", "staat"], r"^(199\d|20\d{2})-Q[1-4]$"
+    )
+    # Einheitenpruefung: Betraege > 1000 bedeuten Mill. EUR -> Division durch 1000 fuer Mrd. EUR
+    scale_y = 1e-3 if (not fin_y_raw.empty and fin_y_raw.abs().median() > 1000.0) else 1.0
+    scale_q = 1e-3 if (not fin_q_raw.empty and fin_q_raw.abs().median() > 1000.0) else 1.0
+    fin_y = fin_y_raw * scale_y
+    fin_q = fin_q_raw * scale_q
 
     return {
-        "bip_real_y": bip_real_y, "bip_nom_y": bip_nom_y,
-        "bip_real_q": bip_real_q, "bip_nom_q": bip_nom_q,
-        "bip_chain_yoy": bip_chain_yoy,
-        "et_y": et_y, "et_q": et_q,
-        "alo_m": alo_m, "alq_m": alq_m, "alo_q": alo_q, "alo_y": alo_y,
-        "fin_y": fin_y, "fin_q": fin_q,
+        "bip_real_y": bip_real_y,
+        "bip_nom_y": bip_nom_y,
+        "bip_real_q": bip_real_q,
+        "bip_nom_q": bip_nom_q,
+        "et_y": et_y,
+        "et_q": et_q,
+        "alo_y": alo_y,
+        "alo_q": alo_q,
+        "alq_m": alq_m,
+        "kug_y": kug_y,
+        "kug_q": kug_q,
+        "fin_y": fin_y,
+        "fin_q": fin_q,
     }
 
 
-def compute_koehler_tables(d):
-    idx_y = d["bip_real_y"].index.intersection(d["et_y"].index).intersection(d["alo_y"].index).sort_values()
-    df_y = pd.DataFrame(index=idx_y)
-    df_y["bip_real"] = d["bip_real_y"].loc[idx_y]
-    df_y["et"] = d["et_y"].loc[idx_y]
-    df_y["alo"] = d["alo_y"].loc[idx_y]
-    df_y["prod"] = (df_y["bip_real"] * 1e6) / df_y["et"]
-    df_y["pot"] = ((df_y["et"] + df_y["alo"]) * df_y["prod"]) / 1e6
-    df_y["ausl"] = (df_y["bip_real"] / df_y["pot"]) * 100.0
-    df_y["g_bip"] = (df_y["bip_real"] / df_y["bip_real"].shift(1) - 1.0) * 100.0
-    df_y["g_pot"] = (df_y["pot"] / df_y["pot"].shift(1) - 1.0) * 100.0
-    df_y["diff"] = df_y["g_bip"] - df_y["g_pot"]
-    df_y["g_alo"] = (df_y["alo"] / df_y["alo"].shift(1) - 1.0) * 100.0
-    common_fin_y = idx_y.intersection(d["fin_y"].index).intersection(d["bip_nom_y"].index)
-    df_y["fin_pct"] = np.nan
-    df_y.loc[common_fin_y, "fin_pct"] = (d["fin_y"].loc[common_fin_y] / d["bip_nom_y"].loc[common_fin_y]) * 100.0
+def compute_koehler_indicators(md):
+    # Jahreswerte ab 1991
+    idx_y = md["bip_real_y"].index.intersection(md["et_y"].index).intersection(md["alo_y"].index).sort_values()
+    idx_y = idx_y[idx_y >= "1991"]
 
-    idx_q = d["bip_real_q"].index.intersection(d["et_q"].index).intersection(d["alo_q"].index).sort_values()
-    df_q = pd.DataFrame(index=idx_q)
-    df_q["bip_real"] = d["bip_real_q"].loc[idx_q]
-    df_q["et"] = d["et_q"].loc[idx_q]
-    df_q["alo"] = d["alo_q"].loc[idx_q]
-    df_q["prod"] = (df_q["bip_real"] * 1e6) / df_q["et"]
-    df_q["pot"] = ((df_q["et"] + df_q["alo"]) * df_q["prod"]) / 1e6
-    df_q["ausl"] = (df_q["bip_real"] / df_q["pot"]) * 100.0
-    df_q["g_bip"] = (df_q["bip_real"] / df_q["bip_real"].shift(4) - 1.0) * 100.0
-    df_q["g_pot"] = (df_q["pot"] / df_q["pot"].shift(4) - 1.0) * 100.0
-    df_q["diff"] = df_q["g_bip"] - df_q["g_pot"]
-    df_q["g_alo"] = (df_q["alo"] / df_q["alo"].shift(4) - 1.0) * 100.0
-    common_fin_q = idx_q.intersection(d["fin_q"].index).intersection(d["bip_nom_q"].index)
-    df_q["fin_pct"] = np.nan
-    df_q.loc[common_fin_q, "fin_pct"] = (d["fin_q"].loc[common_fin_q] / d["bip_nom_q"].loc[common_fin_q]) * 100.0
+    bip_y = md["bip_real_y"].loc[idx_y]
+    et_y = md["et_y"].loc[idx_y]
+    alo_y = md["alo_y"].loc[idx_y]
+    kug_y = md["kug_y"].reindex(idx_y).fillna(0.0)
 
-    return df_y[df_y.index >= "1991"].copy(), df_q[df_q.index >= "1991-Q1"].copy()
+    prod_y = bip_y / et_y
+    pot_base_y = (et_y + alo_y) * prod_y
+    pot_ext_y = (et_y + alo_y + kug_y) * prod_y
+    util_base_y = (bip_y / pot_base_y) * 100.0
+    util_ext_y = (bip_y / pot_ext_y) * 100.0
 
+    g_bip_y = bip_y.pct_change() * 100.0
+    g_pot_y = pot_base_y.pct_change() * 100.0
+    diff_y = g_bip_y - g_pot_y
+    g_alo_y = alo_y.pct_change() * 100.0
 
-def build_hybrid_series(df_y, df_q, start_year="1991", add_gap=False):
-    q_counts = df_q.index.str[:4].value_counts()
-    completed_years = sorted([y for y, cnt in q_counts.items() if cnt == 4 and y in df_y.index and y >= start_year])
-    last_comp_y = completed_years[-1]
-    rem_q = sorted([q for q in df_q.index if q[:4] > last_comp_y])
-    labels, keys, is_q = [], [], []
-    for y in completed_years:
-        labels.append(y)
-        keys.append(("Y", y))
-        is_q.append(False)
-    if add_gap and rem_q:
-        labels.append("")
-        keys.append(("GAP", ""))
-        is_q.append(False)
-    for q in rem_q:
-        labels.append(f"{q[:4]} {ROMAN_Q[q[-2:]]}")
-        keys.append(("Q", q))
-        is_q.append(True)
+    fin_pct_y = pd.Series(np.nan, index=idx_y)
+    common_fy = idx_y.intersection(md["fin_y"].index).intersection(md["bip_nom_y"].index)
+    fin_pct_y.loc[common_fy] = (md["fin_y"].loc[common_fy] / md["bip_nom_y"].loc[common_fy]) * 100.0
 
-    def get_col(col):
-        vals = []
-        for kind, k in keys:
-            if kind == "Y":
-                vals.append(float(df_y.loc[k, col]))
-            elif kind == "Q":
-                vals.append(float(df_q.loc[k, col]))
-            else:
-                vals.append(np.nan)
-        return vals
+    # Quartalswerte (YoY gg. Vorjahresquartal & gleitende 4-Quartals-Summe fuer Niveauvergleich mit Jahreswerten)
+    idx_q = md["bip_real_q"].index.intersection(md["et_q"].index).intersection(md["alo_q"].index).sort_values()
+    bip_q = md["bip_real_q"].loc[idx_q]
+    et_q = md["et_q"].loc[idx_q]
+    alo_q = md["alo_q"].loc[idx_q]
+    kug_q = md["kug_q"].reindex(idx_q).fillna(0.0)
 
-    return labels, keys, is_q, get_col, completed_years
+    prod_q = bip_q / et_q
+    pot_base_q = (et_q + alo_q) * prod_q
+    pot_ext_q = (et_q + alo_q + kug_q) * prod_q
 
+    # Gleitende 4-Quartals-Summe (Jahresrate) fuer Grafik 1 & 2/5
+    bip_q_4sum = bip_q.rolling(4).sum()
+    pot_base_q_4sum = pot_base_q.rolling(4).sum()
+    pot_ext_q_4sum = pot_ext_q.rolling(4).sum()
+    util_base_q = (bip_q_4sum / pot_base_q_4sum) * 100.0
+    util_ext_q = (bip_q_4sum / pot_ext_q_4sum) * 100.0
 
-def get_recession_spans(keys, bip_chain_yoy):
-    svr_spans = []
-    bip_spans = []
-    neg_q = {q for q, v in bip_chain_yoy.items() if not np.isnan(v) and v < 0}
-    neg_y = {q[:4] for q in neg_q}
+    # Vorjahresquartals-Wachstumsraten (4 Quartale Differenz)
+    g_bip_q = bip_q.pct_change(4) * 100.0
+    g_pot_q = pot_base_q.pct_change(4) * 100.0
+    diff_q = g_bip_q - g_pot_q
+    g_alo_q = alo_q.pct_change(4) * 100.0
 
-    def _in_svr(kind, k):
-        if kind == "Q":
-            return any(s <= k <= e for s, e in SVR_PHASES)
-        if kind == "Y":
-            return any(s[:4] <= k <= e[:4] for s, e in SVR_PHASES)
-        return False
+    fin_pct_q = pd.Series(np.nan, index=idx_q)
+    common_fq = idx_q.intersection(md["fin_q"].index).intersection(md["bip_nom_q"].index)
+    fin_pct_q.loc[common_fq] = (md["fin_q"].loc[common_fq] / md["bip_nom_q"].loc[common_fq]) * 100.0
 
-    def _in_bip(kind, k):
-        if kind == "Q":
-            return k in neg_q
-        if kind == "Y":
-            return k in neg_y
-        return False
+    last_completed_year = idx_y[-1]
+    curr_quarters = [q for q in idx_q if q[:4] > last_completed_year]
 
-    def _collect(pred):
-        spans = []
-        st = None
-        for i, (kind, k) in enumerate(keys):
-            if kind != "GAP" and pred(kind, k):
-                if st is None:
-                    st = i
-                en = i
-            else:
-                if st is not None:
-                    spans.append((st - 0.5, en + 0.5))
-                    st = None
-        if st is not None:
-            spans.append((st - 0.5, len(keys) - 0.5))
-        return spans
+    # Gleitender 5-Jahres-Mittelwert von wY* (die letzten 5 abgeschlossenen Jahre, aktuell 2021-2025)
+    valid_g_pot = g_pot_y.dropna()
+    last5_wy = valid_g_pot.iloc[-5:]
+    wy_star = float(last5_wy.mean())
+    wy_span = f"{last5_wy.index[0]}–{last5_wy.index[-1]}"
 
-    return _collect(_in_svr), _collect(_in_bip)
+    # Mittelwert Auslastung 1991-2019
+    util_mean_91_19 = float(util_base_y.loc[(util_base_y.index >= "1991") & (util_base_y.index <= "2019")].mean())
+
+    return {
+        "idx_y": idx_y,
+        "curr_quarters": curr_quarters,
+        "pot_base_y": pot_base_y,
+        "pot_ext_y": pot_ext_y,
+        "pot_base_q_4sum": pot_base_q_4sum,
+        "pot_ext_q_4sum": pot_ext_q_4sum,
+        "util_base_y": util_base_y,
+        "util_ext_y": util_ext_y,
+        "util_base_q": util_base_q,
+        "util_ext_q": util_ext_q,
+        "util_mean_91_19": util_mean_91_19,
+        "g_bip_y": g_bip_y,
+        "diff_y": diff_y,
+        "g_alo_y": g_alo_y,
+        "fin_pct_y": fin_pct_y,
+        "g_bip_q": g_bip_q,
+        "diff_q": diff_q,
+        "g_alo_q": g_alo_q,
+        "fin_pct_q": fin_pct_q,
+        "alq_m": md["alq_m"],
+        "wy_star": wy_star,
+        "wy_span": wy_span,
+    }
 
 
-def add_shades_mpl(ax, svr_spans, bip_spans, t):
+def compute_necessary_growth_path(start_ym, alq0, wy_star):
+    start_year = int(start_ym[:4])
+    labels = [start_ym]
+    alq_vals = [round(float(alq0), 1)]
+    nec_vals = [None]
+
+    curr_alq = float(alq0)
+    step = 0
+    while curr_alq > 3.0 and step < 12:
+        next_alq = max(round(curr_alq - 1.0, 1), 0.0)
+        w_one_plus_alq = ((1.0 + next_alq / 100.0) / (1.0 + curr_alq / 100.0) - 1.0) * 100.0
+        nec_g = wy_star - w_one_plus_alq
+        labels.append(str(start_year + step))
+        alq_vals.append(next_alq)
+        nec_vals.append(round(nec_g, 1))
+        curr_alq = next_alq
+        step += 1
+
+    return labels, alq_vals, nec_vals
+
+def _merge_intervals(flags, n):
+    out, st = [], None
+    for i in range(n):
+        if flags[i] and st is None:
+            st = i
+        elif not flags[i] and st is not None:
+            out.append((st, i - 1))
+            st = None
+    if st is not None:
+        out.append((st, n - 1))
+    return out
+
+
+def add_shading_mpl(ax, cats, bip_neg_set, t):
+    svr_flags = [
+        any(s <= ym <= e for s, e in SVR_PHASES)
+        for ym in [c_to_ym(c) for c in cats]
+    ]
+    bip_flags = [c in bip_neg_set for c in cats]
+    svr_iv = _merge_intervals(svr_flags, len(cats))
+    bip_iv = _merge_intervals(bip_flags, len(cats))
+    for i0, i1 in svr_iv:
+        ax.axvspan(i0 - 0.5, i1 + 0.5, color="#CBD5E1", alpha=0.45, lw=0, zorder=0)
+    for i0, i1 in bip_iv:
+        ax.axvspan(i0 - 0.5, i1 + 0.5, color="#60A5FA", alpha=0.35, lw=0, zorder=1)
     patches = []
-    for x0, x1 in svr_spans:
-        ax.axvspan(x0, x1, color="#CBD5E1", alpha=0.38, zorder=0)
-    if svr_spans:
-        patches.append(mpatches.Patch(color="#CBD5E1", alpha=0.55, label=t["leg_svr"]))
-    for x0, x1 in bip_spans:
-        ax.axvspan(x0, x1, color="#93C5FD", alpha=0.28, zorder=0)
-    if bip_spans:
-        patches.append(mpatches.Patch(color="#93C5FD", alpha=0.45, label=t["leg_bip"]))
+    if svr_iv:
+        patches.append(mpatches.Patch(color="#CBD5E1", alpha=0.65, label=t["leg_svr"]))
+    if bip_iv:
+        patches.append(mpatches.Patch(color="#60A5FA", alpha=0.50, label=t["leg_bip"]))
     return patches
 
 
-def add_shades_plotly(fp, svr_spans, bip_spans, t):
+def add_shading_plotly(fp, cats, bip_neg_set, t):
+    svr_flags = [
+        any(s <= ym <= e for s, e in SVR_PHASES)
+        for ym in [c_to_ym(c) for c in cats]
+    ]
+    bip_flags = [c in bip_neg_set for c in cats]
+    svr_iv = _merge_intervals(svr_flags, len(cats))
+    bip_iv = _merge_intervals(bip_flags, len(cats))
     shapes = []
-    for x0, x1 in svr_spans:
-        shapes.append(dict(type="rect", xref="x", yref="paper", x0=x0, x1=x1, y0=0, y1=1, fillcolor="rgba(203,213,225,0.38)", line=dict(width=0), layer="below"))
-    for x0, x1 in bip_spans:
-        shapes.append(dict(type="rect", xref="x", yref="paper", x0=x0, x1=x1, y0=0, y1=1, fillcolor="rgba(147,197,253,0.28)", line=dict(width=0), layer="below"))
+    for i0, i1 in svr_iv:
+        shapes.append(dict(
+            type="rect", xref="x", yref="paper",
+            x0=i0 - 0.5, x1=i1 + 0.5, y0=0, y1=1,
+            fillcolor="rgba(203, 213, 225, 0.45)", line=dict(width=0), layer="below"
+        ))
+    for i0, i1 in bip_iv:
+        shapes.append(dict(
+            type="rect", xref="x", yref="paper",
+            x0=i0 - 0.5, x1=i1 + 0.5, y0=0, y1=1,
+            fillcolor="rgba(96, 165, 250, 0.35)", line=dict(width=0), layer="below"
+        ))
     if shapes:
         fp.update_layout(shapes=shapes)
-    if svr_spans:
-        fp.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(203,213,225,0.85)"), name=t["leg_svr"], hoverinfo="skip"))
-    if bip_spans:
-        fp.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(147,197,253,0.75)"), name=t["leg_bip"], hoverinfo="skip"))
+    if svr_iv:
+        fp.add_trace(go.Scatter(
+            x=[None], y=[None], mode="markers",
+            marker=dict(size=10, symbol="square", color="rgba(203, 213, 225, 0.9)"),
+            name=t["leg_svr"], showlegend=True, hoverinfo="skip"
+        ))
+    if bip_iv:
+        fp.add_trace(go.Scatter(
+            x=[None], y=[None], mode="markers",
+            marker=dict(size=10, symbol="square", color="rgba(96, 165, 250, 0.8)"),
+            name=t["leg_bip"], showlegend=True, hoverinfo="skip"
+        ))
 
 
-def _write_clean_html(fp, out_html):
-    fp.write_html(out_html, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
-    with open(out_html, "r", encoding="utf-8") as fh:
-        s = fh.read().replace("<body>", '<body style="margin:0;padding:0;overflow:hidden;">')
-    with open(out_html, "w", encoding="utf-8") as fh:
-        fh.write(s)
+def c_to_ym(cat):
+    s = str(cat).strip()
+    if len(s) == 4 and s.isdigit():
+        return f"{s}-07"
+    qmap = {"I": "02", "II": "05", "III": "08", "IV": "11"}
+    parts = s.split()
+    if len(parts) == 2 and parts[1] in qmap:
+        return f"{parts[0]}-{qmap[parts[1]]}"
+    return "2020-01"
 
 
-def compute_necessary_growth(d, df_y, completed_years, mode="year"):
-    alq_s = d["alq_m"]
-    if alq_s.empty:
-        alq_vals = {}
-        for ym in d["alo_m"].index:
-            qk = f"{ym[:4]}-Q{(int(ym[5:7]) - 1)//3 + 1}"
-            if qk in d["et_q"].index:
-                a = float(d["alo_m"].loc[ym])
-                e = float(d["et_q"].loc[qk])
-                alq_vals[ym] = round(a / (e + a) * 100.0, 1)
-        alq_s = pd.Series(alq_vals).sort_index()
+def save_plotly_clean(fp, title, sub, src, now_str, fname, sfx, height_p=470, top_m=132, y_range=None, dtick=None):
+    fp.update_layout(
+        title=dict(
+            text=f"<b>{title}</b><br><span style='font-size:11px;color:#334155;font-weight:normal'>{sub}</span>",
+            x=0.02, y=0.97, yanchor="top",
+            font=dict(size=13.5, color="#0F172A", family="DejaVu Sans, sans-serif"),
+        ),
+        plot_bgcolor="#F8FAFC", paper_bgcolor="white",
+        hovermode="x unified", dragmode=False,
+        hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
+        legend=dict(
+            orientation="h", x=0.0, y=1.01, xanchor="left", yanchor="bottom",
+            bgcolor="rgba(255,255,255,0)", font=dict(size=9.8, color="#1E293B")
+        ),
+        margin=dict(l=48, r=24, t=top_m, b=78),
+        height=height_p,
+        annotations=[
+            dict(text=f"{src}{now_str}", x=0.0, y=-0.24, xref="paper", yref="paper",
+                 showarrow=False, font=dict(size=9.5, color="#64748B"), xanchor="left"),
+            dict(text="T.H.", x=1.0, y=-0.24, xref="paper", yref="paper",
+                 showarrow=False, font=dict(size=10.0, color="#94A3B8"), xanchor="right"),
+        ],
+    )
+    fp.update_xaxes(type="category", fixedrange=True, tickangle=-45, showgrid=False,
+                    linecolor="#94A3B8", tickfont=dict(size=9.8, color="#475569"))
+    y_kw = dict(fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B",
+                zerolinewidth=1.0, tickfont=dict(size=9.8, color="#475569"))
+    if y_range is not None:
+        y_kw["range"] = y_range
+    if dtick is not None:
+        y_kw["dtick"] = dtick
+    fp.update_yaxes(**y_kw)
+    out_p = f"{OUT_DIR}/{fname}{sfx}.html"
+    fp.write_html(out_p, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
+    with open(out_p, "r", encoding="utf-8") as fh:
+        hs = fh.read().replace("<body>", '<body style="margin:0;padding:0;overflow:hidden;">')
+    with open(out_p, "w", encoding="utf-8") as fh:
+        fh.write(hs)
 
-    last_ym = alq_s.index[-1]
-    cur_yr = int(last_ym[:4])
-    if mode == "year":
-        jan_ym = f"{cur_yr}-01"
-        start_ym = jan_ym if jan_ym in alq_s.index else last_ym
-    else:
-        q_ends = [ym for ym in alq_s.index if ym[5:7] in ("03", "06", "09", "12")]
-        start_ym = q_ends[-1] if q_ends else last_ym
+# ==============================================================================
+# TEIL 2B: Zeichenfunktionen fuer Grafiken 1, 2, 5, 8 und 9 (DE & EN)
+# ==============================================================================
 
-    alq0 = round(float(alq_s.loc[start_ym]), 1)
+def _finalize_plotly_layout(fig, title_txt, sub_txt, src_txt, now_str, fname, sfx, y_range=None, y_dtick=None, height_p=470, top_m=132):
+    fig.update_layout(
+        title=dict(
+            text=f"<b>{title_txt}</b><br><span style='font-size:11.5px;color:#334155;font-weight:normal'>{sub_txt}</span>",
+            x=0.02,
+            y=0.97,
+            yanchor="top",
+            font=dict(size=14.0, color="#0F172A", family="DejaVu Sans, sans-serif"),
+        ),
+        plot_bgcolor="#F8FAFC",
+        paper_bgcolor="white",
+        hovermode="x unified",
+        dragmode=False,
+        hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
+        legend=dict(
+            orientation="h",
+            x=0.0,
+            y=1.03,
+            xanchor="left",
+            yanchor="bottom",
+            bgcolor="rgba(255,255,255,0)",
+            font=dict(size=10.0, color="#1E293B"),
+        ),
+        margin=dict(l=52, r=24, t=top_m, b=82),
+        height=height_p,
+        annotations=[
+            dict(text=f"{src_txt}{now_str}", x=0.0, y=-0.25, xref="paper", yref="paper", showarrow=False, font=dict(size=9.8, color="#64748B"), xanchor="left"),
+            dict(text="T.H.", x=1.0, y=-0.25, xref="paper", yref="paper", showarrow=False, font=dict(size=10.2, color="#94A3B8"), xanchor="right"),
+        ],
+    )
+    fig.update_xaxes(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.0, color="#475569"))
+    yaxis_cfg = dict(fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.0, tickfont=dict(size=10.0, color="#475569"))
+    if y_range is not None:
+        yaxis_cfg["range"] = y_range
+    if y_dtick is not None:
+        yaxis_cfg["dtick"] = y_dtick
+    fig.update_yaxes(**yaxis_cfg)
 
-    # Gleitender 5-Jahres-Mittelwert der Zuwachsraten des Produktionspotenzials der letzten 5 abgeschlossenen Jahre (z.B. 2021-2025)
-    last5_y = completed_years[-5:]
-    g_pot_5y = df_y.loc[last5_y, "g_pot"].dropna()
-    wy_star = round(float(g_pot_5y.mean()), 1) if not g_pot_5y.empty else 1.0
-
-    rows = [{"ym": start_ym, "yr": int(start_ym[:4]), "alq": alq0, "w_growth": np.nan}]
-    prev_alq = alq0
-    step_yr = int(start_ym[:4])
-    while prev_alq > 3.0 and len(rows) <= 8:
-        next_alq = round(max(prev_alq - 1.0, 0.0), 1)
-        w_1_alq = ((1.0 + next_alq / 100.0) / (1.0 + prev_alq / 100.0) - 1.0) * 100.0
-        w_nec = round(wy_star - w_1_alq, 1)
-        rows.append({"ym": None, "yr": step_yr, "alq": next_alq, "w_growth": w_nec})
-        prev_alq = next_alq
-        step_yr += 1
-    return start_ym, alq0, wy_star, rows
+    out_path = f"{OUT_DIR}/{fname}{sfx}.html"
+    fig.write_html(out_path, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
+    with open(out_path, "r", encoding="utf-8") as fh:
+        html_s = fh.read().replace("<body>", '<body style="margin:0;padding:0;overflow:hidden;">')
+    with open(out_path, "w", encoding="utf-8") as fh:
+        fh.write(html_s)
 
 
-def save_dual_chart(lang, fname, title, sub, labels, line_vals, line_name, bar_vals, bar_name, bar_color, is_q, svr_spans, bip_spans, lmax, bmax, is_short=False):
-    t = TXT[lang]
+def build_chart_01_potenzial(lang, df_long, bip_intervals):
+    t = TEXTS[lang]
     use_c = t["comma"]
-    now_s = datetime.now().strftime(t["date_fmt"])
-    x = np.arange(len(labels))
-    fig, ax1 = plt.subplots(figsize=(8.2, 5.2), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.90, top=0.77, bottom=0.20)
+    now_str = datetime.now().strftime(t["date_fmt"])
+    labels = df_long["label"].tolist()
+    y_pot = df_long["pot_basis"].tolist()
+    y_pot_ext = df_long["pot_ext"].tolist()
+    x_idx = np.arange(len(labels))
+
+    ymax = int(np.ceil(max(max(y_pot), max(y_pot_ext)) / 500.0) * 500)
+    ymin = int(np.floor(min(min(y_pot), min(y_pot_ext)) / 500.0) * 500)
+
+    fig, ax = plt.subplots(figsize=(8.2, 5.2), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.09, right=0.96, top=0.76, bottom=0.22)
+    fig.suptitle(t["g1_t"], x=0.09, y=0.96, ha="left", fontsize=11.2, fontweight="bold", color="#0F172A")
+    fig.text(0.09, 0.915, t["g1_sub"], ha="left", fontsize=8.3, color="#334155")
+    ax.set_facecolor("#F8FAFC")
+    ax.set_ylim(ymin, ymax)
+    ax.yaxis.grid(True, color="#E2E8F0", linewidth=0.8, zorder=0)
+    for s in ("top", "right", "left"):
+        ax.spines[s].set_visible(False)
+    shade_patches = add_recession_shading_mpl(ax, df_long["period"].tolist(), bip_intervals, t)
+    p1 = ax.plot(x_idx, y_pot, color="#1B3A6B", lw=2.3, marker="o", markersize=3.5, label=t["g1_l"][0], zorder=4)
+    p2 = ax.plot(x_idx, y_pot_ext, color="#059669", lw=1.9, ls="--", label=t["g1_l"][1], zorder=3)
+    step = max(1, len(labels) // 16)
+    ax.set_xticks(x_idx[::step])
+    ax.set_xticklabels(labels[::step], rotation=45, ha="right", fontsize=8.0, color="#475569")
+    ax.legend(handles=p1 + p2 + shade_patches, loc="lower left", bbox_to_anchor=(-0.01, 1.03), ncol=2, frameon=False, fontsize=7.5)
+    fig.text(0.09, 0.015, f"{t['src']}{now_str}", fontsize=6.9, color="#64748B")
+    fig.text(0.96, 0.015, "T.H.", fontsize=7.8, color="#94A3B8", ha="right")
+    plt.savefig(f"{OUT_DIR}/01_potenzial_lang{t['sfx']}.png", dpi=300)
+    plt.close()
+
+    fp = go.Figure()
+    fp.add_trace(go.Scatter(x=labels, y=[round(v, 1) for v in y_pot], customdata=[fmt_num(v, use_c, 1) for v in y_pot],
+                            name=t["g1_l"][0], mode="lines+markers", line=dict(color="#1B3A6B", width=2.4), marker=dict(size=5),
+                            hovertemplate=f"{t['g1_l'][0]}: <b>%{{customdata}} Mrd. €</b><extra></extra>"))
+    fp.add_trace(go.Scatter(x=labels, y=[round(v, 1) for v in y_pot_ext], customdata=[fmt_num(v, use_c, 1) for v in y_pot_ext],
+                            name=t["g1_l"][1], mode="lines", line=dict(color="#059669", width=2.0, dash="dash"),
+                            hovertemplate=f"{t['g1_l'][1]}: <b>%{{customdata}} Mrd. €</b><extra></extra>"))
+    add_recession_shading_plotly(fp, df_long["period"].tolist(), bip_intervals, t)
+    _finalize_plotly_layout(fp, t["g1_t"], t["g1_sub"], t["src"], now_str, "01_potenzial_lang", t["sfx"], y_range=[ymin, ymax])
+
+
+def build_chart_02_05_auslastung(lang, df_sub, bip_intervals, fname, title_key, sub_key, show_mean_1991_2019=False):
+    t = TEXTS[lang]
+    use_c = t["comma"]
+    now_str = datetime.now().strftime(t["date_fmt"])
+    labels = df_sub["label"].tolist()
+    y_util = df_sub["auslastung"].tolist()
+    x_idx = np.arange(len(labels))
+
+    ymin = int(np.floor(min(y_util) - 1.5))
+    ymax = int(np.ceil(max(y_util) + 1.0))
+
+    mean_val = None
+    if show_mean_1991_2019:
+        m_mask = df_sub["period"].astype(str).apply(lambda p: p[:4].isdigit() and 1991 <= int(p[:4]) <= 2019)
+        if m_mask.any():
+            mean_val = round(float(df_sub.loc[m_mask, "auslastung"].mean()), 1)
+
+    fig, ax = plt.subplots(figsize=(8.2, 5.2), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.08, right=0.96, top=0.76, bottom=0.22)
+    fig.suptitle(t[title_key], x=0.08, y=0.96, ha="left", fontsize=11.2, fontweight="bold", color="#0F172A")
+    fig.text(0.08, 0.915, t[sub_key], ha="left", fontsize=8.3, color="#334155")
+    ax.set_facecolor("#F8FAFC")
+    ax.set_ylim(ymin, ymax)
+    ax.yaxis.grid(True, color="#E2E8F0", linewidth=0.8, zorder=0)
+    for s in ("top", "right", "left"):
+        ax.spines[s].set_visible(False)
+    shade_patches = add_recession_shading_mpl(ax, df_sub["period"].tolist(), bip_intervals, t)
+    p1 = ax.plot(x_idx, y_util, color="#1B3A6B", lw=2.3, marker="o", markersize=4.0, label=t["g2_l"], zorder=4)
+    handles = p1 + shade_patches
+    if mean_val is not None:
+        m_lbl = f"{t['mean_lbl']}: {fmt_num(mean_val, use_c, 1)} %"
+        pm = ax.axhline(mean_val, color="#D97706", lw=1.7, ls="--", label=m_lbl, zorder=3)
+        ax.text(len(labels) - 0.5, mean_val + 0.18, fmt_num(mean_val, use_c, 1), color="#B45309", fontsize=8.0, fontweight="bold", ha="right")
+        handles = p1 + [pm] + shade_patches
+    step = max(1, len(labels) // 16)
+    ax.set_xticks(x_idx[::step])
+    ax.set_xticklabels(labels[::step], rotation=45, ha="right", fontsize=8.0, color="#475569")
+    ax.legend(handles=handles, loc="lower left", bbox_to_anchor=(-0.01, 1.03), ncol=2, frameon=False, fontsize=7.5)
+    fig.text(0.08, 0.015, f"{t['src']}{now_str}", fontsize=6.9, color="#64748B")
+    fig.text(0.96, 0.015, "T.H.", fontsize=7.8, color="#94A3B8", ha="right")
+    plt.savefig(f"{OUT_DIR}/{fname}{t['sfx']}.png", dpi=300)
+    plt.close()
+
+    fp = go.Figure()
+    fp.add_trace(go.Scatter(x=labels, y=[round(v, 1) for v in y_util], customdata=[fmt_num(v, use_c, 1) for v in y_util],
+                            name=t["g2_l"], mode="lines+markers", line=dict(color="#1B3A6B", width=2.4), marker=dict(size=5.5),
+                            hovertemplate=f"{t['g2_l']}: <b>%{{customdata}} %</b><extra></extra>"))
+    if mean_val is not None:
+        m_lbl = f"{t['mean_lbl']} ({fmt_num(mean_val, use_c, 1)} %)"
+        fp.add_trace(go.Scatter(x=labels, y=[mean_val] * len(labels), name=m_lbl, mode="lines",
+                                line=dict(color="#D97706", width=1.8, dash="dash"),
+                                hovertemplate=f"{t['mean_lbl']}: <b>{fmt_num(mean_val, use_c, 1)} %</b><extra></extra>"))
+    add_recession_shading_plotly(fp, df_sub["period"].tolist(), bip_intervals, t)
+    _finalize_plotly_layout(fp, t[title_key], t[sub_key], t["src"], now_str, fname, t["sfx"], y_range=[ymin, ymax])
+
+
+def build_chart_08_09_notwendig(lang, df_nec, fname, title_key, sub_tpl):
+    t = TEXTS[lang]
+    use_c = t["comma"]
+    now_str = datetime.now().strftime(t["date_fmt"])
+    x_lbls = df_nec["step_label"].tolist()
+    y_alq = df_nec["alq"].tolist()
+    y_nec = df_nec["nec_growth"].tolist()
+    wy_star = float(df_nec["wy_star"].iloc[0])
+    start_lbl = str(df_nec["start_label"].iloc[0])
+    alq_0 = float(df_nec["alq"].iloc[0])
+
+    subtitle = t[sub_tpl].format(start_lbl=start_lbl, alq0=fmt_num(alq_0, use_c, 1), wystar=fmt_num(wy_star, use_c, 1))
+    ymax = max(8.0, int(np.ceil(max(max(y_alq), max(y_nec)) + 1.2)))
+    x_idx = np.arange(len(x_lbls))
+
+    fig, ax = plt.subplots(figsize=(8.2, 5.2), dpi=300, facecolor="white")
+    plt.subplots_adjust(left=0.08, right=0.96, top=0.75, bottom=0.20)
+    fig.suptitle(t[title_key], x=0.08, y=0.96, ha="left", fontsize=11.2, fontweight="bold", color="#0F172A")
+    fig.text(0.08, 0.912, subtitle, ha="left", fontsize=8.2, color="#334155")
+    ax.set_facecolor("#F8FAFC")
+    ax.set_ylim(0, ymax)
+    ax.yaxis.grid(True, color="#E2E8F0", linewidth=0.8, zorder=0)
+    for s in ("top", "right", "left"):
+        ax.spines[s].set_visible(False)
+
+    bars = ax.bar(x_idx, y_alq, width=0.46, color="#1B3A6B", alpha=0.88, label=t["g8_l"][0], zorder=2)
+    for rect, val in zip(bars, y_alq):
+        ax.text(rect.get_x() + rect.get_width() / 2.0, val + 0.14, fmt_num(val, use_c, 1), ha="center", va="bottom", fontsize=7.8, color="#1E293B")
+
+    valid_x = [i for i, v in enumerate(y_nec) if not pd.isna(v)]
+    valid_y = [float(y_nec[i]) for i in valid_x]
+    line = ax.plot(valid_x, valid_y, color="#D97706", lw=2.4, marker="o", markersize=5.5, label=t["g8_l"][1], zorder=5)
+    for xi, yi in zip(valid_x, valid_y):
+        bar_h = float(y_alq[xi])
+        offset = -0.55 if abs(yi - bar_h) < 0.75 else 0.25
+        ax.text(xi, yi + offset, fmt_num(yi, use_c, 1), ha="center", va="bottom" if offset > 0 else "top",
+                fontsize=8.0, fontweight="bold", color="#B45309",
+                bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="none", alpha=0.88), zorder=6)
+
+    ax.set_xticks(x_idx)
+    ax.set_xticklabels(x_lbls, fontsize=8.4, color="#334155")
+    ax.legend(handles=[bars, line[0]], loc="lower left", bbox_to_anchor=(-0.01, 1.03), ncol=2, frameon=False, fontsize=7.8)
+    fig.text(0.08, 0.015, f"{t['src']}{now_str}", fontsize=6.9, color="#64748B")
+    fig.text(0.96, 0.015, "T.H.", fontsize=7.8, color="#94A3B8", ha="right")
+    plt.savefig(f"{OUT_DIR}/{fname}{t['sfx']}.png", dpi=300)
+    plt.close()
+
+    fp = go.Figure()
+    fp.add_trace(go.Bar(
+        x=x_lbls, y=[round(v, 1) for v in y_alq],
+        text=[fmt_num(v, use_c, 1) for v in y_alq], textposition="outside",
+        name=t["g8_l"][0], marker_color="#1B3A6B", opacity=0.88,
+        hovertemplate=f"{t['g8_l'][0]}: <b>%{{text}} %</b><extra></extra>",
+    ))
+    text_pos = ["bottom center" if (not pd.isna(yn) and abs(yn - ya) < 0.75) else "top center" for ya, yn in zip(y_alq, y_nec)]
+    fp.add_trace(go.Scatter(
+        x=x_lbls, y=[None if pd.isna(v) else round(float(v), 1) for v in y_nec],
+        text=["" if pd.isna(v) else fmt_num(v, use_c, 1) for v in y_nec],
+        textposition=text_pos, textfont=dict(color="#B45309", size=11),
+        name=t["g8_l"][1], mode="lines+markers+text",
+        line=dict(color="#D97706", width=2.5), marker=dict(size=7, color="#D97706"),
+        hovertemplate=f"{t['g8_l'][1]}: <b>%{{text}} %</b><extra></extra>",
+    ))
+    _finalize_plotly_layout(fp, t[title_key], subtitle, t["src"], now_str, fname, t["sfx"], y_range=[0, ymax], y_dtick=1, height_p=470, top_m=136)
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Voraussetzung: 'df' ist der geladene DataFrame mit den entsprechenden Daten
+
+def plot_doppelachse_3(df):
+    fig, ax1 = plt.subplots(figsize=(10, 5))
     ax2 = ax1.twinx()
-
-    fig.suptitle(title, x=0.09, y=0.96, ha="left", fontsize=10.6, fontweight="bold", color="#0F172A")
-    fig.text(0.09, 0.915, sub, ha="left", fontsize=7.9, color="#334155")
-
-    ax1.set_facecolor("#F8FAFC")
-    sh_patches = add_shades_mpl(ax1, svr_spans, bip_spans, t)
-    ax1.axhline(0, color="#64748B", lw=1.0, zorder=2)
-
-    b1 = ax2.bar(x, bar_vals, width=0.48 if is_short else 0.58, color=bar_color, alpha=0.82, label=bar_name, zorder=2)
-    line_arr = np.array(line_vals, dtype=float)
-    l1 = ax1.plot(x, line_arr, color="#1B3A6B", lw=2.3, marker="o" if is_short else None, markersize=4, label=line_name, zorder=4)
-
-    ax1.set_ylim(-lmax, lmax)
-    ax2.set_ylim(-bmax, bmax)
-    ax1.set_yticks(np.linspace(-lmax, lmax, 7))
-    ax2.set_yticks(np.linspace(-bmax, bmax, 7))
-
-    ax1.set_xticks(x)
-    step_lbl = 1 if is_short else 2
-    ax1.set_xticklabels([lbl if (i % step_lbl == 0 or is_q[i]) else "" for i, lbl in enumerate(labels)], rotation=90, fontsize=7.8, color="#475569")
-    ax1.tick_params(axis="y", labelsize=8.3, colors="#1B3A6B", length=0)
-    ax2.tick_params(axis="y", labelsize=8.3, colors=bar_color, length=0)
-    ax1.yaxis.grid(True, color="#E2E8F0", lw=0.8, zorder=0)
-    for ax in (ax1, ax2):
-        for s in ("top", "left", "right"):
-            ax.spines[s].set_visible(False)
-    ax1.spines["bottom"].set_color("#94A3B8")
-
-    handles = [l1[0], b1] + sh_patches
-    ax1.legend(handles=handles, loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=2, frameon=False, fontsize=7.3)
-    fig.text(0.09, 0.015, f"{t['src']}{now_s}", fontsize=6.8, color="#64748B")
-    fig.text(0.90, 0.015, "T.H.", fontsize=7.8, color="#94A3B8", ha="right")
-    plt.savefig(f"{OUT_DIR}/{fname}{t['sfx']}.png", dpi=300)
+    # Beispiel-Logik für Grafik 3
+    ax1.plot(df['Datum'], df['Metrik_A'], color='blue', label='Metrik A')
+    ax2.bar(df['Datum'], df['Metrik_B'], color='orange', alpha=0.3, label='Metrik B')
+    ax1.set_xlabel('Datum')
+    ax1.set_ylabel('Metrik A', color='blue')
+    ax2.set_ylabel('Metrik B', color='orange')
+    plt.title('Doppelachsen-Grafik 3')
+    plt.tight_layout()
+    plt.savefig('doppelachse_3.png')
     plt.close()
 
-    fp = make_subplots(specs=[[{"secondary_y": True}]])
-    fp.add_trace(
-        go.Bar(
-            x=labels,
-            y=[None if np.isnan(v) else round(v, 2) for v in bar_vals],
-            customdata=[fmt_v(v, use_c, 1) for v in bar_vals],
-            name=bar_name,
-            marker_color=bar_color,
-            opacity=0.82,
-            hovertemplate=f"{bar_name}: <b>%{{customdata}} %</b><extra></extra>",
-        ),
-        secondary_y=True,
-    )
-    fp.add_trace(
-        go.Scatter(
-            x=labels,
-            y=[None if np.isnan(v) else round(v, 2) for v in line_vals],
-            customdata=[fmt_v(v, use_c, 2) for v in line_vals],
-            name=line_name,
-            mode="lines+markers" if is_short else "lines",
-            line=dict(color="#1B3A6B", width=2.4),
-            connectgaps=False,
-            hovertemplate=f"{line_name}: <b>%{{customdata}} Ppkt.</b><extra></extra>",
-        ),
-        secondary_y=False,
-    )
-    add_shades_plotly(fp, svr_spans, bip_spans, t)
-    fp.update_layout(
-        title=dict(text=f"<b>{title}</b><br><span style='font-size:11px;color:#334155;font-weight:normal'>{sub}</span>", x=0.02, y=0.96, font=dict(size=13.5, color="#0F172A")),
-        plot_bgcolor="#F8FAFC",
-        paper_bgcolor="white",
-        hovermode="x unified",
-        dragmode=False,
-        legend=dict(orientation="h", x=0.0, y=1.01, yanchor="bottom", font=dict(size=9.5)),
-        margin=dict(l=48, r=48, t=122, b=76),
-        height=470,
-        annotations=[
-            dict(text=f"{t['src']}{now_s}", x=0.0, y=-0.24, xref="paper", yref="paper", showarrow=False, font=dict(size=9.5, color="#64748B"), xanchor="left"),
-            dict(text="T.H.", x=1.0, y=-0.24, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#94A3B8"), xanchor="right"),
-        ],
-    )
-    fp.update_xaxes(type="category", fixedrange=True, tickangle=-45, tickfont=dict(size=9.8))
-    fp.update_yaxes(fixedrange=True, range=[-lmax, lmax], tickvals=list(np.linspace(-lmax, lmax, 7)), zeroline=True, zerolinecolor="#64748B", secondary_y=False)
-    fp.update_yaxes(fixedrange=True, range=[-bmax, bmax], tickvals=list(np.linspace(-bmax, bmax, 7)), showgrid=False, secondary_y=True)
-    _write_clean_html(fp, f"{OUT_DIR}/{fname}{t['sfx']}.html")
-
-
-def save_single_series_chart(lang, fname, title, sub, labels, series_list, is_q, unit_str, svr_spans, bip_spans, mean_val=None, mean_lbl=None, as_bar=False, is_short=False):
-    t = TXT[lang]
-    use_c = t["comma"]
-    now_s = datetime.now().strftime(t["date_fmt"])
-    x = np.arange(len(labels))
-    fig, ax = plt.subplots(figsize=(8.2, 5.1), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.96, top=0.77, bottom=0.20)
-    fig.suptitle(title, x=0.09, y=0.96, ha="left", fontsize=10.8, fontweight="bold", color="#0F172A")
-    fig.text(0.09, 0.915, sub, ha="left", fontsize=7.9, color="#334155")
-    ax.set_facecolor("#F8FAFC")
-    sh_patches = add_shades_mpl(ax, svr_spans, bip_spans, t)
-
-    all_vals = []
-    line_handles = []
-    for vals, lbl, col in series_list:
-        all_vals.extend([v for v in vals if not np.isnan(v)])
-        if as_bar:
-            b = ax.bar(x, vals, width=0.50, color=col, alpha=0.85, label=lbl, zorder=3)
-            line_handles.append(b)
-            for xi, v in zip(x, vals):
-                if not np.isnan(v):
-                    ax.text(xi, v + 0.12, fmt_v(v, use_c, 1), ha="center", va="bottom", fontsize=7.6, fontweight="bold", color="#0F172A")
-        else:
-            p = ax.plot(x, vals, color=col, lw=2.3, marker="o" if is_short else None, markersize=4, label=lbl, zorder=3)
-            line_handles.extend(p)
-
-    if mean_val is not None and not np.isnan(mean_val):
-        m_str = fmt_v(mean_val, use_c, 1)
-        m_full = f"{mean_lbl} ({m_str} %)"
-        pm = ax.axhline(mean_val, color="#D97706", lw=1.7, ls="--", label=m_full, zorder=4)
-        line_handles.append(pm)
-        ax.text(len(labels) - 0.6, mean_val + 0.15, m_str, ha="right", va="bottom", fontsize=8.0, fontweight="bold", color="#D97706",
-                bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="none", alpha=0.85))
-
-    vmin, vmax = min(all_vals), max(all_vals)
-    if as_bar:
-        ax.set_ylim(max(0, np.floor(vmin - 1.0)), np.ceil(vmax + 0.8))
-    else:
-        pad = (vmax - vmin) * 0.14 if vmax > vmin else 1.0
-        ax.set_ylim(max(0, vmin - pad), vmax + pad)
-
-    ax.set_xticks(x)
-    step_lbl = 1 if is_short else 2
-    ax.set_xticklabels([lbl if (i % step_lbl == 0 or is_q[i]) else "" for i, lbl in enumerate(labels)], rotation=90, fontsize=7.8, color="#475569")
-    ax.tick_params(axis="y", labelsize=8.4, colors="#475569", length=0)
-    ax.yaxis.grid(True, color="#E2E8F0", lw=0.8, zorder=0)
-    for s in ("top", "left", "right"):
-        ax.spines[s].set_visible(False)
-    ax.spines["bottom"].set_color("#94A3B8")
-    ax.legend(handles=line_handles + sh_patches, loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=2, frameon=False, fontsize=7.4)
-    fig.text(0.09, 0.015, f"{t['src']}{now_s}", fontsize=6.8, color="#64748B")
-    fig.text(0.96, 0.015, "T.H.", fontsize=7.8, color="#94A3B8", ha="right")
-    plt.savefig(f"{OUT_DIR}/{fname}{t['sfx']}.png", dpi=300)
+def plot_doppelachse_4(df):
+    fig, ax1 = plt.subplots(figsize=(10, 5))
+    ax2 = ax1.twinx()
+    ax1.plot(df['Datum'], df['Wert1'], color='green', label='Wert 1')
+    ax2.plot(df['Datum'], df['Wert2'], color='red', linestyle='--', label='Wert 2')
+    ax1.set_xlabel('Datum')
+    ax1.set_ylabel('Wert 1', color='green')
+    ax2.set_ylabel('Wert 2', color='red')
+    plt.title('Doppelachsen-Grafik 4')
+    plt.tight_layout()
+    plt.savefig('doppelachse_4.png')
     plt.close()
 
-    fp = go.Figure()
-    for vals, lbl, col in series_list:
-        if as_bar:
-            fp.add_trace(go.Bar(x=labels, y=[None if np.isnan(v) else round(v, 2) for v in vals], customdata=[fmt_v(v, use_c, 1) for v in vals], name=lbl, marker_color=col, text=[fmt_v(v, use_c, 1) for v in vals], textposition="outside", hovertemplate=f"{lbl}: <b>%{{customdata}} {unit_str}</b><extra></extra>"))
-        else:
-            fp.add_trace(go.Scatter(x=labels, y=[None if np.isnan(v) else round(v, 2) for v in vals], customdata=[fmt_v(v, use_c, 1) for v in vals], name=lbl, mode="lines+markers" if is_short else "lines", line=dict(color=col, width=2.3), connectgaps=False, hovertemplate=f"{lbl}: <b>%{{customdata}} {unit_str}</b><extra></extra>"))
-    if mean_val is not None and not np.isnan(mean_val):
-        m_str = fmt_v(mean_val, use_c, 1)
-        m_full = f"{mean_lbl} ({m_str} %)"
-        fp.add_trace(go.Scatter(x=labels, y=[round(mean_val, 2)] * len(labels), customdata=[m_str] * len(labels), name=m_full, mode="lines", line=dict(color="#D97706", width=1.8, dash="dash"), hovertemplate=f"{mean_lbl}: <b>%{{customdata}} %</b><extra></extra>"))
-    add_shades_plotly(fp, svr_spans, bip_spans, t)
-    fp.update_layout(
-        title=dict(text=f"<b>{title}</b><br><span style='font-size:11px;color:#334155;font-weight:normal'>{sub}</span>", x=0.02, y=0.96, font=dict(size=13.5, color="#0F172A")),
-        plot_bgcolor="#F8FAFC",
-        paper_bgcolor="white",
-        hovermode="x unified",
-        dragmode=False,
-        legend=dict(orientation="h", x=0.0, y=1.01, yanchor="bottom", font=dict(size=9.5)),
-        margin=dict(l=48, r=24, t=122, b=76),
-        height=470,
-        annotations=[
-            dict(text=f"{t['src']}{now_s}", x=0.0, y=-0.24, xref="paper", yref="paper", showarrow=False, font=dict(size=9.5, color="#64748B"), xanchor="left"),
-            dict(text="T.H.", x=1.0, y=-0.24, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#94A3B8"), xanchor="right"),
-        ],
-    )
-    fp.update_xaxes(type="category", fixedrange=True, tickangle=-45, tickfont=dict(size=9.8))
-    if as_bar:
-        fp.update_yaxes(fixedrange=True, range=[max(0, np.floor(vmin - 1.0)), np.ceil(vmax + 0.8)])
-    else:
-        fp.update_yaxes(fixedrange=True)
-    _write_clean_html(fp, f"{OUT_DIR}/{fname}{t['sfx']}.html")
-
-
-def save_necessary_chart(lang, fname, title_key, sub_key, start_ym, alq0, wy_star, rows):
-    t = TXT[lang]
-    use_c = t["comma"]
-    now_s = datetime.now().strftime(t["date_fmt"])
-    m_idx = int(start_ym[5:7]) - 1
-    start_lbl = f"{t['m'][m_idx]} {start_ym[2:4]}"
-    labels = [start_lbl] + [str(r["yr"]) for r in rows[1:]]
-    alq_vals = [r["alq"] for r in rows]
-    nec_vals = [r["w_growth"] for r in rows]
-
-    title = t[title_key]
-    sub = t[sub_key].format(start_lbl=start_lbl, alq0=fmt_v(alq0, use_c, 1), wy=fmt_v(wy_star, use_c, 1))
-    l_alq, l_nec = t["cn_l"]
-    x = np.arange(len(labels))
-
-    fig, ax = plt.subplots(figsize=(8.2, 5.0), dpi=300, facecolor="white")
-    plt.subplots_adjust(left=0.09, right=0.96, top=0.77, bottom=0.17)
-    fig.suptitle(title, x=0.09, y=0.96, ha="left", fontsize=10.6, fontweight="bold", color="#0F172A")
-    fig.text(0.09, 0.915, sub, ha="left", fontsize=7.9, color="#334155")
-    ax.set_facecolor("#F8FAFC")
-
-    bars = ax.bar(x, alq_vals, width=0.45, color="#CBD5E1", edgecolor="#1B3A6B", lw=1.2, label=l_alq, zorder=2)
-    for xi, v in zip(x, alq_vals):
-        ax.text(xi, v + 0.18, fmt_v(v, use_c, 1), ha="center", va="bottom", fontsize=8.4, fontweight="bold", color="#1B3A6B")
-
-    line = ax.plot(x[1:], nec_vals[1:], color="#D97706", lw=2.5, marker="o", markersize=5, label=l_nec, zorder=4)
-    # Kollisionsfreie Beschriftung: immer sauber unterhalb der Linie (bzw. oberhalb, falls nahe an Balkenoberkante)
-    text_positions = []
-    for xi, v_nec, v_bar in zip(x[1:], nec_vals[1:], alq_vals[1:]):
-        if abs((v_nec - 0.50) - v_bar) < 0.45:
-            y_pos = v_nec + 0.35
-            va_pos = "bottom"
-            text_positions.append("top center")
-        else:
-            y_pos = v_nec - 0.42
-            va_pos = "top"
-            text_positions.append("bottom center")
-        ax.text(
-            xi, y_pos, fmt_v(v_nec, use_c, 1),
-            ha="center", va=va_pos, fontsize=8.4, fontweight="bold", color="#D97706",
-            bbox=dict(boxstyle="round,pad=0.14", facecolor="white", edgecolor="none", alpha=0.88),
-            zorder=5,
-        )
-
-    ax.set_ylim(0, max(8.0, np.ceil(alq0 + 1.5)))
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=9.0, color="#334155")
-    ax.tick_params(axis="y", labelsize=8.5, colors="#475569", length=0)
-    ax.yaxis.grid(True, color="#E2E8F0", lw=0.8, zorder=0)
-    for s in ("top", "left", "right"):
-        ax.spines[s].set_visible(False)
-    ax.spines["bottom"].set_color("#94A3B8")
-    ax.legend(handles=[bars, line[0]], loc="lower left", bbox_to_anchor=(-0.01, 1.02), ncol=2, frameon=False, fontsize=7.8)
-    fig.text(0.09, 0.015, f"{t['src']}{now_s}", fontsize=6.8, color="#64748B")
-    fig.text(0.96, 0.015, "T.H.", fontsize=7.8, color="#94A3B8", ha="right")
-    plt.savefig(f"{OUT_DIR}/{fname}{t['sfx']}.png", dpi=300)
+def plot_doppelachse_6(df):
+    fig, ax1 = plt.subplots(figsize=(10, 5))
+    ax2 = ax1.twinx()
+    ax1.bar(df['Datum'], df['Kategorie_X'], color='purple', label='Kategorie X')
+    ax2.plot(df['Datum'], df['Kategorie_Y'], color='brown', marker='o', label='Kategorie Y')
+    ax1.set_xlabel('Datum')
+    ax1.set_ylabel('Kategorie X', color='purple')
+    ax2.set_ylabel('Kategorie Y', color='brown')
+    plt.title('Doppelachsen-Grafik 6')
+    plt.tight_layout()
+    plt.savefig('doppelachse_6.png')
     plt.close()
 
-    fp = go.Figure()
-    fp.add_trace(go.Bar(x=labels, y=alq_vals, customdata=[fmt_v(v, use_c, 1) for v in alq_vals], name=l_alq, marker_color="#CBD5E1", marker_line_color="#1B3A6B", marker_line_width=1.2, text=[fmt_v(v, use_c, 1) for v in alq_vals], textposition="outside", hovertemplate=f"{l_alq}: <b>%{{customdata}} %</b><extra></extra>"))
-    fp.add_trace(go.Scatter(x=labels[1:], y=nec_vals[1:], customdata=[fmt_v(v, use_c, 1) for v in nec_vals[1:]], name=l_nec, mode="lines+markers+text", line=dict(color="#D97706", width=2.6), text=[fmt_v(v, use_c, 1) for v in nec_vals[1:]], textposition=text_positions, textfont=dict(color="#D97706", size=11), hovertemplate=f"{l_nec}: <b>%{{customdata}} %</b><extra></extra>"))
-    fp.update_layout(
-        title=dict(text=f"<b>{title}</b><br><span style='font-size:11px;color:#334155;font-weight:normal'>{sub}</span>", x=0.02, y=0.96, font=dict(size=13.5, color="#0F172A")),
-        plot_bgcolor="#F8FAFC",
-        paper_bgcolor="white",
-        hovermode="x unified",
-        dragmode=False,
-        legend=dict(orientation="h", x=0.0, y=1.01, yanchor="bottom", font=dict(size=9.5)),
-        margin=dict(l=48, r=24, t=122, b=72),
-        height=460,
-        annotations=[
-            dict(text=f"{t['src']}{now_s}", x=0.0, y=-0.21, xref="paper", yref="paper", showarrow=False, font=dict(size=9.5, color="#64748B"), xanchor="left"),
-            dict(text="T.H.", x=1.0, y=-0.21, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#94A3B8"), xanchor="right"),
-        ],
-    )
-    fp.update_xaxes(type="category", fixedrange=True)
-    fp.update_yaxes(fixedrange=True, range=[0, max(8.0, np.ceil(alq0 + 1.5))])
-    _write_clean_html(fp, f"{OUT_DIR}/{fname}{t['sfx']}.html")
-
+def plot_doppelachse_7(df):
+    fig, ax1 = plt.subplots(figsize=(10, 5))
+    ax2 = ax1.twinx()
+    ax1.plot(df['Datum'], df['Indicator_A'], color='cyan', label='Indicator A')
+    ax2.fill_between(df['Datum'], df['Indicator_B'], color='magenta', alpha=0.2, label='Indicator B')
+    ax1.set_xlabel('Datum')
+    ax1.set_ylabel('Indicator A', color='cyan')
+    ax2.set_ylabel('Indicator B', color='magenta')
+    plt.title('Doppelachsen-Grafik 7')
+    plt.tight_layout()
+    plt.savefig('doppelachse_7.png')
+    plt.close()
 
 def main():
-    os.makedirs(OUT_DIR, exist_ok=True)
-    plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
+    print("Starte Generierung der Doppelachsen-Grafiken...")
+    # Pfad zu deiner Datenquelle anpassen
+    file_path = 'produktionspotenzial_daten.csv'
+    try:
+        df = pd.read_csv(file_path)
+        plot_doppelachse_3(df)
+        plot_doppelachse_4(df)
+        plot_doppelachse_6(df)
+        plot_doppelachse_7(df)
+        print("Alle Grafiken (3, 4, 6, 7) wurden erfolgreich erstellt.")
+    except Exception as e:
+        print(f"Fehler bei der Verarbeitung: {e}")
 
-    d = load_all_macro_data()
-    df_y, df_q = compute_koehler_tables(d)
-
-    lbl_long, keys_long, isq_long, get_long, completed_years = build_hybrid_series(df_y, df_q, start_year="1991", add_gap=False)
-    lbl_short, keys_short, isq_short, get_short, _ = build_hybrid_series(df_y, df_q, start_year="2019", add_gap=True)
-
-    svr_long, bip_long = get_recession_spans(keys_long, d["bip_chain_yoy"])
-    svr_short, bip_short = get_recession_spans(keys_short, d["bip_chain_yoy"])
-
-    # Mittelwert der Auslastung 1991-2019
-    ausl_91_19 = df_y.loc[(df_y.index >= "1991") & (df_y.index <= "2019"), "ausl"].dropna()
-    mean_ausl_91_19 = float(ausl_91_19.mean()) if not ausl_91_19.empty else np.nan
-
-    start_y, alq0_y, wy_y, rows_y = compute_necessary_growth(d, df_y, completed_years, mode="year")
-    start_q, alq0_q, wy_q, rows_q = compute_necessary_growth(d, df_y, completed_years, mode="quarter")
-
-    for lang in ("de", "en"):
-        t = TXT[lang]
-        # 1-4: Lange Frist (ab 1991)
-        save_single_series_chart(lang, "01_potenzial_lang", t["c1_t"], t["c1_s"], lbl_long, [(get_long("pot"), t["c1_l"][0], "#1B3A6B")], isq_long, "Mrd. €", svr_long, bip_long)
-        save_single_series_chart(lang, "02_auslastung_lang", t["c2_t"], t["c2_s"], lbl_long, [(get_long("ausl"), t["c2_l"][0], "#1B3A6B")], isq_long, "%", svr_long, bip_long, mean_val=mean_ausl_91_19, mean_lbl=t["c2_l"][1])
-        save_dual_chart(lang, "03_angemessen_alo_lang", t["c3_t"], t["c3_s"], lbl_long, get_long("diff"), t["c3_l"][0], get_long("g_alo"), t["c3_l"][1], "#D97706", isq_long, svr_long, bip_long, lmax=3.0, bmax=30.0, is_short=False)
-        save_dual_chart(lang, "04_angemessen_staat_lang", t["c4_t"], t["c4_s"], lbl_long, get_long("diff"), t["c4_l"][0], get_long("fin_pct"), t["c4_l"][1], "#059669", isq_long, svr_long, bip_long, lmax=3.0, bmax=12.0, is_short=False)
-
-        # 5-7: Kuerzere Frist (ab 2019)
-        save_single_series_chart(lang, "05_auslastung_kurz", t["c5_t"], t["c5_s"], lbl_short, [(get_short("ausl"), t["c5_l"][0], "#D97706")], isq_short, "%", svr_short, bip_short, as_bar=True, is_short=True)
-        save_dual_chart(lang, "06_angemessen_alo_kurz", t["c6_t"], t["c6_s"], lbl_short, get_short("diff"), t["c6_l"][0], get_short("g_alo"), t["c6_l"][1], "#D97706", isq_short, svr_short, bip_short, lmax=3.0, bmax=30.0, is_short=True)
-        save_dual_chart(lang, "07_angemessen_staat_kurz", t["c7_t"], t["c7_s"], lbl_short, get_short("diff"), t["c7_l"][0], get_short("fin_pct"), t["c7_l"][1], "#059669", isq_short, svr_short, bip_short, lmax=3.0, bmax=12.0, is_short=True)
-
-        # 8-9: Notwendiges Wirtschaftswachstum
-        save_necessary_chart(lang, "08_notwendig_jahr", "c8_t", "c8_s", start_y, alq0_y, wy_y, rows_y)
-        save_necessary_chart(lang, "09_notwendig_quartal", "c9_t", "c9_s", start_q, alq0_q, wy_q, rows_q)
-
-    print("[OK] Alle 36 Dateien (9 Grafiken x DE/EN x PNG/HTML) unter static/produktionspotenzial/ erzeugt.")
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
