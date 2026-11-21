@@ -297,121 +297,150 @@ def _clean_series(sub, freq="Y", min_abs=None, max_abs=None):
         s = s.sort_values("ZEIT").drop_duplicates(subset=["ZEIT"], keep="first")
     return pd.Series(s["V"].values, index=s["ZEIT"].values).sort_index()
 
+def _extract_annual_level_from_table(df, primary_kw, secondary_kw, min_median=100.0, max_median=50000.0):
+    if df.empty or "ZEIT" not in df.columns or "WERT" not in df.columns:
+        return pd.Series(dtype=float)
+    d = df[df["ZEIT"].astype(str).str.match(r"^\d{4}$")].copy()
+    if d.empty:
+        return pd.Series(dtype=float)
+    d["V"] = pd.to_numeric(d["WERT"].astype(str).str.replace(",", "."), errors="coerce")
+    d = d.dropna(subset=["V"])
+    if d.empty:
+        return pd.Series(dtype=float)
+
+    lbl_cols = [c for c in d.columns if "label" in c.lower()]
+    code_cols = [c for c in d.columns if c.endswith("_code") and c not in {"statistics_code", "time_code"}]
+    lbl_txt = (
+        d.loc[:, lbl_cols].fillna("").astype(str).agg(" | ".join, axis=1).str.lower()
+        if lbl_cols
+        else pd.Series("", index=d.index)
+    )
+    code_txt = (
+        d.loc[:, code_cols].fillna("").astype(str).agg(" | ".join, axis=1).str.upper()
+        if code_cols
+        else pd.Series("", index=d.index)
+    )
+
+    mask = (
+        lbl_txt.str.contains(primary_kw, regex=False)
+        & lbl_txt.str.contains(secondary_kw, regex=False)
+        & ~lbl_txt.str.contains("veränderung", regex=False)
+        & ~lbl_txt.str.contains("prozent", regex=False)
+        & ~lbl_txt.str.contains("index", regex=False)
+        & ~lbl_txt.str.contains("je erwerbstätigen", regex=False)
+        & ~lbl_txt.str.contains("je einwohner", regex=False)
+    )
+    sub = d[mask].copy()
+    if sub.empty:
+        sub = d[lbl_txt.str.contains(primary_kw, regex=False) & ~lbl_txt.str.contains("veränderung", regex=False)].copy()
+    if sub.empty:
+        return pd.Series(dtype=float)
+
+    # Waehle die exakt passende Gesamt-Kennzahlen-Kombination (ohne Teilaggregate)
+    sub["_KEY"] = (
+        (sub["value_variable_code"].astype(str) if "value_variable_code" in sub.columns else "")
+        + "|"
+        + code_txt.loc[sub.index]
+    )
+    best_s = pd.Series(dtype=float)
+    best_score = (-1, -1)
+    for _, grp in sub.groupby("_KEY"):
+        med = float(grp["V"].median())
+        if not (min_median <= med <= max_median):
+            continue
+        s = grp.drop_duplicates(subset=["ZEIT"], keep="first").set_index("ZEIT")["V"].sort_index()
+        has_1991 = 1 if "1991" in s.index else 0
+        score = (has_1991, len(s))
+        if score > best_score:
+            best_score = score
+            best_s = s
+    return best_s
+
+
+def _annual_from_quarterly(q_series, agg="sum"):
+    if q_series.empty:
+        return pd.Series(dtype=float)
+    df_q = pd.DataFrame({"ZEIT": q_series.index, "V": q_series.values})
+    df_q = df_q[df_q["ZEIT"].astype(str).str.match(r"^\d{4}-Q[1-4]$")].copy()
+    df_q["Y"] = df_q["ZEIT"].str[:4]
+    out = {}
+    for yr, grp in df_q.groupby("Y"):
+        if len(grp) == 4:
+            out[yr] = float(grp["V"].sum() if agg == "sum" else grp["V"].mean())
+    return pd.Series(out).sort_index()
 
 def load_all_macro_data():
-    # 1. BIP real & nominal (Jahre 81000-0001, Quartale 81000-0002) ab 1991
-    df_gdp_y = _destatis_ffcsv("81000-0001", startyear="1991")
-    codes_gy = _extract_code_set(df_gdp_y)
-    lbl_gy = _label_text(df_gdp_y)
+    df_81_01 = _destatis_ffcsv("81000-0001", startyear="1991")
+    df_81_02 = _destatis_ffcsv("81000-0002", startyear="1991")
+    df_81_11 = _destatis_ffcsv("81000-0011", startyear="1991")
+    df_81_12 = _destatis_ffcsv("81000-0012", startyear="1991")
+    df_81_31 = _destatis_ffcsv("81000-0031", startyear="1991")
+    df_13_01 = _destatis_ffcsv("13211-0001", startyear="1991")
+    df_13_02 = _destatis_ffcsv("13211-0002", startyear="2005")
 
-    sub_ry = df_gdp_y[codes_gy.apply(lambda s: {"WERTORG", "VGR014"}.issubset(s))]
-    if sub_ry.empty:
-        sub_ry = df_gdp_y[lbl_gy.str.contains("originalwerte") & lbl_gy.str.contains("preisbereinigt") & lbl_gy.str.contains("bruttoinlandsprodukt")]
-    bip_real_y = _clean_series(sub_ry, freq="Y", min_abs=1000.0)
+    bip_real_q = _filter_series(df_81_02, {"WERTORG", "VGR014", "VGRPKM"}, ["originalwerte", "preisbereinigt", "bruttoinlandsprodukt"])
+    bip_nom_q = _filter_series(df_81_02, {"WERTORG", "VGR014", "VGR011"}, ["originalwerte", "jeweiligen preisen", "bruttoinlandsprodukt"])
 
-    sub_ny = df_gdp_y[codes_gy.apply(lambda s: {"WERTORG", "VGR013"}.issubset(s))]
-    if sub_ny.empty:
-        sub_ny = df_gdp_y[lbl_gy.str.contains("originalwerte") & lbl_gy.str.contains("jeweiligen preisen") & lbl_gy.str.contains("bruttoinlandsprodukt")]
-    bip_nom_y = _clean_series(sub_ny, freq="Y", min_abs=1000.0)
+    bip_real_y = _extract_annual_level_from_table(df_81_01, "bruttoinlandsprodukt", "preisbereinigt", 1500.0, 10000.0)
+    if bip_real_y.empty:
+        bip_real_y = _annual_from_quarterly(bip_real_q, agg="sum")
 
-    df_gdp_q = _destatis_ffcsv("81000-0002", startyear="1991")
-    codes_gq = _extract_code_set(df_gdp_q)
-    lbl_gq = _label_text(df_gdp_q)
+    bip_nom_y = _extract_annual_level_from_table(df_81_01, "bruttoinlandsprodukt", "jeweiligen preisen", 1500.0, 10000.0)
+    if bip_nom_y.empty:
+        bip_nom_y = _annual_from_quarterly(bip_nom_q, agg="sum")
 
-    sub_rq = df_gdp_q[codes_gq.apply(lambda s: {"WERTORG", "VGR014"}.issubset(s))]
-    if sub_rq.empty:
-        sub_rq = df_gdp_q[lbl_gq.str.contains("originalwerte") & lbl_gq.str.contains("preisbereinigt") & lbl_gq.str.contains("bruttoinlandsprodukt")]
-    bip_real_q = _clean_series(sub_rq, freq="Q", min_abs=250.0)
+    et_q = _filter_series(df_81_12, {"WERTORG", "ERW060"}, ["originalwerte", "erwerbstätige"])
+    et_y = _extract_annual_level_from_table(df_81_11, "erwerbstätige", "inland", 30000.0, 60000.0)
+    if et_y.empty:
+        et_y = _filter_series(df_81_11, {"WERTORG", "ERW060"}, ["erwerbstätige"])
+    if et_y.empty:
+        et_y = _annual_from_quarterly(et_q, agg="mean")
 
-    sub_nq = df_gdp_q[codes_gq.apply(lambda s: {"WERTORG", "VGR013"}.issubset(s))]
-    if sub_nq.empty:
-        sub_nq = df_gdp_q[lbl_gq.str.contains("originalwerte") & lbl_gq.str.contains("jeweiligen preisen") & lbl_gq.str.contains("bruttoinlandsprodukt")]
-    bip_nom_q = _clean_series(sub_nq, freq="Q", min_abs=250.0)
+    alo_y_hist = _extract_annual_level_from_table(df_13_01, "arbeitslose", "arbeitslose", 1000.0, 8000.0)
+    if alo_y_hist.empty:
+        alo_y_hist = _filter_series(df_13_01, set(), ["arbeitslose"])
+    alo_m = _filter_series(df_13_02, {"ERW015"}, ["arbeitslose"], exact_lbl="arbeitslose")
+    alo_q = _m_to_q(alo_m, agg="mean")
+    alo_y_m = _m_to_y(alo_m, agg="mean")
+    alo_y = alo_y_hist.combine_first(alo_y_m).sort_index()
 
-    # 2. Erwerbstaetige im Inland (Jahre 81000-0011, Quartale 81000-0012) ab 1991
-    df_et_y = _destatis_ffcsv("81000-0011", startyear="1991")
-    codes_ey = _extract_code_set(df_et_y)
-    lbl_ey = _label_text(df_et_y)
-    sub_ey = df_et_y[codes_ey.apply(lambda s: {"WERTORG", "ERW060"}.issubset(s))]
-    if sub_ey.empty:
-        sub_ey = df_et_y[lbl_ey.str.contains("originalwerte") & lbl_ey.str.contains("erwerbst") & lbl_ey.str.contains("inland")]
-    et_y = _clean_series(sub_ey, freq="Y", min_abs=25000.0)
+    # Offizielle BA-Arbeitslosenquote bezogen auf alle zivilen Erwerbspersonen
+    alq_m = _filter_series(
+        df_13_02,
+        {"ERW061"},
+        ["arbeitslosenquote", "alle zivilen erwerbspersonen"],
+        exact_lbl="arbeitslosenquote bezogen auf alle zivilen erwerbspersonen",
+    )
+    if alq_m.empty:
+        alq_m = _filter_series(df_13_02, set(), ["arbeitslosenquote", "alle zivilen"])
+    if alq_m.empty:
+        alq_m = _filter_series(df_13_02, set(), ["arbeitslosenquote"])
 
-    df_et_q = _destatis_ffcsv("81000-0012", startyear="1991")
-    codes_eq = _extract_code_set(df_et_q)
-    lbl_eq = _label_text(df_et_q)
-    sub_eq = df_et_q[codes_eq.apply(lambda s: {"WERTORG", "ERW060"}.issubset(s))]
-    if sub_eq.empty:
-        sub_eq = df_et_q[lbl_eq.str.contains("originalwerte") & lbl_eq.str.contains("erwerbst") & lbl_eq.str.contains("inland")]
-    et_q = _clean_series(sub_eq, freq="Q", min_abs=25000.0)
+    kug_m = _filter_series(df_13_02, {"ERW057"}, ["kurzarbeiter"], exact_lbl="kurzarbeiter")
+    if kug_m.empty:
+        kug_m = pd.Series(0.0, index=alo_m.index)
+    kug_q = _m_to_q(kug_m, agg="mean")
+    kug_y = _m_to_y(kug_m, agg="mean").reindex(alo_y.index, fill_value=0.0)
 
-    # 3. Arbeitslose & Arbeitslosenquote (13211-0001 ab 1991 + 13211-0002 monatlich)
-    df_alo_y = _destatis_ffcsv("13211-0001", startyear="1991")
-    lbl_ay = _label_text(df_alo_y)
-    mask_ay_tot = (~lbl_ay.str.contains("männlich|weiblich|ausländer|schwerbehindert|jugendlich|ältere"))
-    sub_ay = df_alo_y[mask_ay_tot & lbl_ay.str.contains("arbeitslose") & (~lbl_ay.str.contains("quote"))]
-    alo_y = _clean_series(sub_ay, freq="Y", min_abs=500000.0) / 1000.0  # in Tsd.
+    fin_y = _extract_annual_level_from_table(df_81_31, "finanzierungssaldo", "staat", -500000.0, 500000.0)
+    if fin_y.empty:
+        fin_y = _filter_series(df_81_31, {"WERTORG", "VGR048"}, ["finanzierungssaldo", "staat"])
+    fin_q = _filter_series(df_81_31, {"WERTORG", "VGR048"}, ["originalwerte", "finanzierungssaldo", "staat"])
+    if fin_q.empty:
+        fin_q = _filter_series(df_81_31, set(), ["finanzierungssaldo", "staat"])
+        fin_q = fin_q[fin_q.index.astype(str).str.match(r"^\d{4}-Q[1-4]$")]
 
-    df_alo_m = _destatis_ffcsv("13211-0002", startyear="1991")
-    lbl_am = _label_text(df_alo_m)
-    mask_am_tot = (~lbl_am.str.contains("männlich|weiblich|ausländer|schwerbehindert|jugendlich|ältere"))
-    sub_am_cnt = df_alo_m[mask_am_tot & lbl_am.str.contains("arbeitslose") & (~lbl_am.str.contains("quote"))]
-    alo_m = _clean_series(sub_am_cnt, freq="M", min_abs=500000.0) / 1000.0  # in Tsd.
-
-    # Quartalswerte der Arbeitslosen aus Monatsdurchschnitt
-    if not alo_m.empty:
-        s_am = alo_m.copy()
-        q_idx = [f"{k[:4]}-Q{(int(k[5:7]) - 1) // 3 + 1}" for k in s_am.index]
-        df_tmp = pd.DataFrame({"Q": q_idx, "V": s_am.values})
-        cnt_q = df_tmp.groupby("Q")["V"].count()
-        alo_q = df_tmp.groupby("Q")["V"].mean()[cnt_q == 3].sort_index()
-        # Ergaenze Jahreswerte ab 2005 aus 13211-0002 falls 13211-0001 frueher endet
-        y_idx = [k[:4] for k in s_am.index]
-        df_ty = pd.DataFrame({"Y": y_idx, "V": s_am.values})
-        cnt_y = df_ty.groupby("Y")["V"].count()
-        alo_y_from_m = df_ty.groupby("Y")["V"].mean()[cnt_y == 12]
-        alo_y = alo_y.combine_first(alo_y_from_m).sort_index()
-    else:
-        alo_q = pd.Series(dtype=float)
-
-    # Offizielle BA-Arbeitslosenquote bezogen auf alle zivilen Erwerbspersonen (in %)
-    sub_alq = df_alo_m[
-        mask_am_tot
-        & lbl_am.str.contains("arbeitslosenquote")
-        & lbl_am.str.contains("alle zivilen erwerbspersonen")
-    ]
-    if sub_alq.empty:
-        sub_alq = df_alo_m[
-            mask_am_tot
-            & lbl_am.str.contains("arbeitslosenquote")
-            & (~lbl_am.str.contains("abhängig"))
-        ]
-    alq_m = _clean_series(sub_alq, freq="M", min_abs=1.0, max_abs=25.0)
-
-    # 4. Finanzierungssaldo des Staates (81000-0031, Umrechnung Mill. EUR -> Mrd. EUR)
-    df_fin = _destatis_ffcsv("81000-0031", startyear="1991")
-    codes_fin = _extract_code_set(df_fin)
-    lbl_fin = _label_text(df_fin)
-    mask_fin = lbl_fin.str.contains("finanzierungssaldo") & (~lbl_fin.str.contains("bund|länder|gemeinden|sozialversicherung"))
-    if mask_fin.any():
-        sub_fin = df_fin[mask_fin]
-    else:
-        sub_fin = df_fin[codes_fin.apply(lambda s: "WERTORG" in s)]
-    fin_y = _clean_series(sub_fin, freq="Y")
-    fin_q = _clean_series(sub_fin, freq="Q")
+    # Umrechnung Finanzierungssaldo von Mill. EUR in Mrd. EUR (falls Werte > 1000)
     if not fin_y.empty and fin_y.abs().median() > 1000.0:
         fin_y = fin_y / 1000.0
-    if not fin_q.empty and fin_q.abs().median() > 250.0:
+    if not fin_q.empty and fin_q.abs().median() > 1000.0:
         fin_q = fin_q / 1000.0
-
-    # 5. Konjunkturelle Kurzarbeiter (falls verfuegbar, sonst 0-Reihe auf selbem Index)
-    kug_y = pd.Series(0.0, index=et_y.index)
-    kug_q = pd.Series(0.0, index=et_q.index)
 
     print(
         f"[LOAD OK] bip_real_y: {bip_real_y.index.min()}..{bip_real_y.index.max()} ({len(bip_real_y)}) | "
+        f"et_y: {et_y.index.min()}..{et_y.index.max()} ({len(et_y)}) | "
         f"alo_y: {alo_y.index.min()}..{alo_y.index.max()} ({len(alo_y)}) | "
-        f"alq_m last: {alq_m.index[-1] if not alq_m.empty else 'n/a'}={alq_m.iloc[-1] if not alq_m.empty else 'n/a'}%"
+        f"alq_m last: {alq_m.index[-1]}={alq_m.iloc[-1]:.1f}%"
     )
 
     return {
