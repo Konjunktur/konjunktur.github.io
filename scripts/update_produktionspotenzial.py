@@ -1266,27 +1266,23 @@ def build_potential_datasets(macro):
     }
     
 def main():
-    STATIC_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir = Path("static/produktionspotenzial")
+    out_dir.mkdir(parents=True, exist_ok=True)
     macro = load_all_macro_data()
     series = build_potential_datasets(macro)
 
-    # 1-2 & 5: Produktionspotenzial & Auslastung
-    build_potenzial_chart(series, STATIC_DIR)
-    build_auslastung_chart(series, STATIC_DIR, short_term=False)
-    build_auslastung_chart(series, STATIC_DIR, short_term=True)
-
-    # 3-4 & 6-7: Doppelachsen-Grafiken (Arbeitslose & Finanzierungssaldo)
-    build_dual_axis_chart(series, STATIC_DIR, indicator="alo", short_term=False)
-    build_dual_axis_chart(series, STATIC_DIR, indicator="staat", short_term=False)
-    build_dual_axis_chart(series, STATIC_DIR, indicator="alo", short_term=True)
-    build_dual_axis_chart(series, STATIC_DIR, indicator="staat", short_term=True)
-
-    # 8-9: Notwendiges Wirtschaftswachstum (Jahr & Quartal)
-    build_necessary_growth_chart(series, STATIC_DIR, mode="year")
-    build_necessary_growth_chart(series, STATIC_DIR, mode="quarter")
-
+    build_potenzial_chart(series, out_dir)
+    build_auslastung_chart(series, out_dir, short_term=False)
+    build_auslastung_chart(series, out_dir, short_term=True)
+    build_dual_axis_chart(series, out_dir, indicator="alo", short_term=False)
+    build_dual_axis_chart(series, out_dir, indicator="staat", short_term=False)
+    build_dual_axis_chart(series, out_dir, indicator="alo", short_term=True)
+    build_dual_axis_chart(series, out_dir, indicator="staat", short_term=True)
+    build_necessary_growth_chart(series, out_dir, mode="year")
+    build_necessary_growth_chart(series, out_dir, mode="quarter")
     print("Alle 9 Produktionspotenzial-Grafiken (DE & EN) erfolgreich erstellt.")
 
 
 if __name__ == "__main__":
     main()
+
