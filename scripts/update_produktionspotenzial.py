@@ -1264,108 +1264,29 @@ def build_potential_datasets(macro):
         "nec_quarter": nec_quarter,
         "neg_bip_set": neg_set,
     }
+    
 def main():
-    os.makedirs(OUT_DIR, exist_ok=True)
-    plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
-
+    STATIC_DIR.mkdir(parents=True, exist_ok=True)
     macro = load_all_macro_data()
     series = build_potential_datasets(macro)
 
-    long_df = series["long"]
-    short_df = series["short"]
-    nec_year = series["nec_year"]
-    nec_quart = series["nec_quart"]
+    # 1-2 & 5: Produktionspotenzial & Auslastung
+    build_potenzial_chart(series, STATIC_DIR)
+    build_auslastung_chart(series, STATIC_DIR, short_term=False)
+    build_auslastung_chart(series, STATIC_DIR, short_term=True)
 
-    print(
-        f"[OK] Lange Reihe: {long_df['label'].iloc[0]} bis {long_df['label'].iloc[-1]} ({len(long_df)} Punkte) | "
-        f"Kurze Reihe: {short_df['label'].iloc[0]} bis {short_df['label'].iloc[-1]} | "
-        f"wY* (5J-Ø): {nec_year['wy_star']:.2f} %"
-    )
+    # 3-4 & 6-7: Doppelachsen-Grafiken (Arbeitslose & Finanzierungssaldo)
+    build_dual_axis_chart(series, STATIC_DIR, indicator="alo", short_term=False)
+    build_dual_axis_chart(series, STATIC_DIR, indicator="staat", short_term=False)
+    build_dual_axis_chart(series, STATIC_DIR, indicator="alo", short_term=True)
+    build_dual_axis_chart(series, STATIC_DIR, indicator="staat", short_term=True)
 
-    for lang in ("de", "en"):
-        build_potential_level_chart(lang, long_df)
-        build_utilization_chart(lang, "02_auslastung_lang", "g2_t", "g2_sub", long_df, show_mean_1991_2019=True)
-        build_dual_axis_chart(
-            lang,
-            "03_angemessen_alo_lang",
-            "g3_t",
-            "g3_sub",
-            "g3_l1",
-            "g3_l2",
-            list(long_df["label"]),
-            list(long_df["diff_growth"]),
-            list(long_df["alo_yoy"]),
-            list(long_df["bip_neg"]),
-            y1_lim=3.0,
-            y1_step=1.0,
-            y2_lim=30.0,
-            y2_step=10.0,
-            bar_color="#D97706",
-            y1_unit="Ppkt." if lang == "de" else "pp",
-            y2_unit="%",
-        )
-        build_dual_axis_chart(
-            lang,
-            "04_angemessen_staat_lang",
-            "g4_t",
-            "g4_sub",
-            "g4_l1",
-            "g4_l2",
-            list(long_df["label"]),
-            list(long_df["diff_growth"]),
-            list(long_df["fin_gdp"]),
-            list(long_df["bip_neg"]),
-            y1_lim=3.0,
-            y1_step=1.0,
-            y2_lim=12.0,
-            y2_step=4.0,
-            bar_color="#059669",
-            y1_unit="Ppkt." if lang == "de" else "pp",
-            y2_unit="%",
-        )
-        build_utilization_chart(lang, "05_auslastung_kurz", "g5_t", "g5_sub", short_df, show_mean_1991_2019=False)
-        build_dual_axis_chart(
-            lang,
-            "06_angemessen_alo_kurz",
-            "g6_t",
-            "g6_sub",
-            "g6_l1",
-            "g6_l2",
-            list(short_df["label"]),
-            list(short_df["diff_growth"]),
-            list(short_df["alo_yoy"]),
-            list(short_df["bip_neg"]),
-            y1_lim=3.0,
-            y1_step=1.0,
-            y2_lim=20.0,
-            y2_step=5.0,
-            bar_color="#D97706",
-            y1_unit="Ppkt." if lang == "de" else "pp",
-            y2_unit="%",
-        )
-        build_dual_axis_chart(
-            lang,
-            "07_angemessen_staat_kurz",
-            "g7_t",
-            "g7_sub",
-            "g7_l1",
-            "g7_l2",
-            list(short_df["label"]),
-            list(short_df["diff_growth"]),
-            list(short_df["fin_gdp"]),
-            list(short_df["bip_neg"]),
-            y1_lim=3.0,
-            y1_step=1.0,
-            y2_lim=12.0,
-            y2_step=4.0,
-            bar_color="#059669",
-            y1_unit="Ppkt." if lang == "de" else "pp",
-            y2_unit="%",
-        )
-        build_necessary_growth_chart(lang, "08_notwendig_jahr", "g8_t", "g8_sub", nec_year)
-        build_necessary_growth_chart(lang, "09_notwendig_quartal", "g9_t", "g9_sub", nec_quart)
+    # 8-9: Notwendiges Wirtschaftswachstum (Jahr & Quartal)
+    build_necessary_growth_chart(series, STATIC_DIR, mode="year")
+    build_necessary_growth_chart(series, STATIC_DIR, mode="quarter")
+
+    print("Alle 9 Produktionspotenzial-Grafiken (DE & EN) erfolgreich erstellt.")
 
 
 if __name__ == "__main__":
     main()
-
