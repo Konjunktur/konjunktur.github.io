@@ -1019,7 +1019,175 @@ def build_dual_axis_chart(
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(html_s)
 
+def _pick_series(macro, candidates):
+    for k in candidates:
+        s = macro.get(k)
+        if s is not None and len(s) > 0:
+            return s.sort_index()
+    raise KeyError(f"Keine passende Datenreihe in macro gefunden. Verfuegbare Keys: {list(macro.keys())}")
 
+
+def _to_quarter_label(q_key):
+    s = str(q_key).strip()
+    if "-Q" in s:
+        yr, qp = s.split("-Q")
+        roman = {"1": "I", "2": "II", "3": "III", "4": "IV"}.get(qp, qp)
+        return f"{yr} {roman}"
+    return s
+
+
+def build_potential_datasets(macro):
+    bip_real_y = _pick_series(macro, ["bip_real_y", "gdp_real_y", "real_gdp_y"])
+    bip_real_q = _pick_series(macro, ["bip_real_q", "gdp_real_q", "real_gdp_q"])
+    bip_nom_y = _pick_series(macro, ["bip_nom_y", "gdp_nom_y", "nom_gdp_y"])
+    bip_nom_q = _pick_series(macro, ["bip_nom_q", "gdp_nom_q", "nom_gdp_q"])
+    et_y = _pick_series(macro, ["et_y", "emp_y"])
+    et_q = _pick_series(macro, ["et_q", "emp_q"])
+    alo_y = _pick_series(macro, ["alo_y", "unemp_y"])
+    alo_q = _pick_series(macro, ["alo_q", "unemp_q"])
+    kug_y = macro.get("kug_y")
+    kug_q = macro.get("kug_q")
+    fin_y = _pick_series(macro, ["fin_y", "gov_bal_y", "staat_y"])
+    fin_q = _pick_series(macro, ["fin_q", "gov_bal_q", "staat_q"])
+    alq_m = _pick_series(macro, ["alq_m", "unemp_rate_m"])
+
+    # Einheiten-Normalisierung (Finanzierungssaldo 81000-0031 liegt in Mill. EUR -> Mrd. EUR)
+    if fin_y.abs().median() > 500:
+        fin_y = fin_y / 1000.0
+    if len(fin_q) > 0 and fin_q.abs().median() > 500:
+        fin_q = fin_q / 1000.0
+
+    # Produktivitaet & Produktionspotenzial (Jahre ab 1991)
+    idx_y = bip_real_y.index.intersection(et_y.index).intersection(alo_y.index).sort_values()
+    idx_y = idx_y[idx_y >= "1991"]
+
+    prod_y = (bip_real_y.loc[idx_y] / et_y.loc[idx_y]) * 1e6
+    pot_base_y = ((et_y.loc[idx_y] + alo_y.loc[idx_y]) * prod_y) / 1e6
+
+    if kug_y is not None and len(kug_y) > 0:
+        kug_y_aligned = kug_y.reindex(idx_y).fillna(0.0)
+    else:
+        kug_y_aligned = pd.Series(0.0, index=idx_y)
+    pot_ext_y = ((et_y.loc[idx_y] + alo_y.loc[idx_y] + kug_y_aligned) * prod_y) / 1e6
+    util_y = (bip_real_y.loc[idx_y] / pot_base_y) * 100.0
+
+    # Quartalswerte (inkl. Vorjahresbasis fuer Wachstumsraten & 4-Quartals-Summe)
+    idx_q = bip_real_q.index.intersection(et_q.index).intersection(alo_q.index).sort_values()
+    prod_q = (bip_real_q.loc[idx_q] / et_q.loc[idx_q]) * 1e6
+    pot_base_q = ((et_q.loc[idx_q] + alo_q.loc[idx_q]) * prod_q) / 1e6
+
+    if kug_q is not None and len(kug_q) > 0:
+        kug_q_aligned = kug_q.reindex(idx_q).fillna(0.0)
+    else:
+        kug_q_aligned = pd.Series(0.0, index=idx_q)
+    pot_ext_q = ((et_q.loc[idx_q] + alo_q.loc[idx_q] + kug_q_aligned) * prod_q) / 1e6
+    util_q = (bip_real_q.loc[idx_q] / pot_base_q) * 100.0
+
+    # Gleitende 4-Quartals-Summe auf Jahresniveau fuer Grafik 1
+    pot_base_q4 = pot_base_q.rolling(4).sum().dropna()
+    pot_ext_q4 = pot_ext_q.rolling(4).sum().dropna()
+
+    last_full_year = str(idx_y[-1])
+    curr_quarters = [q for q in idx_q if str(q)[:4] > last_full_year]
+
+    # Zuwachsraten gg. Vj. (%)
+    g_bip_y = bip_real_y.loc[idx_y].pct_change() * 100.0
+    g_pot_y = pot_base_y.pct_change() * 100.0
+    diff_y = (g_bip_y - g_pot_y).dropna()
+    g_alo_y = (alo_y.loc[idx_y].pct_change() * 100.0).reindex(diff_y.index)
+    fin_pct_y = ((fin_y / bip_nom_y) * 100.0).reindex(diff_y.index)
+
+    g_bip_q = bip_real_q.loc[idx_q].pct_change(4) * 100.0
+    g_pot_q = pot_base_q.pct_change(4) * 100.0
+    diff_q = (g_bip_q - g_pot_q).dropna()
+    g_alo_q = (alo_q.loc[idx_q].pct_change(4) * 100.0).reindex(diff_q.index)
+    fin_pct_q = ((fin_q / bip_nom_q) * 100.0).reindex(diff_q.index)
+
+    # Lange Reihe (Jahre ab 1991 + aktuelle Quartale)
+    long_labels = list(idx_y) + [_to_quarter_label(q) for q in curr_quarters]
+    long_pot_base = [float(pot_base_y.loc[y]) for y in idx_y] + [float(pot_base_q4.get(q, pot_base_q.loc[q] * 4.0)) for q in curr_quarters]
+    long_pot_ext = [float(pot_ext_y.loc[y]) for y in idx_y] + [float(pot_ext_q4.get(q, pot_ext_q.loc[q] * 4.0)) for q in curr_quarters]
+    long_util = [float(util_y.loc[y]) for y in idx_y] + [float(util_q.loc[q]) for q in curr_quarters]
+
+    util_1991_2019 = util_y.loc[(util_y.index >= "1991") & (util_y.index <= "2019")]
+    mean_util_91_19 = float(util_1991_2019.mean()) if len(util_1991_2019) > 0 else float(util_y.mean())
+
+    # Lange Wachstumsreihen (ab 1992 + aktuelle Quartale)
+    idx_y_g = [y for y in diff_y.index if str(y) >= "1992"]
+    curr_q_g = [q for q in curr_quarters if q in diff_q.index]
+    long_g_labels = list(idx_y_g) + [_to_quarter_label(q) for q in curr_q_g]
+    long_diff = [float(diff_y.loc[y]) for y in idx_y_g] + [float(diff_q.loc[q]) for q in curr_q_g]
+    long_g_alo = [float(g_alo_y.loc[y]) for y in idx_y_g] + [float(g_alo_q.loc[q]) for q in curr_q_g]
+    long_fin_pct = [float(fin_pct_y.loc[y]) if pd.notna(fin_pct_y.loc[y]) else None for y in idx_y_g] + [
+        float(fin_pct_q.loc[q]) if pd.notna(fin_pct_q.loc[q]) else None for q in curr_q_g
+    ]
+
+    # Kuerzere Reihe (ab 2019 + Trennluecke + aktuelle Quartale)
+    short_years = [y for y in idx_y if str(y) >= "2019"]
+    short_labels = list(short_years) + ([""] if curr_quarters else []) + [_to_quarter_label(q) for q in curr_quarters]
+    short_util = [float(util_y.loc[y]) for y in short_years] + ([None] if curr_quarters else []) + [float(util_q.loc[q]) for q in curr_quarters]
+    short_diff = [float(diff_y.loc[y]) for y in short_years] + ([None] if curr_quarters else []) + [float(diff_q.loc[q]) for q in curr_quarters]
+    short_g_alo = [float(g_alo_y.loc[y]) for y in short_years] + ([None] if curr_quarters else []) + [float(g_alo_q.loc[q]) for q in curr_quarters]
+    short_fin_pct = (
+        [float(fin_pct_y.loc[y]) if pd.notna(fin_pct_y.loc[y]) else None for y in short_years]
+        + ([None] if curr_quarters else [])
+        + [float(fin_pct_q.loc[q]) if pd.notna(fin_pct_q.loc[q]) else None for q in curr_quarters]
+    )
+
+    # Notwendiges Wirtschaftswachstum: gleitender 5-Jahres-Mittelwert wY*
+    last_5_years = sorted(g_pot_y.dropna().index)[-5:]
+    wy_star = float(g_pot_y.loc[last_5_years].mean()) if len(last_5_years) > 0 else 1.1
+    wy_window = f"{last_5_years[0]}-{last_5_years[-1]}" if len(last_5_years) >= 2 else "2021-2025"
+
+    def _calc_necessary_path(start_ym, start_alq):
+        yr0 = int(str(start_ym)[:4])
+        labels = [start_ym]
+        alq_vals = [round(float(start_alq), 1)]
+        nec_vals = [None]
+        cur_alq = float(start_alq)
+        step = 0
+        while cur_alq > 3.0 and step < 10:
+            prev_alq = cur_alq
+            cur_alq = max(round(prev_alq - 1.0, 1), 0.0)
+            w_1_alq = ((1.0 + cur_alq / 100.0) / (1.0 + prev_alq / 100.0) - 1.0) * 100.0
+            nec_wy = wy_star - w_1_alq
+            labels.append(str(yr0 + step))
+            alq_vals.append(cur_alq)
+            nec_vals.append(round(nec_wy, 1))
+            step += 1
+        return {"labels": labels, "alq": alq_vals, "nec": nec_vals, "wy_star": round(wy_star, 1), "window": wy_window, "start_ym": start_ym, "start_alq": round(float(start_alq), 1)}
+
+    alq_m_sorted = alq_m.dropna().sort_index()
+    latest_m = str(alq_m_sorted.index[-1])
+    curr_yr = latest_m[:4]
+    jan_key = f"{curr_yr}-01" if f"{curr_yr}-01" in alq_m_sorted.index else latest_m
+    nec_year = _calc_necessary_path(jan_key, alq_m_sorted.loc[jan_key])
+    nec_quarter = _calc_necessary_path(latest_m, alq_m_sorted.loc[latest_m])
+
+    # Rezessionsintervalle (nur tatsaechliche negative BIP-Wachstumsraten)
+    neg_bip_years = {str(y) for y, v in g_bip_y.dropna().items() if v < 0}
+    neg_bip_quarters = {_to_quarter_label(q) for q, v in g_bip_q.dropna().items() if v < 0}
+    neg_set = neg_bip_years | neg_bip_quarters
+
+    return {
+        "long_labels": long_labels,
+        "long_pot_base": long_pot_base,
+        "long_pot_ext": long_pot_ext,
+        "long_util": long_util,
+        "mean_util_91_19": mean_util_91_19,
+        "long_g_labels": long_g_labels,
+        "long_diff": long_diff,
+        "long_g_alo": long_g_alo,
+        "long_fin_pct": long_fin_pct,
+        "short_labels": short_labels,
+        "short_util": short_util,
+        "short_diff": short_diff,
+        "short_g_alo": short_g_alo,
+        "short_fin_pct": short_fin_pct,
+        "nec_year": nec_year,
+        "nec_quarter": nec_quarter,
+        "neg_bip_set": neg_set,
+    }
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
