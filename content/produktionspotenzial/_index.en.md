@@ -18,7 +18,7 @@ See also on the life and work of Claus Köhler: [Duncker & Humblot – Claus Kö
 
 ### Table of Contents
 
-* **Part 1: Long-Term Perspective (from 1993 to Latest Available Date)**
+* **Part 1: Long-Term Perspective (from 1991 to Latest Available Date)**
   * [1. Potential Output and Real GDP (in EUR bn)](#potential-output-long)
   * [2. Capacity Utilization of Potential Output (%)](#utilization-long)
   * [3. Appropriate / Inappropriate Economic Growth and Unemployment](#appropriate-unemployment-long)
@@ -41,7 +41,7 @@ See also on the life and work of Claus Köhler: [Duncker & Humblot – Claus Kö
 
 [Open full-screen chart (PNG)](/produktionspotenzial/01_potenzial_lang_en.png)
 
-**Construction & Sources:** Potential output is calculated following Claus Köhler by multiplying the potential labor force (persons in employment plus registered unemployed persons; extended variant additionally including cyclical short-time workers) by actual labor productivity per person employed (real GDP divided by persons in employment). Annual values up to the last completed year and quarterly values for the current year. Source: Federal Statistical Office (Destatis GENESIS-Online, Tables 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0002) and Federal Employment Agency.
+**Construction & Sources:** Potential output is calculated following Claus Köhler by multiplying the potential labor force (persons in employment plus registered unemployed persons; extended variant additionally including cyclical short-time workers) by actual labor productivity per person employed (real GDP divided by persons in employment). Annual values up to the last completed year and annualized quarterly values for the current year. Source: Federal Statistical Office (Destatis GENESIS-Online, Tables 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0001, 13211-0002) and Federal Employment Agency.
 
 ---
 

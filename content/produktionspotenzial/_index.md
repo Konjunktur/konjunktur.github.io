@@ -19,10 +19,10 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 ### Inhaltsverzeichnis
 
 1. [**Produktionspotenzial, Auslastung des Produktionspotenzials, angemessenes/nicht angemessenes Wirtschaftswachstum in der langen Frist**](#lange-frist)
-   * [Produktionspotenzial und reales Bruttoinlandsprodukt (ab 1993)](#potenzial-lang)
-   * [Auslastung des Produktionspotenzials (ab 1993)](#auslastung-lang)
-   * [Angemessenes/nicht angemessenes Wirtschaftswachstum und Arbeitslosigkeit (ab 1993)](#angemessen-alo-lang)
-   * [Angemessenes/nicht angemessenes Wirtschaftswachstum und Öffentliche Haushalte (ab 1993)](#angemessen-staat-lang)
+   * [Produktionspotenzial und reales Bruttoinlandsprodukt (ab 1991)](#potenzial-lang)
+   * [Auslastung des Produktionspotenzials (ab 1991)](#auslastung-lang)
+   * [Angemessenes/nicht angemessenes Wirtschaftswachstum und Arbeitslosigkeit (ab 1991)](#angemessen-alo-lang)
+   * [Angemessenes/nicht angemessenes Wirtschaftswachstum und Öffentliche Haushalte (ab 1991)](#angemessen-staat-lang)
 2. [**Produktionspotenzial, Auslastung des Produktionspotenzials, angemessenes/nicht angemessenes Wirtschaftswachstum in der kürzeren Frist**](#kuerzere-frist)
    * [Auslastung des Produktionspotenzials (ab 2019)](#auslastung-kurz)
    * [Angemessenes/nicht angemessenes Wirtschaftswachstum und Arbeitslosigkeit (ab 2019)](#angemessen-alo-kurz)
@@ -41,8 +41,8 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 [Grafik als Vollbild öffnen (.png)](/produktionspotenzial/01_potenzial_lang.png)
 
-* **Konstruktion:** Das Produktionspotenzial nach Claus Köhler ergibt sich aus dem vorhandenen Arbeitskräftepotenzial (Erwerbstätige im Inland zuzüglich registrierte Arbeitslose) multipliziert mit der tatsächlichen Arbeitsproduktivität je Erwerbstätigem (reales BIP je Erwerbstätigem). Bis zum zuletzt abgeschlossenen Kalenderjahr werden Jahreswerte und für das laufende Jahr die verfügbaren Quartalswerte ausgewiesen.
-* **Quellen:** Statistisches Bundesamt (GENESIS-Online, Tabellen 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0002).
+* **Konstruktion:** Das Produktionspotenzial nach Claus Köhler ergibt sich aus dem vorhandenen Arbeitskräftepotenzial (Erwerbstätige im Inland zuzüglich registrierte Arbeitslose) multipliziert mit der tatsächlichen Arbeitsproduktivität je Erwerbstätigem (reales BIP je Erwerbstätigem). Bis zum zuletzt abgeschlossenen Kalenderjahr werden Jahreswerte und für das laufende Jahr auf Jahresrate hochgerechnete Quartalswerte ausgewiesen.
+* **Quellen:** Statistisches Bundesamt (GENESIS-Online, Tabellen 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0001, 13211-0002).
 
 ---
 
@@ -64,7 +64,7 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 [Grafik als Vollbild öffnen (.png)](/produktionspotenzial/03_angemessen_alo_lang.png)
 
 * **Konstruktion:** Ein Wirtschaftswachstum ist angemessen (positiver Wert in Prozentpunkten, linke Skala), wenn die Zuwachsrate des realen BIP die Zuwachsrate des Produktionspotenzials übersteigt, und nicht angemessen (negativer Wert), wenn sie dahinter zurückbleibt. Gegenübergestellt wird die jährliche Veränderungsrate der Zahl der registrierten Arbeitslosen in Prozent (rechte Skala).
-* **Quellen:** Statistisches Bundesamt / Bundesagentur für Arbeit (GENESIS-Online, Tabellen 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0002).
+* **Quellen:** Statistisches Bundesamt / Bundesagentur für Arbeit (GENESIS-Online, Tabellen 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0001, 13211-0002).
 
 ---
 
