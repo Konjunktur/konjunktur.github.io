@@ -280,6 +280,7 @@ def _filter_series(
     if df is None or df.empty or "ZEIT" not in df.columns or "NUM" not in df.columns:
         return pd.Series(dtype=float)
 
+    df = df.loc[:, ~df.columns.duplicated()].copy()
     code_cols = [
         column
         for column in df.columns
