@@ -124,6 +124,11 @@ def fmt_v(val, comma=True, dec=1):
     return s.replace(".", ",") if comma else s
 
 
+def _as_series(frame, col):
+    s = frame[col]
+    return s.iloc[:, 0] if isinstance(s, pd.DataFrame) else s
+
+
 def _destatis_ffcsv(table, startyear="1991", extra=None):
     if not D_USER or not D_PASS:
         raise RuntimeError("DESTATIS_USER / DESTATIS_PASS fehlen in den Environment-Variablen.")
@@ -225,13 +230,13 @@ def _destatis_ffcsv(table, startyear="1991", extra=None):
     time_col = column_map.get("time") or column_map.get("zeit")
     value_col = column_map.get("value") or column_map.get("wert")
 
-    time_values = df[time_col].astype(str).str.strip()
+    time_values = _as_series(df, time_col).astype(str).str.strip()
 
     for column in df.columns:
         if column in (time_col, value_col) or "label" in column.lower():
             continue
 
-        values = df[column].astype(str).str.strip()
+        values = _as_series(df, column).astype(str).str.strip()
         if values.str.match(r"^QUART0?[1-4]$", case=False).any():
             quarter = values.str.extract(r"([1-4])", expand=False)
             time_values = pd.Series(
@@ -262,7 +267,7 @@ def _destatis_ffcsv(table, startyear="1991", extra=None):
 
     df["ZEIT"] = time_values
     df["NUM"] = pd.to_numeric(
-        df[value_col].astype(str).str.replace(",", "."),
+        _as_series(df, value_col).astype(str).str.replace(",", "."),
         errors="coerce",
     )
     return df.dropna(subset=["NUM"]).copy()
@@ -330,7 +335,12 @@ def _filter_series(
                     [_as_text_series(label_df, column) for column in label_cols],
                     axis=1,
                 )
-                .agg(" | ".join, axis=1)
+                .apply(lambda row: " | ".join(row), axis=1)
+            )
+            label_text = (
+                label_text.iloc[:, 0]
+                if isinstance(label_text, pd.DataFrame)
+                else label_text
             )
             mask = pd.Series(True, index=label_df.index)
             for term in lbl_terms:
@@ -350,7 +360,7 @@ def _filter_series(
         return pd.Series(dtype=float)
 
     sub = sub[
-        sub["ZEIT"].astype(str).str.match(z_regex)
+        _as_series(sub, "ZEIT").astype(str).str.match(z_regex)
     ].copy()
     if sub.empty:
         return pd.Series(dtype=float)
