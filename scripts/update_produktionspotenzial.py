@@ -1,326 +1,600 @@
 #!/usr/bin/env python3
-# Update-Skript: Produktionspotenzial nach Claus Koehler (DE & EN, PNG & HTML)
+# -*- coding: utf-8 -*-
+"""
+Vollständiges Update-Skript: Produktionspotenzial & Produktionslücke Deutschland (ab 1991)
+- Datenabruf über die Destatis GENESIS-REST-API (www-genesis.destatis.de/genesisWS/rest/2020/data/tablefile)
+- Robuster CSV-Parser (on_bad_lines="skip", Semikolon-Trennung, Komma-Dezimalzahlen)
+- Vollständige Zeitreihen ab 1991 mit Quartals-Aggregations-Fallbacks (4-Quartals-Summe / -Mittelwert)
+- Einheiten-Bereinigung (Mill. EUR -> Mrd. EUR für Tabelle 81000-0031)
+- Offizielle BA-Arbeitslosenquote (bezogen auf alle zivilen Erwerbspersonen)
+- Trend- und Potenzialschätzung (HP-Filter, rollierender 5-Jahres-Durchschnitt wY*, Produktionsfunktion)
+- Erzeugung aller 9 zweisprachigen Grafiken (DE & EN) als interaktives HTML (ohne Scrollbalken) & hochauflösendes PNG
+- Durchgehende Rezessionsschattierung und einheitliche Fußzeile: Quelle: Statistisches Bundesamt | Stand: <Datum>
+"""
 
-import io, math, os, re
+import os
+import io
+import json
+import getpass
 from datetime import datetime
 from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
+import requests
+from statsmodels.tsa.filters.hp_filter import hpfilter
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import requests
-
-OUT_DIR = Path("static/produktionspotenzial")
-API_URL = "https://" + "www-genesis.destatis.de/genesisWS/rest/2020/data/tablefile"
-LT, GT = chr(60), chr(62)
-SVR_Y = [(1992, 1993), (2001, 2003), (2008, 2009), (2020, 2020), (2022, 2025)]
-SVR_Q = [("1992-01", "1993-04"), ("2001-01", "2003-02"), ("2008-02", "2009-02"), ("2020-01", "2020-02"), ("2022-04", "2025-04")]
-C_NAVY, C_ORANGE, C_GREEN, C_SLATE, C_GRID = "#1E3A8A", "#D97706", "#059669", "#475569", "#E2E8F0"
-C_SVR, C_BIP = "rgba(148,163,184,0.30)", "rgba(96,165,250,0.36)"
 
 
-def _f(v) -> float:
-    s = "" if v is None else str(v).strip().replace("\xa0", "").replace(" ", "")
-    if s in ("", ".", "-", "...", "x", "/", "nan", "NaN", "None"):
-        return np.nan
-    try:
-        return float(s.replace(".", "").replace(",", ".") if ("," in s and "." in s) else s.replace(",", "."))
-    except ValueError:
-        return np.nan
+# ==============================================================================
+# 1. KONFIGURATION & KONSTANTEN
+# ==============================================================================
+
+DESTATIS_BASE_URL = "https://www-genesis.destatis.de/genesisWS/rest/2020/data/tablefile"
+START_YEAR = 1991
+TODAY_STR = datetime.now().strftime("%d.%m.%Y")
+SOURCE_FOOTER = f"Quelle: Statistisches Bundesamt | Stand: {TODAY_STR}"
+SOURCE_FOOTER_EN = f"Source: Federal Statistical Office (Destatis) | As of: {TODAY_STR}"
+
+OUTPUT_DIR = Path("output_produktionspotenzial")
+HTML_DIR = OUTPUT_DIR / "html"
+PNG_DIR = OUTPUT_DIR / "png"
+DATA_DIR = OUTPUT_DIR / "data"
+
+# Offizielle Rezessionsphasen Deutschland (Sachverständigenrat / Bundesbank-Datierung)
+RECESSIONS = [
+    (1992.75, 1993.50, "Rezession 1992/93", "Recession 1992/93"),
+    (2001.25, 2003.50, "Stagnation 2001–03", "Stagnation 2001–03"),
+    (2008.25, 2009.50, "Finanzkrise 2008/09", "Financial Crisis 2008/09"),
+    (2020.00, 2020.50, "COVID-19 2020", "COVID-19 2020"),
+    (2022.75, 2024.25, "Energie-/Industriekrise 2022–24", "Energy/Industry Crisis 2022–24"),
+]
+
+# Farbpalette (konsistent für alle 9 Grafiken)
+COLORS = {
+    "primary": "#1B365D",      # Dunkelblau (Ist-Werte)
+    "potential": "#C0392B",    # Karmesinrot (Potenzial / Trend)
+    "gap_pos": "#2E7D32",      # Grün (Überauslastung)
+    "gap_neg": "#D32F2F",      # Rot (Unterauslastung)
+    "accent": "#E67E22",       # Orange (Kapital / TFP)
+    "teal": "#00838F",         # Petrol (Arbeit / Stunden)
+    "gray": "#546E7A",         # Schiefergrau (Referenzlinien)
+    "recession": "rgba(180, 190, 200, 0.28)",
+}
 
 
-def fetch_table(tid: str, start: int = 1991) -> pd.DataFrame:
-    u = os.environ.get("DESTATIS_USER", "").strip()
-    p = os.environ.get("DESTATIS_PASS", "").strip()
-    if not u or not p:
-        raise RuntimeError("DESTATIS_USER oder DESTATIS_PASS fehlt.")
-    params = {"username": u, "password": p, "name": tid, "area": "all", "compress": "false",
-              "transpose": "false", "startyear": str(start), "endyear": str(datetime.now().year + 1),
-              "language": "de", "format": "ffcsv"}
-    r = requests.get(API_URL, params=params, headers={"username": u, "password": p}, timeout=90)
-    r.raise_for_status()
-    lines = r.content.decode("utf-8-sig", errors="replace").splitlines()
-    idx = next((i for i, l in enumerate(lines) if l.startswith(("statistics_code;", "Statistik_Code;"))), 0)
-    df = pd.read_csv(io.StringIO("\n".join(lines[idx:])), sep=";", dtype=str, on_bad_lines="skip")
-    df.columns = [c.strip() for c in df.columns]
+# ==============================================================================
+# 2. DESTATIS GENESIS-API CLIENT & ROBUSTER CSV-PARSER
+# ==============================================================================
+
+def get_destatis_credentials() -> Tuple[str, str]:
+    """Liest Destatis-Zugangsdaten aus Umgebungsvariablen oder fragt sie interaktiv ab."""
+    user = os.environ.get("DESTATIS_USER", "").strip()
+    password = os.environ.get("DESTATIS_PASS", "").strip()
+    if not user:
+        user = input("Destatis GENESIS Benutzername (oder Token): ").strip()
+    if not password and not user.startswith("token:"):
+        password = getpass.getpass("Destatis GENESIS Passwort (leer lassen bei API-Token): ").strip()
+    return user, password
+
+
+def fetch_destatis_table(
+    table_code: str,
+    username: str,
+    password: str,
+    start_year: int = START_YEAR,
+    end_year: Optional[int] = None,
+    regional_key: str = "",
+) -> pd.DataFrame:
+    """
+    Ruft eine Tabelle über den offiziellen Endpunkt
+    https://www-genesis.destatis.de/genesisWS/rest/2020/data/tablefile
+    im CSV-Format ab und überspringt fehlerhafte Metadaten-Kopfzeilen sicher.
+    """
+    if end_year is None:
+        end_year = datetime.now().year
+
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "username": username,
+        "password": password,
+    }
+    payload = {
+        "name": table_code,
+        "area": "all",
+        "compress": "false",
+        "transpose": "false",
+        "startyear": str(start_year),
+        "endyear": str(end_year),
+        "timeslices": "",
+        "regionalvariable": "",
+        "regionalkey": regional_key,
+        "classifyingvariable1": "",
+        "classifyingkey1": "",
+        "classifyingvariable2": "",
+        "classifyingkey2": "",
+        "classifyingvariable3": "",
+        "classifyingkey3": "",
+        "job": "false",
+        "stand": "01.01.1970",
+        "language": "de",
+        "format": "ffcsv",
+    }
+
+    response = requests.post(DESTATIS_BASE_URL, headers=headers, data=payload, timeout=60)
+    response.raise_for_status()
+
+    raw_text = response.content.decode("utf-8-sig", errors="replace")
+    if "Fehler" in raw_text[:300] and ";" not in raw_text[:300]:
+        raise RuntimeError(f"Destatis-API meldet Fehler für Tabelle {table_code}: {raw_text[:250]}")
+
+    df = pd.read_csv(
+        io.StringIO(raw_text),
+        sep=";",
+        decimal=",",
+        thousands=".",
+        on_bad_lines="skip",
+        engine="python",
+    )
+    df.columns = [str(c).strip() for c in df.columns]
     return df
 
 
-def _col(df: pd.DataFrame, names: list) -> str:
-    low = {c.lower(): c for c in df.columns}
-    return next((low[n.lower()] for n in names if n.lower() in low), "")
+def parse_german_number(series: pd.Series) -> pd.Series:
+    """Konvertiert deutsche Zahlenstrings (inkl. '-', '.', 'x', '/') sauber in float."""
+    cleaned = (
+        series.astype(str)
+        .str.strip()
+        .replace({"-": np.nan, ".": np.nan, "...": np.nan, "x": np.nan, "/": np.nan, "nan": np.nan, "": np.nan})
+        .str.replace(".", "", regex=False)
+        .str.replace(",", ".", regex=False)
+    )
+    return pd.to_numeric(cleaned, errors="coerce")
 
 
-def _extract(df: pd.DataFrame, inc: list, exc: list, lo: float, hi: float, yearly: bool) -> pd.Series:
-    df = df.copy()
-    for c in df.columns:
-        if ("variable_code" in c.lower() or "merkmal" in c.lower()) and (df[c].fillna("") == "WERTORG").any():
-            df = df[df[c].fillna("") == "WERTORG"]
-    ct, cc, cv, cl = _col(df, ["time", "Zeit"]), _col(df, ["time_code", "Zeit_Code"]), _col(df, ["value", "Wert"]), _col(df, ["value_variable_label", "Wert_Merkmal_Label"])
-    if yearly and cc and (df[cc].fillna("") == "JAHR").any():
-        df = df[df[cc].fillna("") == "JAHR"]
-    if cl and inc:
-        lbl = df[cl].fillna("").str.lower()
-        m = pd.Series(True, index=df.index)
-        for k in inc:
-            m &= lbl.str.contains(k.lower(), regex=False)
-        for k in exc:
-            m &= ~lbl.str.contains(k.lower(), regex=False)
-        df = df[m]
-    for c in df.columns:
-        if c.endswith("_code") and c not in (cc, "statistics_code", "value_variable_code"):
-            v = df[c].fillna("")
-            if (v == "INSGESAMT").any():
-                df = df[v == "INSGESAMT"]
-            elif (v == "WZ08-00").any():
-                df = df[v == "WZ08-00"]
-    qmap, out = {"QUART1": 1, "QUART2": 2, "QUART3": 3, "QUART4": 4}, {}
-    for _, r in df.iterrows():
-        ys, qs, val = str(r[ct]).strip(), str(r[cc]).strip() if cc else "", _f(r[cv])
-        if np.isnan(val) or not (lo <= val <= hi):
-            continue
-        if yearly and re.match(r"^\d{4}$", ys):
-            out[int(ys)] = val
-        elif not yearly and ys.isdigit() and qs in qmap:
-            out[f"{int(ys):04d}-0{qmap[qs]}"] = val
-    s = pd.Series(out, dtype=float).sort_index()
-    return s[~s.index.duplicated(keep="last")]
+# ==============================================================================
+# 3. AGGREGATIONS-FALLBACKS & DATENAUFBEREITUNG AB 1991
+# ==============================================================================
+
+def annualize_from_quarters(
+    df_q: pd.DataFrame,
+    year_col: str,
+    quarter_col: str,
+    value_col: str,
+    method: str = "sum",
+) -> pd.Series:
+    """
+    Aggregiert Quartalsdaten auf Jahreswerte, sobald alle 4 Quartale vorliegen
+    (4-Quartals-Summe für Stromgrößen wie BIP/Arbeitsvolumen; 4-Quartals-Mittelwert für Bestandsgrößen).
+    """
+    sub = df_q[[year_col, quarter_col, value_col]].dropna().copy()
+    sub[year_col] = pd.to_numeric(sub[year_col], errors="coerce").astype("Int64")
+    counts = sub.groupby(year_col)[value_col].count()
+    complete_years = counts[counts == 4].index
+
+    sub_complete = sub[sub[year_col].isin(complete_years)]
+    if method == "sum":
+        return sub_complete.groupby(year_col)[value_col].sum()
+    return sub_complete.groupby(year_col)[value_col].mean()
 
 
-def _q2y(sq: pd.Series, agg: str = "sum") -> pd.Series:
-    if len(sq) == 0:
-        return pd.Series(dtype=float)
-    g = pd.DataFrame({"yr": [int(k[:4]) for k in sq.index], "v": sq.values}).groupby("yr")["v"]
-    return (g.sum() if agg == "sum" else g.mean())[g.count() == 4].sort_index()
-
-#!/usr/bin/env python3
-# Update-Skript: Produktionspotenzial nach Claus Koehler (DE & EN, PNG & HTML)
-
-import io, math, os, re
-from datetime import datetime
-from pathlib import Path
-import numpy as np
-import pandas as pd
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import requests
-
-OUT_DIR = Path("static/produktionspotenzial")
-API_URL = "https://" + "www-genesis.destatis.de/genesisWS/rest/2020/data/tablefile"
-LT, GT = chr(60), chr(62)
-SVR_Y = [(1992, 1993), (2001, 2003), (2008, 2009), (2020, 2020), (2022, 2025)]
-SVR_Q = [("1992-01", "1993-04"), ("2001-01", "2003-02"), ("2008-02", "2009-02"), ("2020-01", "2020-02"), ("2022-04", "2025-04")]
-C_NAVY, C_ORANGE, C_GREEN, C_SLATE, C_GRID = "#1E3A8A", "#D97706", "#059669", "#475569", "#E2E8F0"
-C_SVR, C_BIP = "rgba(148,163,184,0.30)", "rgba(96,165,250,0.36)"
+def merge_annual_with_quarterly_fallback(
+    annual_series: pd.Series,
+    quarterly_fallback: pd.Series,
+    years: pd.Index,
+) -> pd.Series:
+    """Ergänzt fehlende Jahreswerte (z. B. aktuelles Jahr) über vollständige 4-Quartals-Aggregate."""
+    out = annual_series.reindex(years).copy()
+    missing = out.isna()
+    out.loc[missing] = quarterly_fallback.reindex(years).loc[missing]
+    return out
 
 
-def _f(v) -> float:
-    s = "" if v is None else str(v).strip().replace("\xa0", "").replace(" ", "")
-    if s in ("", ".", "-", "...", "x", "/", "nan", "NaN", "None"):
-        return np.nan
-    try:
-        return float(s.replace(".", "").replace(",", ".") if ("," in s and "." in s) else s.replace(",", "."))
-    except ValueError:
-        return np.nan
+def rolling_5y_potential_growth(series: pd.Series) -> pd.Series:
+    """Berechnet das rollierende 5-Jahres-Mittel der Potenzialwachstumsrate (wY*)."""
+    growth = series.pct_change() * 100.0
+    return growth.rolling(window=5, min_periods=3).mean()
 
 
-def fetch_table(tid: str, start: int = 1991) -> pd.DataFrame:
-    u = os.environ.get("DESTATIS_USER", "").strip()
-    p = os.environ.get("DESTATIS_PASS", "").strip()
-    if not u or not p:
-        raise RuntimeError("DESTATIS_USER oder DESTATIS_PASS fehlt.")
-    params = {"username": u, "password": p, "name": tid, "area": "all", "compress": "false",
-              "transpose": "false", "startyear": str(start), "endyear": str(datetime.now().year + 1),
-              "language": "de", "format": "ffcsv"}
-    r = requests.get(API_URL, params=params, headers={"username": u, "password": p}, timeout=90)
-    r.raise_for_status()
-    lines = r.content.decode("utf-8-sig", errors="replace").splitlines()
-    idx = next((i for i, l in enumerate(lines) if l.startswith(("statistics_code;", "Statistik_Code;"))), 0)
-    df = pd.read_csv(io.StringIO("\n".join(lines[idx:])), sep=";", dtype=str, on_bad_lines="skip")
-    df.columns = [c.strip() for c in df.columns]
+def build_data(use_api: bool = True) -> dict:
+    """
+    Erzeugt den vollständigen, geprüften Datensatz für alle 9 Grafiken ab 1991.
+    Führt Einheiten-Umrechnungen (81000-0031: Mill. EUR -> Mrd. EUR),
+    Quartals-Fallbacks, HP-Filter-Zerlegung und Produktionsfunktions-Beiträge zusammen.
+    """
+    years = pd.Index(range(START_YEAR, datetime.now().year + 1), name="Jahr")
+    df = pd.DataFrame(index=years)
+
+    if use_api:
+        user, pwd = get_destatis_credentials()
+        # 81000-0001: Bruttoinlandsprodukt (preisbereinigt, Kettenindex & Mrd. EUR)
+        raw_bip = fetch_destatis_table("81000-0001", user, pwd, start_year=START_YEAR)
+        # 81000-0015: BIP & Erwerbstätige / Arbeitsvolumen (Quartale & Jahre)
+        raw_et = fetch_destatis_table("81000-0015", user, pwd, start_year=START_YEAR)
+        # 81000-0031: Anlagevermögen / Kapitalstock (in Mill. EUR -> Umrechnung in Mrd. EUR)
+        raw_cap = fetch_destatis_table("81000-0031", user, pwd, start_year=START_YEAR)
+        # 13211-0001: Offizielle Arbeitslosenquote (BA, bez. auf alle zivilen Erwerbspersonen)
+        raw_alq = fetch_destatis_table("13211-0001", user, pwd, start_year=START_YEAR)
+
+        df = _extract_destatis_series(df, raw_bip, raw_et, raw_cap, raw_alq)
+    else:
+        raise ValueError("use_api=False ist nur für interne Tests zulässig.")
+
+    # Einheiten-Check: Tabelle 81000-0031 liefert Mill. EUR -> konsequent in Mrd. EUR umrechnen
+    if df["kapitalstock_mrd"].median() > 50_000:
+        df["kapitalstock_mrd"] = df["kapitalstock_mrd"] / 1000.0
+
+    # Produktionsfunktion (Cobb-Douglas mit Lohnquote alpha = 0.65, Kapitalelastizität 1 - alpha = 0.35)
+    alpha = 0.65
+    df["arbeitsvolumen_mrd_std"] = (df["erwerbstaetige_tsd"] * df["arbeitszeit_std"]) / 1_000_000.0
+    df["stundenproduktivitaet"] = (df["bip_real_mrd"] * 1000.0) / df["arbeitsvolumen_mrd_std"]
+
+    # Trend-Komponenten via Hodrick-Prescott-Filter (lambda = 100 für Jahresdaten)
+    for col, trend_col in [
+        ("bip_real_mrd", "bip_potenzial_mrd"),
+        ("erwerbspersonen_tsd", "erwerbspersonen_pot_tsd"),
+        ("arbeitszeit_std", "arbeitszeit_pot_std"),
+        ("alq_ba_pct", "nairu_pct"),
+        ("kapitalstock_mrd", "kapitalstock_pot_mrd"),
+    ]:
+        valid = df[col].dropna()
+        _, trend = hpfilter(np.log(valid), lamb=100) if col != "alq_ba_pct" else hpfilter(valid, lamb=100)
+        df[trend_col] = np.exp(trend) if col != "alq_ba_pct" else trend
+
+    # Solow-Residuum (Totale Faktorproduktivität, TFP) & TFP-Trend
+    ln_tfp = (
+        np.log(df["bip_real_mrd"])
+        - alpha * np.log(df["arbeitsvolumen_mrd_std"])
+        - (1.0 - alpha) * np.log(df["kapitalstock_mrd"])
+    )
+    valid_tfp = ln_tfp.dropna()
+    _, ln_tfp_trend = hpfilter(valid_tfp, lamb=100)
+    df["tfp_index"] = np.exp(valid_tfp - valid_tfp.iloc[0]) * 100.0
+    df["tfp_pot_index"] = np.exp(ln_tfp_trend - valid_tfp.iloc[0]) * 100.0
+
+    # Produktionspotenzial auf Basis der Produktionsfunktion (Y*)
+    pot_erwerbstaetige = df["erwerbspersonen_pot_tsd"] * (1.0 - df["nairu_pct"] / 100.0)
+    pot_arbeitsvolumen = (pot_erwerbstaetige * df["arbeitszeit_pot_std"]) / 1_000_000.0
+    df["potenzial_pf_mrd"] = (
+        np.exp(ln_tfp_trend)
+        * (pot_arbeitsvolumen ** alpha)
+        * (df["kapitalstock_pot_mrd"] ** (1.0 - alpha))
+    )
+
+    # Produktionslücke in % des Produktionspotenzials
+    df["produktionsluecke_pct"] = (
+        (df["bip_real_mrd"] - df["potenzial_pf_mrd"]) / df["potenzial_pf_mrd"]
+    ) * 100.0
+
+    # Potenzialwachstum (wY*) und rollierender 5-Jahres-Durchschnitt
+    df["potenzialwachstum_pct"] = df["potenzial_pf_mrd"].pct_change() * 100.0
+    df["potenzialwachstum_5j_pct"] = rolling_5y_potential_growth(df["potenzial_pf_mrd"])
+
+    # Wachstumsbeiträge zum Potenzialwachstum (in Prozentpunkten)
+    df["beitrag_tfp_pp"] = ln_tfp_trend.diff() * 100.0
+    df["beitrag_arbeit_pp"] = alpha * np.log(pot_arbeitsvolumen).diff() * 100.0
+    df["beitrag_kapital_pp"] = (1.0 - alpha) * np.log(df["kapitalstock_pot_mrd"]).diff() * 100.0
+
+    # Arbeitsmarkt-Komponenten (Erwerbspersonenpotenzial-Beiträge)
+    df["erwerbsquote_pct"] = (df["erwerbspersonen_tsd"] / df["bevoelkerung_15_64_tsd"]) * 100.0
+    _, eq_trend = hpfilter(df["erwerbsquote_pct"].dropna(), lamb=100)
+    df["erwerbsquote_pot_pct"] = eq_trend
+
+    df = df.dropna(subset=["bip_real_mrd"]).copy()
+
+    return {
+        "df": df,
+        "meta": {
+            "start_year": int(df.index.min()),
+            "end_year": int(df.index.max()),
+            "stand": TODAY_STR,
+            "source_de": SOURCE_FOOTER,
+            "source_en": SOURCE_FOOTER_EN,
+        },
+    }
+
+
+def _extract_destatis_series(
+    df: pd.DataFrame,
+    raw_bip: pd.DataFrame,
+    raw_et: pd.DataFrame,
+    raw_cap: pd.DataFrame,
+    raw_alq: pd.DataFrame,
+) -> pd.DataFrame:
+    """Mappt die bereinigten Destatis-GENESIS-Tabellen auf das einheitliche Jahres-DataFrame ab 1991."""
+    def _extract_col(raw: pd.DataFrame, code_filter: str, value_col: str = "value") -> pd.Series:
+        sub = raw.copy()
+        if "value_variable_code" in sub.columns and code_filter:
+            sub = sub[sub["value_variable_code"].astype(str).str.contains(code_filter, na=False)]
+        time_col = "time" if "time" in sub.columns else sub.columns[0]
+        val_col = value_col if value_col in sub.columns else sub.columns[-1]
+        sub["Jahr"] = pd.to_numeric(sub[time_col].astype(str).str.slice(0, 4), errors="coerce")
+        sub["val"] = parse_german_number(sub[val_col])
+        annual = sub[sub[time_col].astype(str).str.len() == 4].groupby("Jahr")["val"].first()
+        quarterly = sub[sub[time_col].astype(str).str.contains("Q", na=False)].copy()
+        if not quarterly.empty:
+            quarterly["Q"] = quarterly[time_col].astype(str).str.extract(r"(Q[1-4])")[0]
+            q_agg = annualize_from_quarters(quarterly, "Jahr", "Q", "val", method="sum")
+            return merge_annual_with_quarterly_fallback(annual, q_agg, df.index)
+        return annual.reindex(df.index)
+
+    df["bip_real_mrd"] = _extract_col(raw_bip, "BIP")
+    df["erwerbstaetige_tsd"] = _extract_col(raw_et, "ERW")
+    df["arbeitszeit_std"] = _extract_col(raw_et, "ARBZ")
+    df["kapitalstock_mrd"] = _extract_col(raw_cap, "ANLV")
+    df["alq_ba_pct"] = _extract_col(raw_alq, "ALQ")
+    df["erwerbspersonen_tsd"] = df["erwerbstaetige_tsd"] / (1.0 - df["alq_ba_pct"] / 100.0)
+    df["bevoelkerung_15_64_tsd"] = _extract_col(raw_et, "BEV")
     return df
 
 
-def _col(df: pd.DataFrame, names: list) -> str:
-    low = {c.lower(): c for c in df.columns}
-    return next((low[n.lower()] for n in names if n.lower() in low), "")
+# ==============================================================================
+# 4. LAYOUT-HELFER & EXPORT OHNE SCROLLBALKEN (HTML + PNG)
+# ==============================================================================
 
+def apply_standard_layout(
+    fig: go.Figure,
+    title: str,
+    subtitle: str,
+    yaxis_title: str,
+    lang: str = "de",
+    height: int = 560,
+) -> go.Figure:
+    """Wendet einheitliches Design, durchgehende Rezessionsschattierung und Quellen-Fußzeile an."""
+    footer_text = SOURCE_FOOTER if lang == "de" else SOURCE_FOOTER_EN
 
-def _extract(df: pd.DataFrame, inc: list, exc: list, lo: float, hi: float, yearly: bool) -> pd.Series:
-    df = df.copy()
-    for c in df.columns:
-        if ("variable_code" in c.lower() or "merkmal" in c.lower()) and (df[c].fillna("") == "WERTORG").any():
-            df = df[df[c].fillna("") == "WERTORG"]
-    ct, cc, cv, cl = _col(df, ["time", "Zeit"]), _col(df, ["time_code", "Zeit_Code"]), _col(df, ["value", "Wert"]), _col(df, ["value_variable_label", "Wert_Merkmal_Label"])
-    if yearly and cc and (df[cc].fillna("") == "JAHR").any():
-        df = df[df[cc].fillna("") == "JAHR"]
-    if cl and inc:
-        lbl = df[cl].fillna("").str.lower()
-        m = pd.Series(True, index=df.index)
-        for k in inc:
-            m &= lbl.str.contains(k.lower(), regex=False)
-        for k in exc:
-            m &= ~lbl.str.contains(k.lower(), regex=False)
-        df = df[m]
-    for c in df.columns:
-        if c.endswith("_code") and c not in (cc, "statistics_code", "value_variable_code"):
-            v = df[c].fillna("")
-            if (v == "INSGESAMT").any():
-                df = df[v == "INSGESAMT"]
-            elif (v == "WZ08-00").any():
-                df = df[v == "WZ08-00"]
-    qmap, out = {"QUART1": 1, "QUART2": 2, "QUART3": 3, "QUART4": 4}, {}
-    for _, r in df.iterrows():
-        ys, qs, val = str(r[ct]).strip(), str(r[cc]).strip() if cc else "", _f(r[cv])
-        if np.isnan(val) or not (lo <= val <= hi):
-            continue
-        if yearly and re.match(r"^\d{4}$", ys):
-            out[int(ys)] = val
-        elif not yearly and ys.isdigit() and qs in qmap:
-            out[f"{int(ys):04d}-0{qmap[qs]}"] = val
-    s = pd.Series(out, dtype=float).sort_index()
-    return s[~s.index.duplicated(keep="last")]
+    for x0, x1, label_de, label_en in RECESSIONS:
+        fig.add_vrect(
+            x0=x0,
+            x1=x1,
+            fillcolor=COLORS["recession"],
+            opacity=1.0,
+            layer="below",
+            line_width=0,
+        )
 
-
-def _q2y(sq: pd.Series, agg: str = "sum") -> pd.Series:
-    if len(sq) == 0:
-        return pd.Series(dtype=float)
-    g = pd.DataFrame({"yr": [int(k[:4]) for k in sq.index], "v": sq.values}).groupby("yr")["v"]
-    return (g.sum() if agg == "sum" else g.mean())[g.count() == 4].sort_index()
-
-def _shade(fig: go.Figure, keys: list, wy_y: pd.Series, wy_q: pd.Series, l: str):
-    svr_i = [i for i, (k, v) in enumerate(keys) if (any(a <= int(v) <= b for a, b in SVR_Y) if k == "Y" else any(a <= str(v) <= b for a, b in SVR_Q))]
-    bip_i = [i for i, (k, v) in enumerate(keys) if (wy_y.get(int(v), 1) if k == "Y" else wy_q.get(str(v), 1)) < 0]
-    for col, nm, idxs in (
-        (C_SVR, "Rezessionsphasen (SVR/BBK)" if l == "de" else "Recession phases (SVR/BBK)", svr_i),
-        (C_BIP, "Reales BIP < 0 % gg. Vj." if l == "de" else "Real GDP < 0% YoY", bip_i),
-    ):
-        s = tuple(sorted(set(idxs)))
-        if s:
-            st = pr = next(iter(s))
-            for i in s[1:] + (-99,):
-                if i == pr + 1:
-                    pr = i
-                else:
-                    fig.add_vrect(x0=st - 0.5, x1=pr + 0.5, fillcolor=col, line_width=0, layer="below")
-                    st = pr = i
-        fig.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=12, symbol="square", color=col), name=nm))
-
-
-def _save(fig: go.Figure, stem: str, title: str, sub: str, src: str, y1: str, r1=None, y2=None, r2=None, dt=2):
-    t_html = f"{LT}b{GT}{title}{LT}/b{GT}{LT}br{GT}{LT}span style='font-size:12px;color:#475569'{GT}{sub}{LT}/span{GT}"
     fig.update_layout(
-        title=dict(text=t_html, x=0.01, y=0.97, font=dict(size=16)),
-        legend=dict(orientation="h", yanchor="bottom", y=1.03, x=0.0, bgcolor="rgba(255,255,255,0.85)"),
-        margin=dict(l=58, r=58 if y2 else 26, t=122, b=66),
-        plot_bgcolor="#FFF", paper_bgcolor="#FFF", hovermode="x unified", height=490,
+        template="plotly_white",
+        autosize=True,
+        height=height,
+        margin=dict(l=65, r=35, t=95, b=85),
+        title=dict(
+            text=f"<b>{title}</b><br><span style='font-size:13px;color:#546E7A;'>{subtitle}</span>",
+            x=0.01,
+            xanchor="left",
+            font=dict(size=18, color="#1B365D"),
+        ),
+        yaxis=dict(
+            title=dict(text=yaxis_title, font=dict(size=13, color="#263238")),
+            gridcolor="#ECEFF1",
+            zerolinecolor="#B0BEC5",
+        ),
+        xaxis=dict(
+            gridcolor="#F5F7F8",
+            dtick=2,
+            tickangle=0,
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.01,
+            xanchor="right",
+            x=1.0,
+            bgcolor="rgba(255,255,255,0.85)",
+        ),
+        annotations=[
+            dict(
+                text=footer_text,
+                xref="paper",
+                yref="paper",
+                x=0.0,
+                y=-0.16,
+                xanchor="left",
+                yanchor="top",
+                showarrow=False,
+                font=dict(size=11, color="#546E7A"),
+            )
+        ],
     )
-    fig.update_xaxes(type="category", showgrid=False, linecolor="#CBD5E1", tickangle=-45, nticks=max(10, 38 // dt))
-    fig.update_yaxes(title_text=y1, gridcolor=C_GRID, zeroline=True, zerolinecolor="#94A3B8", range=r1, secondary_y=False if y2 else None)
-    if y2:
-        fig.update_yaxes(title_text=y2, showgrid=False, zeroline=False, range=r2, secondary_y=True)
-    fig.add_annotation(text=src, xref="paper", yref="paper", x=0.0, y=-0.16, showarrow=False, xanchor="left", yanchor="top", font=dict(size=11, color="#64748B"))
-    css = f"{LT}style{GT}html,body{{margin:0;padding:0;overflow:hidden;width:100%;height:100%;background:#fff}}.plotly-graph-div{{width:100%!important;height:100%!important}}{LT}/style{GT}"
-    html = fig.to_html(include_plotlyjs="cdn", full_html=True, config={"displayModeBar": False, "responsive": True})
-    (OUT_DIR / f"{stem}.html").write_text(html.replace(f"{LT}/head{GT}", f"{css}{LT}/head{GT}"), encoding="utf-8")
-    try:
-        fig.write_image(str(OUT_DIR / f"{stem}.png"), width=1100, height=520, scale=2)
-    except Exception as e:
-        print(f"[WARN] PNG {stem}: {e}")
+    return fig
 
 
-def main():
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    s, ex = build_data(), f"{LT}extra{GT}{LT}/extra{GT}"
-    src = lambda l: f"Quelle: Statistisches Bundesamt | Stand: {s['de']}" if l == "de" else f"Source: Federal Statistical Office | As of: {s['en']}"
+def save_chart_both_languages(
+    fig_de: go.Figure,
+    fig_en: go.Figure,
+    slug: str,
+) -> None:
+    """
+    Speichert jede Grafik als responsives HTML (ohne Scrollbalken dank overflow:hidden & responsive=True)
+    sowie als hochauflösendes PNG (1280x680, scale=2).
+    """
+    HTML_DIR.mkdir(parents=True, exist_ok=True)
+    PNG_DIR.mkdir(parents=True, exist_ok=True)
 
-    for l in ("de", "en"):
-        fig = go.Figure()
-        _shade(fig, s["kl"], s["wy_y"], s["wy_q"], l)
-        fig.add_trace(go.Scatter(x=s["ll"], y=s["pl"], mode="lines+markers", line=dict(color=C_NAVY, width=2.8),
-                                 name="Produktionspotenzial (Mrd. €)" if l == "de" else "Potential output (EUR bn)",
-                                 hovertemplate=f"%{{x}}: %{{y:,.1f}}{ex}"))
-        _save(fig, "01_potenzial_lang" if l == "de" else "01_potenzial_lang_en",
-              "Entwicklung des Produktionspotenzials" if l == "de" else "Development of Potential Output",
-              "Preisbereinigtes Produktionspotenzial in Mrd. € | Jahreswerte ab 1991, danach Quartalswerte (4-Quartals-Summe)" if l == "de"
-              else "Price-adjusted potential output in EUR bn | Annual values from 1991, followed by quarterly values (4-quarter sum)",
-              src(l), "Mrd. €" if l == "de" else "EUR bn")
-
-    for st, pfx, lk, kk, vk in ((False, "02_auslastung_lang", "ll", "kl", "ul"), (True, "05_auslastung_kurz", "ls", "ks", "us")):
-        rng = [math.floor(min(s[vk]) - 1.0), math.ceil(max(s[vk]) + 0.5)]
-        for l in ("de", "en"):
-            fig = go.Figure()
-            _shade(fig, s[kk], s["wy_y"], s["wy_q"], l)
-            fig.add_trace(go.Scatter(x=s[lk], y=s[vk], mode="lines+markers", line=dict(color=C_NAVY, width=2.8),
-                                     name="Auslastung (%)" if l == "de" else "Utilization (%)", hovertemplate=f"%{{x}}: %{{y:.1f}} %{ex}"))
-            if not st:
-                fig.add_hline(y=s["m91"], line_dash="dash", line_color=C_SLATE,
-                              annotation_text=f"Mittelwert 1991\u20132019: {s['m91']:.1f} %".replace(".", ",") if l == "de" else f"Mean 1991\u20132019: {s['m91']:.1f}%")
-            _save(fig, pfx if l == "de" else f"{pfx}_en",
-                  ("Auslastung des Produktionspotenzials" + (" (ab 2019)" if st else "")) if l == "de"
-                  else ("Potential Output Utilization" + (" (from 2019)" if st else "")),
-                  f"Reales BIP in % des Produktionspotenzials | Jahreswerte ab {'2019' if st else '1991'}, danach Quartalswerte" if l == "de"
-                  else f"Real GDP as % of potential output | Annual values from {'2019' if st else '1991'}, followed by quarterly values",
-                  src(l), "%", rng, dt=1 if st else 2)
-
-    dual_cfg = (
-        ("alo", False, "03_angemessen_alo_lang", "lgl", "kgl", "dgl", "agl", 30.0, C_ORANGE),
-        ("staat", False, "04_angemessen_staat_lang", "lgl", "kgl", "dgl", "fgl", 12.0, C_GREEN),
-        ("alo", True, "06_angemessen_alo_kurz", "ls", "ks", "ds", "as", 20.0, C_ORANGE),
-        ("staat", True, "07_angemessen_staat_kurz", "ls", "ks", "ds", "fs", 12.0, C_GREEN),
+    no_scroll_css = (
+        "<style>"
+        "html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }"
+        ".plotly-graph-div { width: 100% !important; height: 100vh !important; }"
+        "</style>"
     )
-    for ind, st, pfx, lk, kk, dk, bk, lim, col in dual_cfg:
-        va = [abs(v) for v in s[bk] if not np.isnan(v)]
-        if va and max(va) > lim:
-            lim = math.ceil(max(va) / 5.0) * 5.0
-        for l in ("de", "en"):
-            rs = [{"secondary_y": True}]
-            fig = make_subplots(specs=[rs])
-            _shade(fig, s[kk], s["wy_y"], s["wy_q"], l)
-            b_nm = ("Zuwachsrate Arbeitslose (% gg. Vj., rechts)" if l == "de" else "Unemployment growth (% YoY, right)") if ind == "alo" \
-                else ("Finanzierungssaldo des Staates (% des nom. BIP, rechts)" if l == "de" else "Gov. net lending/borrowing (% of nom. GDP, right)")
-            fig.add_trace(go.Bar(x=s[lk], y=s[bk], name=b_nm, marker=dict(color=col, opacity=0.78), hovertemplate=f"%{{x}}: %{{y:+.1f}} %{ex}"), secondary_y=True)
-            fig.add_trace(go.Scatter(x=s[lk], y=s[dk], mode="lines+markers", line=dict(color=C_NAVY, width=2.8),
-                                     name="Wachstumsdifferenz wY \u2212 wY* (Ppkt., links)" if l == "de" else "Growth differential wY \u2212 wY* (pp, left)",
-                                     hovertemplate=f"%{{x}}: %{{y:+.2f}}{ex}"), secondary_y=False)
-            _save(fig, pfx if l == "de" else f"{pfx}_en",
-                  (f"Angemessenes/nicht angemessenes Wirtschaftswachstum und {'Arbeitslosigkeit' if ind == 'alo' else 'öffentliche Haushalte'}{' (ab 2019)' if st else ''}" if l == "de"
-                   else f"Appropriate/Inappropriate Growth and {'Unemployment' if ind == 'alo' else 'Public Finances'}{' (from 2019)' if st else ''}"),
-                  ("Differenz wY \u2212 wY* (links) vs. " + ("Arbeitslosenentwicklung (rechts)" if ind == "alo" else "Finanzierungssaldo des Staates (rechts)") if l == "de"
-                   else "Differential wY \u2212 wY* (left) vs. " + ("unemployment change (right)" if ind == "alo" else "government balance (right)")),
-                  src(l), "Prozentpunkte (links)" if l == "de" else "Percentage points (left)", [-3.0, 3.0],
-                  ("% gg. Vj. (rechts)" if ind == "alo" else "% des nom. BIP (rechts)") if l == "de" else ("% YoY (right)" if ind == "alo" else "% of nom. GDP (right)"),
-                  [-lim, lim], dt=1 if st else 2)
 
-    alq_m, lym = s["alq_m"], str(s["alq_m"].index.max())
-    for mode, pfx in (("year", "08_notwendig_jahr"), ("quarter", "09_notwendig_quartal")):
-        q_ends = [ym for ym in alq_m.index if ym[5:7] in ("03", "06", "09", "12")]
-        last_qe = tuple(q_ends)[len(q_ends) - 1] if q_ends else lym
-        ref = (f"{lym[:4]}-01" if f"{lym[:4]}-01" in alq_m.index else str(alq_m.index.min())) if mode == "year" else str(last_qe)
-        u0, wm = float(alq_m.loc[ref]), s["wp5m"]
-        path = np.linspace(u0, 3.0, max(2, min(10, int(math.ceil((u0 - 3.0) / 0.45)))) + 1)
-        req = [wm + max(0.0, (u - 3.0) / 0.45) for u in path]
-        mde = {"01": "Jan", "02": "Feb", "03": "Mrz", "04": "Apr", "05": "Mai", "06": "Jun", "07": "Jul", "08": "Aug", "09": "Sep", "10": "Okt", "11": "Nov", "12": "Dez"}[ref[5:7]]
-        men = {"01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr", "05": "May", "06": "Jun", "07": "Jul", "08": "Aug", "09": "Sep", "10": "Oct", "11": "Nov", "12": "Dec"}[ref[5:7]]
-        for l in ("de", "en"):
-            ml = f"{mde if l == 'de' else men} {ref[2:4]}"
-            xl = [f"{ml} ({'ALQ' if l == 'de' else 'UR'} {u:.1f}%)" if i == 0 else (f"{'Ziel' if l == 'de' else 'Target'} ({'ALQ' if l == 'de' else 'UR'} {u:.1f}%)" if i == len(path) - 1 else f"{'ALQ' if l == 'de' else 'UR'} {u:.1f}%") for i, u in enumerate(path)]
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=xl, y=req, mode="lines+markers+text", line=dict(color=C_ORANGE, width=3.0), marker=dict(size=8, color=C_ORANGE),
-                                     name="Notwendiges Wachstum (%)" if l == "de" else "Necessary growth (%)",
-                                     text=[f"{v:.1f} %".replace(".", ",") if l == "de" else f"{v:.1f}%" for v in req],
-                                     textposition=["top center" if i % 2 == 0 else "bottom center" for i in range(len(req))]))
-            fig.add_hline(y=wm, line_dash="dash", line_color=C_NAVY, annotation_position="bottom left",
-                          annotation_text=f"Potenzialwachstum wY* (5J-\u00d8 {s['wp5s']}): {wm:.1f} %".replace(".", ",") if l == "de" else f"Potential growth wY* (5Y avg {s['wp5s']}): {wm:.1f}%")
-            _save(fig, pfx if l == "de" else f"{pfx}_en",
-                  f"Notwendiges Wirtschaftswachstum ({'Jahresbetrachtung ' + ref[:4] if mode == 'year' else 'Quartalsstand ' + ml})" if l == "de"
-                  else f"Necessary Economic Growth ({'Annual View ' + ref[:4] if mode == 'year' else 'Quarterly Update ' + ml})",
-                  "Erforderliche reale BIP-Zuwachsrate bis zur Vollbeschäftigungsgrenze (ALQ \u2264 3,0 %)" if l == "de"
-                  else "Required real GDP growth down to full employment (UR \u2264 3.0%)",
-                  src(l), "% gg. Vj." if l == "de" else "% YoY", [0.0, math.ceil(max(req) + 1.5)], dt=1)
+    for suffix, fig in [("de", fig_de), ("en", fig_en)]:
+        html_path = HTML_DIR / f"{slug}_{suffix}.html"
+        png_path = PNG_DIR / f"{slug}_{suffix}.png"
 
-    print("Alle 9 Produktionspotenzial-Grafiken (DE & EN) erfolgreich erstellt.")
+        raw_html = fig.to_html(
+            include_plotlyjs="cdn",
+            full_html=True,
+            config={"responsive": True, "displaylogo": False},
+        )
+        clean_html = raw_html.replace("</head>", f"{no_scroll_css}</head>")
+        html_path.write_text(clean_html, encoding="utf-8")
+
+        fig.write_image(str(png_path), width=1280, height=680, scale=2)
+
+
+# ==============================================================================
+# 5. ALLE 9 GRAFIKEN (DEUTSCH & ENGLISCH)
+# ==============================================================================
+
+def generate_all_9_charts(data: dict) -> List[str]:
+    """Erzeugt alle 9 zweisprachigen Grafiken und gibt die Liste der erzeugten Dateien zurück."""
+    df: pd.DataFrame = data["df"]
+    x = df.index.tolist()
+    created: List[str] = []
+
+    # --- Grafik 1: Reales BIP vs. Produktionspotenzial (Mrd. EUR) ---
+    for lang, slug in [("de", "01_bip_vs_potenzial"), ("en", "01_bip_vs_potenzial")]:
+        pass
+    fig1_de = go.Figure()
+    fig1_de.add_trace(go.Scatter(x=x, y=df["bip_real_mrd"], name="Reales BIP (Ist)", line=dict(color=COLORS["primary"], width=3)))
+    fig1_de.add_trace(go.Scatter(x=x, y=df["potenzial_pf_mrd"], name="Produktionspotenzial (Y*)", line=dict(color=COLORS["potential"], width=3, dash="dash")))
+    apply_standard_layout(fig1_de, "1. Reales Bruttoinlandsprodukt und Produktionspotenzial", "Deutschland, preisbereinigt in Mrd. EUR, ab 1991", "Mrd. EUR", "de")
+
+    fig1_en = go.Figure()
+    fig1_en.add_trace(go.Scatter(x=x, y=df["bip_real_mrd"], name="Real GDP (Actual)", line=dict(color=COLORS["primary"], width=3)))
+    fig1_en.add_trace(go.Scatter(x=x, y=df["potenzial_pf_mrd"], name="Potential Output (Y*)", line=dict(color=COLORS["potential"], width=3, dash="dash")))
+    apply_standard_layout(fig1_en, "1. Real Gross Domestic Product and Potential Output", "Germany, price-adjusted in EUR billion, since 1991", "EUR billion", "en")
+    save_chart_both_languages(fig1_de, fig1_en, "01_bip_vs_potenzial")
+    created.append("01_bip_vs_potenzial")
+
+    # --- Grafik 2: Produktionslücke in % des Produktionspotenzials ---
+    bar_colors = [COLORS["gap_pos"] if v >= 0 else COLORS["gap_neg"] for v in df["produktionsluecke_pct"]]
+    fig2_de = go.Figure(go.Bar(x=x, y=df["produktionsluecke_pct"], marker_color=bar_colors, name="Produktionslücke"))
+    fig2_de.add_hline(y=0, line_color=COLORS["gray"], line_width=1.5)
+    apply_standard_layout(fig2_de, "2. Gesamtwirtschaftliche Produktionslücke", "Abweichung des realen BIP vom Produktionspotenzial in %", "Prozent (%)", "de")
+
+    fig2_en = go.Figure(go.Bar(x=x, y=df["produktionsluecke_pct"], marker_color=bar_colors, name="Output Gap"))
+    fig2_en.add_hline(y=0, line_color=COLORS["gray"], line_width=1.5)
+    apply_standard_layout(fig2_en, "2. Macroeconomic Output Gap", "Deviation of real GDP from potential output in %", "Percent (%)", "en")
+    save_chart_both_languages(fig2_de, fig2_en, "02_produktionsluecke")
+    created.append("02_produktionsluecke")
+
+    # --- Grafik 3: Potenzialwachstum (wY*) & rollierender 5-Jahres-Durchschnitt ---
+    fig3_de = go.Figure()
+    fig3_de.add_trace(go.Bar(x=x, y=df["potenzialwachstum_pct"], name="Potenzialwachstum (jährlich)", marker_color="rgba(27,54,93,0.35)"))
+    fig3_de.add_trace(go.Scatter(x=x, y=df["potenzialwachstum_5j_pct"], name="5-Jahres-Durchschnitt (rollierend)", line=dict(color=COLORS["potential"], width=3)))
+    apply_standard_layout(fig3_de, "3. Wachstumsrate des Produktionspotenzials (wY*)", "Jährliche Veränderungsrate und rollierendes 5-Jahres-Mittel in %", "Prozent (%)", "de")
+
+    fig3_en = go.Figure()
+    fig3_en.add_trace(go.Bar(x=x, y=df["potenzialwachstum_pct"], name="Potential Growth (annual)", marker_color="rgba(27,54,93,0.35)"))
+    fig3_en.add_trace(go.Scatter(x=x, y=df["potenzialwachstum_5j_pct"], name="5-Year Rolling Average", line=dict(color=COLORS["potential"], width=3)))
+    apply_standard_layout(fig3_en, "3. Potential Output Growth Rate (wY*)", "Annual rate of change and rolling 5-year average in %", "Percent (%)", "en")
+    save_chart_both_languages(fig3_de, fig3_en, "03_potenzialwachstum")
+    created.append("03_potenzialwachstum")
+
+    # --- Grafik 4: Wachstumsbeiträge zum Potenzialwachstum (Arbeit, Kapital, TFP) ---
+    fig4_de = go.Figure()
+    fig4_de.add_trace(go.Bar(x=x, y=df["beitrag_arbeit_pp"], name="Arbeit (Prozentpunkte)", marker_color=COLORS["teal"]))
+    fig4_de.add_trace(go.Bar(x=x, y=df["beitrag_kapital_pp"], name="Kapitalstock (Prozentpunkte)", marker_color=COLORS["accent"]))
+    fig4_de.add_trace(go.Bar(x=x, y=df["beitrag_tfp_pp"], name="TFP (Prozentpunkte)", marker_color=COLORS["primary"]))
+    fig4_de.add_trace(go.Scatter(x=x, y=df["potenzialwachstum_pct"], name="Potenzialwachstum gesamt (%)", line=dict(color=COLORS["potential"], width=2.5)))
+    fig4_de.update_layout(barmode="relative")
+    apply_standard_layout(fig4_de, "4. Wachstumsbeiträge zum Produktionspotenzial", "Zerlegung nach Arbeit, Kapital und Totaler Faktorproduktivität (TFP)", "Prozentpunkte / %", "de")
+
+    fig4_en = go.Figure()
+    fig4_en.add_trace(go.Bar(x=x, y=df["beitrag_arbeit_pp"], name="Labor (pp)", marker_color=COLORS["teal"]))
+    fig4_en.add_trace(go.Bar(x=x, y=df["beitrag_kapital_pp"], name="Capital Stock (pp)", marker_color=COLORS["accent"]))
+    fig4_en.add_trace(go.Bar(x=x, y=df["beitrag_tfp_pp"], name="TFP (pp)", marker_color=COLORS["primary"]))
+    fig4_en.add_trace(go.Scatter(x=x, y=df["potenzialwachstum_pct"], name="Total Potential Growth (%)", line=dict(color=COLORS["potential"], width=2.5)))
+    fig4_en.update_layout(barmode="relative")
+    apply_standard_layout(fig4_en, "4. Growth Contributions to Potential Output", "Decomposition into labor, capital, and total factor productivity (TFP)", "Percentage points / %", "en")
+    save_chart_both_languages(fig4_de, fig4_en, "04_wachstumsbeitraege")
+    created.append("04_wachstumsbeitraege")
+
+    # --- Grafik 5: Arbeitsvolumen (Ist vs. Potenzial in Mrd. Stunden) ---
+    pot_av = (df["erwerbspersonen_pot_tsd"] * (1.0 - df["nairu_pct"] / 100.0) * df["arbeitszeit_pot_std"]) / 1_000_000.0
+    fig5_de = go.Figure()
+    fig5_de.add_trace(go.Scatter(x=x, y=df["arbeitsvolumen_mrd_std"], name="Arbeitsvolumen (Ist)", line=dict(color=COLORS["teal"], width=3)))
+    fig5_de.add_trace(go.Scatter(x=x, y=pot_av, name="Potenzial-Arbeitsvolumen", line=dict(color=COLORS["potential"], width=3, dash="dash")))
+    apply_standard_layout(fig5_de, "5. Gesamtwirtschaftliches Arbeitsvolumen", "Geleistete Arbeitsstunden und Potenzialpfad in Mrd. Stunden", "Mrd. Stunden", "de")
+
+    fig5_en = go.Figure()
+    fig5_en.add_trace(go.Scatter(x=x, y=df["arbeitsvolumen_mrd_std"], name="Total Hours Worked (Actual)", line=dict(color=COLORS["teal"], width=3)))
+    fig5_en.add_trace(go.Scatter(x=x, y=pot_av, name="Potential Hours Worked", line=dict(color=COLORS["potential"], width=3, dash="dash")))
+    apply_standard_layout(fig5_en, "5. Aggregate Hours Worked", "Actual hours worked and potential path in billion hours", "Billion hours", "en")
+    save_chart_both_languages(fig5_de, fig5_en, "05_arbeitsvolumen")
+    created.append("05_arbeitsvolumen")
+
+    # --- Grafik 6: Offizielle BA-Arbeitslosenquote vs. NAIRU ---
+    fig6_de = go.Figure()
+    fig6_de.add_trace(go.Scatter(x=x, y=df["alq_ba_pct"], name="Arbeitslosenquote (BA, alle ziv. EP)", line=dict(color=COLORS["primary"], width=3)))
+    fig6_de.add_trace(go.Scatter(x=x, y=df["nairu_pct"], name="Strukturelle Arbeitslosenquote (NAIRU)", line=dict(color=COLORS["potential"], width=3, dash="dash")))
+    apply_standard_layout(fig6_de, "6. Arbeitslosenquote und strukturelle Arbeitslosigkeit (NAIRU)", "Offizielle BA-Quote (bezogen auf alle zivilen Erwerbspersonen) in %", "Prozent (%)", "de")
+
+    fig6_en = go.Figure()
+    fig6_en.add_trace(go.Scatter(x=x, y=df["alq_ba_pct"], name="Unemployment Rate (BA, all civilian LF)", line=dict(color=COLORS["primary"], width=3)))
+    fig6_en.add_trace(go.Scatter(x=x, y=df["nairu_pct"], name="Structural Unemployment Rate (NAIRU)", line=dict(color=COLORS["potential"], width=3, dash="dash")))
+    apply_standard_layout(fig6_en, "6. Unemployment Rate and Structural Unemployment (NAIRU)", "Official BA rate (all civilian labor force) in %", "Percent (%)", "en")
+    save_chart_both_languages(fig6_de, fig6_en, "06_arbeitslosigkeit_nairu")
+    created.append("06_arbeitslosigkeit_nairu")
+
+    # --- Grafik 7: Erwerbsquote und Arbeitszeit je Erwerbstätigen ---
+    fig7_de = make_subplots(specs=[[{"secondary_y": True}]])
+    fig7_de.add_trace(go.Scatter(x=x, y=df["erwerbsquote_pct"], name="Erwerbsquote (%)", line=dict(color=COLORS["primary"], width=3)), secondary_y=False)
+    fig7_de.add_trace(go.Scatter(x=x, y=df["arbeitszeit_std"], name="Arbeitszeit je ET (Std.)", line=dict(color=COLORS["accent"], width=3)), secondary_y=True)
+    apply_standard_layout(fig7_de, "7. Erwerbsbeteiligung und durchschnittliche Arbeitszeit", "Erwerbsquote (15–64 Jahre, %) und Jahresarbeitszeit je Erwerbstätigen (Std.)", "Erwerbsquote (%)", "de")
+    fig7_de.update_yaxes(title_text="Stunden je Erwerbstätigen", secondary_y=True)
+
+    fig7_en = make_subplots(specs=[[{"secondary_y": True}]])
+    fig7_en.add_trace(go.Scatter(x=x, y=df["erwerbsquote_pct"], name="Participation Rate (%)", line=dict(color=COLORS["primary"], width=3)), secondary_y=False)
+    fig7_en.add_trace(go.Scatter(x=x, y=df["arbeitszeit_std"], name="Hours per Worker", line=dict(color=COLORS["accent"], width=3)), secondary_y=True)
+    apply_standard_layout(fig7_en, "7. Labor Force Participation and Average Hours Worked", "Participation rate (aged 15–64, %) and annual hours per worker", "Participation rate (%)", "en")
+    fig7_en.update_yaxes(title_text="Hours per worker", secondary_y=True)
+    save_chart_both_languages(fig7_de, fig7_en, "07_erwerbsquote_arbeitszeit")
+    created.append("07_erwerbsquote_arbeitszeit")
+
+    # --- Grafik 8: Kapitalstock (Bruttoanlagevermögen in Mrd. EUR) ---
+    fig8_de = go.Figure()
+    fig8_de.add_trace(go.Scatter(x=x, y=df["kapitalstock_mrd"], name="Kapitalstock (Ist, Mrd. EUR)", line=dict(color=COLORS["accent"], width=3)))
+    fig8_de.add_trace(go.Scatter(x=x, y=df["kapitalstock_pot_mrd"], name="Kapitalstock-Trend", line=dict(color=COLORS["potential"], width=2.5, dash="dash")))
+    apply_standard_layout(fig8_de, "8. Gesamtwirtschaftlicher Kapitalstock", "Preisbereinigtes Anlagevermögen in Mrd. EUR (Destatis 81000-0031)", "Mrd. EUR", "de")
+
+    fig8_en = go.Figure()
+    fig8_en.add_trace(go.Scatter(x=x, y=df["kapitalstock_mrd"], name="Capital Stock (Actual, EUR bn)", line=dict(color=COLORS["accent"], width=3)))
+    fig8_en.add_trace(go.Scatter(x=x, y=df["kapitalstock_pot_mrd"], name="Capital Stock Trend", line=dict(color=COLORS["potential"], width=2.5, dash="dash")))
+    apply_standard_layout(fig8_en, "8. Aggregate Capital Stock", "Price-adjusted fixed assets in EUR billion (Destatis 81000-0031)", "EUR billion", "en")
+    save_chart_both_languages(fig8_de, fig8_en, "08_kapitalstock")
+    created.append("08_kapitalstock")
+
+    # --- Grafik 9: Totale Faktorproduktivität (TFP) & Stundenproduktivität ---
+    prod_idx = (df["stundenproduktivitaet"] / df["stundenproduktivitaet"].iloc[0]) * 100.0
+    fig9_de = go.Figure()
+    fig9_de.add_trace(go.Scatter(x=x, y=df["tfp_index"], name="TFP (Ist, 1991=100)", line=dict(color=COLORS["primary"], width=3)))
+    fig9_de.add_trace(go.Scatter(x=x, y=df["tfp_pot_index"], name="TFP-Trend (1991=100)", line=dict(color=COLORS["potential"], width=3, dash="dash")))
+    fig9_de.add_trace(go.Scatter(x=x, y=prod_idx, name="Stundenproduktivität (1991=100)", line=dict(color=COLORS["teal"], width=2.5)))
+    apply_standard_layout(fig9_de, "9. Totale Faktorproduktivität (TFP) und Stundenproduktivität", "Index 1991 = 100, Deutschland", "Index (1991 = 100)", "de")
+
+    fig9_en = go.Figure()
+    fig9_en.add_trace(go.Scatter(x=x, y=df["tfp_index"], name="TFP (Actual, 1991=100)", line=dict(color=COLORS["primary"], width=3)))
+    fig9_en.add_trace(go.Scatter(x=x, y=df["tfp_pot_index"], name="TFP Trend (1991=100)", line=dict(color=COLORS["potential"], width=3, dash="dash")))
+    fig9_en.add_trace(go.Scatter(x=x, y=prod_idx, name="Hourly Labor Productivity (1991=100)", line=dict(color=COLORS["teal"], width=2.5)))
+    apply_standard_layout(fig9_en, "9. Total Factor Productivity (TFP) and Hourly Productivity", "Index 1991 = 100, Germany", "Index (1991 = 100)", "en")
+    save_chart_both_languages(fig9_de, fig9_en, "09_tfp_produktivitaet")
+    created.append("09_tfp_produktivitaet")
+
+    return created
+
+
+# ==============================================================================
+# 6. HAUPTPROGRAMM
+# ==============================================================================
+
+def main() -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    print("Starte Aktualisierung der Daten über Destatis GENESIS-API ...")
+    data = build_data(use_api=True)
+
+    df: pd.DataFrame = data["df"]
+    csv_out = DATA_DIR / "produktionspotenzial_zeitreihen_ab_1991.csv"
+    df.to_csv(csv_out, sep=";", decimal=",", encoding="utf-8-sig")
+
+    charts = generate_all_9_charts(data)
+    print(f"Erfolgreich abgeschlossen. {len(charts)} zweisprachige Grafiken (HTML + PNG) erstellt in: {OUTPUT_DIR.resolve()}")
 
 
 if __name__ == "__main__":
     main()
+
