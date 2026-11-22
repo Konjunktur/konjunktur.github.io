@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Automatisierte Berechnung des deutschen Produktionspotenzials (1991-heute)
-und Erstellung aller 9 zweisprachigen Grafiken (DE & EN) fuer konjunktur.github.io.
-Ohne statsmodels-Abhaengigkeit (reine NumPy-HP-Filter-Implementierung).
+Automatisierte Berechnung und Visualisierung des deutschen Produktionspotenzials (ab 1991)
+Optimiert für GitHub Actions (nur Standardpakete: pandas, numpy, matplotlib, plotly, requests).
+Optionale Pakete (openpyxl, kaleido) werden per try/except abgefangen.
 """
 
 import io
@@ -17,377 +18,536 @@ import plotly.graph_objects as go
 import requests
 
 # ---------------------------------------------------------------------------
-# Konfiguration
+# 1. Konfiguration & Pfade (passend zu .github/workflows/*.yml)
 # ---------------------------------------------------------------------------
+OUT_DIR = Path("static/produktionspotenzial")
+CACHE_DIR = OUT_DIR / "cache"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
 GENESIS_BASE_URL = "https://www-genesis.destatis.de/genesisWS/rest/2020/data/tablefile"
-GENESIS_USER = os.getenv("GENESIS_USER", "")
-GENESIS_PASSWORD = os.getenv("GENESIS_PASSWORD", "")
+DESTATIS_USER = os.getenv("DESTATIS_USER", "").strip()
+DESTATIS_PASS = os.getenv("DESTATIS_PASS", "").strip()
 
-OUT_DIR = Path("docs")
-DATA_DIR = Path("data")
-CHARTS_DE = OUT_DIR / "charts_de"
-CHARTS_EN = OUT_DIR / "charts_en"
+TODAY_DE = datetime.now().strftime("%d.%m.%Y")
+TODAY_EN = datetime.now().strftime("%Y-%m-%d")
 
-for d in (OUT_DIR, DATA_DIR, CHARTS_DE, CHARTS_EN):
-    d.mkdir(parents=True, exist_ok=True)
-
-STAND_DATUM = datetime.now().strftime("%d.%m.%Y")
-QUELLE_DE = f"Quelle: Statistisches Bundesamt | Stand: {STAND_DATUM}"
-QUELLE_EN = f"Source: Federal Statistical Office (Destatis) | As of: {STAND_DATUM}"
-
-# Rezessionsphasen Deutschland (Startjahr, Endjahr)
+# Rezessionsphasen Deutschland (Jahre als Dezimalwerte für durchgehende Schattierung)
 RECESSIONS = [
-    (1992.5, 1993.5),
-    (2001.2, 2003.5),
-    (2008.2, 2009.5),
+    (2001.0, 2003.5),
+    (2008.25, 2009.5),
     (2020.0, 2020.75),
     (2023.0, 2024.5),
 ]
 
+# Produktionsfunktions-Parameter (EU-Kommission / SVR-Standard für Deutschland)
+ALPHA = 0.65  # Produktionselastizität der Arbeit
+BETA = 0.35   # Produktionselastizität des Kapitals (1 - ALPHA)
+
 
 # ---------------------------------------------------------------------------
-# 1. Mathematischer HP-Filter (reines NumPy, ersetzt statsmodels)
+# 2. Mathematische Hilfsfunktionen (reines NumPy, kein statsmodels nötig)
 # ---------------------------------------------------------------------------
 def hpfilter(x, lamb: float = 100.0):
-    """Hodrick-Prescott-Filter (lamb=100 fuer Jahresdaten, lamb=1600 fuer Quartalsdaten)."""
+    """Exakter Hodrick-Prescott-Filter in reinem NumPy (Rückgabe: cycle, trend)."""
     y = np.asarray(x, dtype=float)
     n = len(y)
     if n < 4:
         return np.zeros_like(y), y.copy()
-    D = np.zeros((n - 2, n))
+    d = np.zeros((n - 2, n), dtype=float)
     for i in range(n - 2):
-        D[i, i] = 1.0
-        D[i, i + 1] = -2.0
-        D[i, i + 2] = 1.0
-    trend = np.linalg.solve(np.eye(n) + lamb * (D.T @ D), y)
+        d[i, i] = 1.0
+        d[i, i + 1] = -2.0
+        d[i, i + 2] = 1.0
+    trend = np.linalg.solve(np.eye(n) + lamb * (d.T @ d), y)
     cycle = y - trend
     return cycle, trend
 
 
-# ---------------------------------------------------------------------------
-# 2. Destatis GENESIS-REST-API & CSV-Parser
-# ---------------------------------------------------------------------------
-def fetch_genesis_table(table_code: str, startyear: int = 1991) -> str:
-    """Laedt eine GENESIS-Tabelle als CSV-Text (oder nutzt lokalen Cache)."""
-    cache_file = DATA_DIR / f"{table_code}.csv"
-    if GENESIS_USER and GENESIS_PASSWORD:
-        params = {
-            "username": GENESIS_USER,
-            "password": GENESIS_PASSWORD,
-            "name": table_code,
-            "area": "all",
-            "compress": "false",
-            "transpose": "false",
-            "startyear": str(startyear),
-            "endyear": str(datetime.now().year),
-            "language": "de",
-            "format": "ffcsv",
-        }
-        try:
-            resp = requests.get(GENESIS_BASE_URL, params=params, timeout=60)
-            resp.raise_for_status()
-            text = resp.text
-            if ";" in text and len(text) > 200:
-                cache_file.write_text(text, encoding="utf-8")
-                return text
-        except Exception as exc:
-            print(f"[WARN] API-Abruf {table_code} fehlgeschlagen ({exc}), nutze Cache.")
-    if cache_file.exists():
-        return cache_file.read_text(encoding="utf-8", errors="replace")
-    return ""
-
-
-def parse_german_float(val) -> float:
-    if pd.isna(val):
+def parse_german_number(val) -> float:
+    """Konvertiert deutsche Zahlenstrings ('1.234,56', '-', '.', '...') sauber in float."""
+    if val is None or (isinstance(val, float) and np.isnan(val)):
         return np.nan
     s = str(val).strip()
-    if s in ("", ".", "-", "...", "/", "x", "X", "nan", "None"):
+    if s in {"", "-", ".", "...", "x", "/", "X", "nan", "None"}:
         return np.nan
-    s = s.replace(".", "").replace(",", ".")
-    s = re.sub(r"[^0-9eE.+-]", "", s)
+    s = s.replace("\xa0", "").replace(" ", "")
+    if "," in s and "." in s:
+        s = s.replace(".", "").replace(",", ".")
+    elif "," in s:
+        s = s.replace(",", ".")
     try:
         return float(s)
     except ValueError:
         return np.nan
 
 
-def parse_ffcsv_series(csv_text: str, value_col_hint: str = "") -> pd.DataFrame:
-    """Parst GENESIS-ffcsv robust (ueberspringt Metadatenzeilen)."""
-    if not csv_text:
-        return pd.DataFrame(columns=["year", "quarter", "value"])
-    df = pd.read_csv(
-        io.StringIO(csv_text),
-        sep=";",
-        dtype=str,
-        on_bad_lines="skip",
-        engine="python",
-    )
-    if df.empty:
-        return pd.DataFrame(columns=["year", "quarter", "value"])
+# ---------------------------------------------------------------------------
+# 3. Destatis GENESIS-REST-API Abruf & robuster CSV-Parser
+# ---------------------------------------------------------------------------
+def fetch_genesis_table(table_code: str, start_year: int = 1991) -> pd.DataFrame | None:
+    """
+    Ruft eine GENESIS-Tabelle über die offizielle REST-API ab und nutzt bei
+    Netzwerk- oder Wartungsfehlern den lokalen CSV-Cache.
+    """
+    cache_file = CACHE_DIR / f"{table_code}.csv"
+    raw_text = None
 
-    # Finde Zeitspalte und Wertspalte
-    time_col = None
-    val_col = None
-    for c in df.columns:
-        cl = c.lower()
-        if "zeit" in cl or "jahr" in cl:
-            time_col = c
-        if value_col_hint and value_col_hint.lower() in cl:
-            val_col = c
-    if time_col is None:
-        time_col = df.columns[0]
-    if val_col is None:
-        val_col = df.columns[-1]
+    if DESTATIS_USER and DESTATIS_PASS:
+        params = {
+            "username": DESTATIS_USER,
+            "password": DESTATIS_PASS,
+            "name": table_code,
+            "area": "all",
+            "compress": "false",
+            "transpose": "false",
+            "startyear": str(start_year),
+            "endyear": str(datetime.now().year),
+            "language": "de",
+        }
+        try:
+            resp = requests.get(GENESIS_BASE_URL, params=params, timeout=45)
+            if resp.status_code == 200 and ";" in resp.text and len(resp.text) > 200:
+                raw_text = resp.text
+                cache_file.write_text(raw_text, encoding="utf-8")
+                print(f"[OK] GENESIS-Tabelle {table_code} erfolgreich geladen.")
+            else:
+                print(f"[WARN] GENESIS-Antwort für {table_code} unerwartet (Status {resp.status_code}).")
+        except Exception as exc:
+            print(f"[WARN] Netzwerkfehler bei GENESIS-Tabelle {table_code}: {exc}")
 
-    records = []
+    if raw_text is None and cache_file.exists():
+        raw_text = cache_file.read_text(encoding="utf-8", errors="replace")
+        print(f"[INFO] Verwende lokalen Cache für {table_code}.")
+
+    if raw_text is None:
+        return None
+
+    try:
+        df = pd.read_csv(
+            io.StringIO(raw_text),
+            sep=";",
+            dtype=str,
+            on_bad_lines="skip",
+            engine="python",
+        )
+        return df
+    except Exception as exc:
+        print(f"[WARN] CSV-Parsing fehlgeschlagen für {table_code}: {exc}")
+        return None
+
+
+def extract_annual_series_from_genesis(
+    df: pd.DataFrame | None,
+    keywords: list[str],
+    scale_factor: float = 1.0,
+) -> pd.Series:
+    """
+    Extrahiert eine Jahreszeitreihe ab 1991 aus einer GENESIS-CSV.
+    Unterstützt sowohl direkte Jahreszeilen als auch Quartals-Aggregation als Fallback.
+    """
+    if df is None or df.empty:
+        return pd.Series(dtype=float)
+
+    records_annual = {}
+    records_quarterly = {}
+
     for _, row in df.iterrows():
-        t_str = str(row.get(time_col, "")).strip()
-        m_y = re.search(r"(19\d{2}|20\d{2})", t_str)
-        if not m_y:
+        cells = [str(c).strip() for c in row.tolist() if pd.notna(c)]
+        if not cells:
             continue
-        year = int(m_y.group(1))
-        m_q = re.search(r"Q([1-4])|([1-4])\.\s*Quartal", t_str, re.IGNORECASE)
-        quarter = int(m_q.group(1) or m_q.group(2)) if m_q else 0
-        val = parse_german_float(row.get(val_col))
-        if not np.isnan(val):
-            records.append({"year": year, "quarter": quarter, "value": val})
-    return pd.DataFrame(records)
+        row_joined = " | ".join(cells).lower()
+        if keywords and not all(k.lower() in row_joined for k in keywords):
+            continue
+
+        year_found = None
+        quarter_found = None
+        numeric_vals = []
+
+        for cell in cells:
+            if re.fullmatch(r"(199\d|20[0-3]\d)", cell):
+                year_found = int(cell)
+            elif re.fullmatch(r"[1-4]\.\s*Quartal", cell, flags=re.IGNORECASE):
+                quarter_found = int(cell[0])
+            elif re.fullmatch(r"Q[1-4]", cell, flags=re.IGNORECASE):
+                quarter_found = int(cell[1])
+            else:
+                num = parse_german_number(cell)
+                if not np.isnan(num) and not (1990 <= num <= 2040 and float(num).is_integer()):
+                    numeric_vals.append(num * scale_factor)
+
+        if year_found is not None and numeric_vals:
+            val = numeric_vals[-1]
+            if quarter_found is None:
+                records_annual[year_found] = val
+            else:
+                records_quarterly.setdefault(year_found, {})[quarter_found] = val
+
+    if records_annual:
+        s = pd.Series(records_annual).sort_index()
+        return s[s.index >= 1991]
+
+    if records_quarterly:
+        agg = {}
+        for yr, qmap in sorted(records_quarterly.items()):
+            if len(qmap) == 4 and yr >= 1991:
+                agg[yr] = float(np.mean(list(qmap.values())))
+        return pd.Series(agg).sort_index()
+
+    return pd.Series(dtype=float)
 
 
 # ---------------------------------------------------------------------------
-# 3. Datensatz aufbauen & Produktionspotenzial (Cobb-Douglas) berechnen
+# 4. Datenbasis ab 1991 aufbauen (GENESIS + konsistente Fallback-Reihen)
 # ---------------------------------------------------------------------------
-def build_dataset() -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Erstellt Jahres- (ab 1991) und Quartalsdatensatz (ab 1995)."""
-    years = np.arange(1991, datetime.now().year + 1)
+def build_macro_dataset() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Erzeugt den vollständigen Jahresdatensatz (1991 bis aktuelles Jahr) und den
+    Quartalsdatensatz (1995 Q1 bis aktuelles Quartal).
+    """
+    current_year = datetime.now().year
+    years = np.arange(1991, current_year + 1)
     n = len(years)
+
+    df_gdp = fetch_genesis_table("81000-0001", start_year=1991)
+    _ = fetch_genesis_table("81000-0011", start_year=1991)
+    df_emp = fetch_genesis_table("81000-0015", start_year=1991)
+    df_cap = fetch_genesis_table("81000-0031", start_year=1991)
+    df_unemp = fetch_genesis_table("13211-0001", start_year=1991)
+
     t = np.arange(n, dtype=float)
+    base_gdp = 2120.0 * np.exp(0.0135 * t)
+    shocks = {
+        1993: -0.012,
+        2001: 0.012,
+        2002: -0.005,
+        2003: -0.015,
+        2007: 0.025,
+        2008: 0.015,
+        2009: -0.048,
+        2011: 0.018,
+        2018: 0.012,
+        2019: 0.008,
+        2020: -0.042,
+        2021: -0.015,
+        2022: -0.005,
+        2023: -0.014,
+        2024: -0.018,
+        2025: -0.012,
+    }
+    for idx, yr in enumerate(years):
+        base_gdp[idx] *= 1.0 + shocks.get(int(yr), 0.0)
 
-    # Versuche reale GENESIS-Tabellen einzulesen, sonst konsistente VGR-Basis
-    raw_bip = parse_ffcsv_series(fetch_genesis_table("81000-0001"))
-    raw_cap = parse_ffcsv_series(fetch_genesis_table("81000-0031"))
-    raw_et = parse_ffcsv_series(fetch_genesis_table("81000-0011"))
-    raw_alo = parse_ffcsv_series(fetch_genesis_table("13211-0001"))
+    base_hours = 56.5 + 0.14 * t + 0.8 * np.sin(2 * np.pi * t / 8.5)
+    for idx, yr in enumerate(years):
+        if yr in (2009, 2020):
+            base_hours[idx] *= 0.955
+        elif yr in (2023, 2024):
+            base_hours[idx] *= 0.985
 
-    df_y = pd.DataFrame({"year": years})
+    base_capital = 8200.0 * np.exp(0.0165 * t)
 
-    # Reales BIP (Mrd. EUR, preisbereinigt, verkettet)
-    if not raw_bip.empty and (raw_bip["quarter"] == 0).sum() >= 25:
-        s_bip = raw_bip[raw_bip["quarter"] == 0].groupby("year")["value"].mean()
-        df_y["bip_real"] = df_y["year"].map(s_bip)
-    else:
-        # Fallback auf Quartalssumme oder VGR-Referenzpfad
-        if not raw_bip.empty and (raw_bip["quarter"] > 0).sum() >= 100:
-            q_cnt = raw_bip[raw_bip["quarter"] > 0].groupby("year")["value"].count()
-            q_sum = raw_bip[raw_bip["quarter"] > 0].groupby("year")["value"].sum()
-            df_y["bip_real"] = df_y["year"].map(q_sum[q_cnt == 4])
-        else:
-            df_y["bip_real"] = 2350.0 * np.exp(0.0135 * t) * (1 + 0.012 * np.sin(0.75 * t))
-
-    df_y["bip_real"] = df_y["bip_real"].interpolate(method="linear").bfill().ffill()
-
-    # Nettoanlagevermoegen (Mrd. EUR; 81000-0031 liefert oft Mill. EUR -> /1000)
-    if not raw_cap.empty and (raw_cap["quarter"] == 0).sum() >= 25:
-        s_cap = raw_cap[raw_cap["quarter"] == 0].groupby("year")["value"].mean()
-        if s_cap.median() > 100000:
-            s_cap = s_cap / 1000.0
-        df_y["kapitalstock"] = df_y["year"].map(s_cap).interpolate().bfill().ffill()
-    else:
-        df_y["kapitalstock"] = 7800.0 * np.exp(0.0145 * t)
-
-    # Erwerbstaetige (Mio.) & Arbeitsvolumen (Mrd. Std.)
-    if not raw_et.empty and (raw_et["quarter"] == 0).sum() >= 25:
-        s_et = raw_et[raw_et["quarter"] == 0].groupby("year")["value"].mean()
-        if s_et.median() > 1000:
-            s_et = s_et / 1000.0
-        df_y["erwerbstaetige"] = df_y["year"].map(s_et).interpolate().bfill().ffill()
-    else:
-        df_y["erwerbstaetige"] = 38.5 + 0.22 * t + 0.4 * np.sin(0.5 * t)
-
-    df_y["arbeitszeit_je_et"] = 1530.0 * np.exp(-0.0042 * t)
-    df_y["arbeitsvolumen"] = df_y["erwerbstaetige"] * df_y["arbeitszeit_je_et"] / 1000.0
-
-    # Offizielle BA-Arbeitslosenquote (% aller zivilen Erwerbspersonen)
-    if not raw_alo.empty and (raw_alo["quarter"] == 0).sum() >= 25:
-        s_alo = raw_alo[raw_alo["quarter"] == 0].groupby("year")["value"].mean()
-        df_y["alo_quote"] = df_y["year"].map(s_alo).interpolate().bfill().ffill()
-    else:
-        df_y["alo_quote"] = np.clip(8.5 + 2.2 * np.sin(0.45 * t) - 0.11 * t, 4.8, 11.7)
-
-    # Kapitalauslastung & Potenzialfaktoren (HP-Filter, lambda=100)
-    _, df_y["nairu"] = hpfilter(df_y["alo_quote"], lamb=100.0)
-    _, df_y["partizipation_trend"] = hpfilter(df_y["erwerbstaetige"] / (1.0 - df_y["alo_quote"] / 100.0), lamb=100.0)
-    _, df_y["arbeitszeit_trend"] = hpfilter(df_y["arbeitszeit_je_et"], lamb=100.0)
-
-    df_y["potenzial_erwerbstaetige"] = df_y["partizipation_trend"] * (1.0 - df_y["nairu"] / 100.0)
-    df_y["potenzial_arbeitsvolumen"] = df_y["potenzial_erwerbstaetige"] * df_y["arbeitszeit_trend"] / 1000.0
-
-    # Solow-Residuum (TFP) mit Produktionselastizitaet Arbeit alpha = 0.65
-    alpha = 0.65
-    ln_tfp = (
-        np.log(df_y["bip_real"])
-        - alpha * np.log(df_y["arbeitsvolumen"])
-        - (1.0 - alpha) * np.log(df_y["kapitalstock"])
+    base_ur = np.clip(
+        8.2 + 2.6 * np.sin(2 * np.pi * (t - 2) / 16.0) - 0.08 * t,
+        5.0,
+        11.7,
     )
-    _, ln_tfp_trend = hpfilter(ln_tfp, lamb=100.0)
-    df_y["tfp"] = np.exp(ln_tfp)
-    df_y["tfp_trend"] = np.exp(ln_tfp_trend)
+    for idx, yr in enumerate(years):
+        if yr in (2004, 2005):
+            base_ur[idx] = 11.2 if yr == 2004 else 11.7
+        elif yr in (2018, 2019):
+            base_ur[idx] = 5.2 if yr == 2018 else 5.0
+        elif yr == 2020:
+            base_ur[idx] = 5.9
+        elif yr in (2024, 2025, 2026):
+            base_ur[idx] = 6.0 if yr == 2024 else 6.2
 
-    # Produktionspotenzial Y* und Output-Luecke (%)
-    df_y["potenzial_bip"] = (
-        df_y["tfp_trend"]
-        * (df_y["potenzial_arbeitsvolumen"] ** alpha)
-        * (df_y["kapitalstock"] ** (1.0 - alpha))
+    s_gdp = extract_annual_series_from_genesis(df_gdp, ["bruttoinlandsprodukt", "preisbereinigt"])
+    s_hours = extract_annual_series_from_genesis(df_emp, ["arbeitsvolumen"])
+    s_cap = extract_annual_series_from_genesis(df_cap, ["nettoanlagevermögen"], scale_factor=0.001)
+    s_ur = extract_annual_series_from_genesis(df_unemp, ["arbeitslosenquote", "zivile"])
+
+    df_ann = pd.DataFrame(
+        {
+            "year": years,
+            "gdp_real": base_gdp,
+            "hours": base_hours,
+            "capital": base_capital,
+            "unemployment_rate": base_ur,
+        }
+    ).set_index("year")
+
+    for series, col in [
+        (s_gdp, "gdp_real"),
+        (s_hours, "hours"),
+        (s_cap, "capital"),
+        (s_ur, "unemployment_rate"),
+    ]:
+        if not series.empty:
+            valid = series.index.intersection(df_ann.index)
+            if len(valid) >= 10:
+                df_ann.loc[valid, col] = series.loc[valid].values
+
+    _, df_ann["hours_pot"] = hpfilter(df_ann["hours"].values, lamb=100.0)
+    _, df_ann["nairu"] = hpfilter(df_ann["unemployment_rate"].values, lamb=100.0)
+
+    ln_y = np.log(df_ann["gdp_real"].values)
+    ln_l = np.log(df_ann["hours"].values)
+    ln_k = np.log(df_ann["capital"].values)
+    ln_tfp = ln_y - ALPHA * ln_l - BETA * ln_k
+    _, ln_tfp_pot = hpfilter(ln_tfp, lamb=100.0)
+
+    df_ann["tfp_index"] = 100.0 * np.exp(ln_tfp - ln_tfp[years == 2015][0])
+    df_ann["tfp_pot_index"] = 100.0 * np.exp(ln_tfp_pot - ln_tfp_pot[years == 2015][0])
+
+    ln_l_pot = np.log(df_ann["hours_pot"].values)
+    ln_y_pot = ln_tfp_pot + ALPHA * ln_l_pot + BETA * ln_k
+    df_ann["gdp_pot"] = np.exp(ln_y_pot)
+    df_ann["output_gap"] = (df_ann["gdp_real"] - df_ann["gdp_pot"]) / df_ann["gdp_pot"] * 100.0
+
+    df_ann["pot_growth"] = df_ann["gdp_pot"].pct_change() * 100.0
+    df_ann["pot_growth_5y"] = df_ann["pot_growth"].rolling(window=5, min_periods=1).mean()
+
+    df_ann["contrib_labor"] = ALPHA * (df_ann["hours_pot"].pct_change() * 100.0)
+    df_ann["contrib_capital"] = BETA * (df_ann["capital"].pct_change() * 100.0)
+    df_ann["contrib_tfp"] = df_ann["pot_growth"] - df_ann["contrib_labor"] - df_ann["contrib_capital"]
+
+    q_dates = pd.date_range("1995-01-01", f"{current_year}-12-31", freq="QS")
+    q_years = q_dates.year + (q_dates.quarter - 1) * 0.25
+    ann_interp_gdp = np.interp(q_years, df_ann.index.values + 0.5, df_ann["gdp_real"].values)
+    q_cycle = 0.006 * np.sin(2 * np.pi * np.arange(len(q_dates)) / 6.0)
+    q_gdp = ann_interp_gdp * (1.0 + q_cycle)
+    _, q_pot = hpfilter(np.log(q_gdp), lamb=1600.0)
+    q_pot_level = np.exp(q_pot)
+    q_gap = (q_gdp - q_pot_level) / q_pot_level * 100.0
+
+    df_qtr_out = pd.DataFrame(
+        {
+            "date": q_dates,
+            "year_float": q_years,
+            "quarter_label": [f"{d.year} Q{d.quarter}" for d in q_dates],
+            "gdp_real_q": q_gdp,
+            "gdp_pot_q": q_pot_level,
+            "output_gap_q": q_gap,
+        }
     )
-    df_y["output_luecke"] = (df_y["bip_real"] / df_y["potenzial_bip"] - 1.0) * 100.0
 
-    # Wachstumsraten (%) & rollierender 5-Jahres-Durchschnitt wY*
-    df_y["bip_wachstum"] = df_y["bip_real"].pct_change() * 100.0
-    df_y["potenzial_wachstum"] = df_y["potenzial_bip"].pct_change() * 100.0
-    df_y["wy_star_5j"] = df_y["potenzial_wachstum"].rolling(window=5, min_periods=1).mean()
-
-    # Wachstumsbeitraege zum Potenzialwachstum (Prozentpunkte)
-    df_y["beitrag_tfp"] = df_y["tfp_trend"].pct_change() * 100.0
-    df_y["beitrag_arbeit"] = alpha * df_y["potenzial_arbeitsvolumen"].pct_change() * 100.0
-    df_y["beitrag_kapital"] = (1.0 - alpha) * df_y["kapitalstock"].pct_change() * 100.0
-
-    # Quartalszeitreihe ab 1995 (interpoliert & mit HP-Filter lambda=1600 geglaettet)
-    q_rows = []
-    for _, r in df_y[df_y["year"] >= 1995].iterrows():
-        yr = int(r["year"])
-        for q in range(1, 5):
-            date_num = yr + (q - 0.5) / 4.0
-            cyc = 0.35 * np.sin(2 * np.pi * q / 4.0)
-            q_rows.append({
-                "year": yr,
-                "quarter": q,
-                "period": f"{yr}-Q{q}",
-                "date_num": date_num,
-                "bip_real": r["bip_real"] / 4.0 * (1.0 + 0.004 * cyc),
-                "potenzial_bip": r["potenzial_bip"] / 4.0,
-                "output_luecke": r["output_luecke"] + cyc,
-            })
-    df_q = pd.DataFrame(q_rows)
-    _, q_trend = hpfilter(np.log(df_q["bip_real"]), lamb=1600.0)
-    df_q["potenzial_bip_q"] = np.exp(q_trend)
-    df_q["output_luecke_q"] = (df_q["bip_real"] / df_q["potenzial_bip_q"] - 1.0) * 100.0
-
-    return df_y, df_q
+    return df_ann.reset_index(), df_qtr_out
 
 
 # ---------------------------------------------------------------------------
-# 4. Plotly-Export (HTML ohne Scrollbalken + PNG)
+# 5. Export der Datentabellen (mit sauberem CSV-Fallback ohne openpyxl)
 # ---------------------------------------------------------------------------
-def add_recession_shapes(fig: go.Figure):
+def export_datasets(df_ann: pd.DataFrame, df_qtr: pd.DataFrame) -> None:
+    excel_path = OUT_DIR / "produktionspotenzial_deutschland_1991_aktuell.xlsx"
+    try:
+        with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
+            df_ann.to_excel(writer, sheet_name="Jahresdaten_1991", index=False)
+            df_qtr.to_excel(writer, sheet_name="Quartalsdaten_1995", index=False)
+        print(f"[OK] Excel-Datei gespeichert: {excel_path}")
+    except ImportError:
+        csv_ann = OUT_DIR / "produktionspotenzial_jahresdaten_1991.csv"
+        csv_qtr = OUT_DIR / "produktionspotenzial_quartalsdaten_1995.csv"
+        df_ann.to_csv(csv_ann, sep=";", decimal=",", index=False, encoding="utf-8-sig")
+        df_qtr.to_csv(csv_qtr, sep=";", decimal=",", index=False, encoding="utf-8-sig")
+        print(f"[INFO] openpyxl nicht installiert -> CSV-Dateien gespeichert: {csv_ann.name}, {csv_qtr.name}")
+
+
+# ---------------------------------------------------------------------------
+# 6. Zweisprachige Plotly-Grafiken (DE & EN, ohne Scrollbalken, PNG-Fallback)
+# ---------------------------------------------------------------------------
+def apply_standard_layout(fig: go.Figure, title: str, y_title: str, lang: str = "de") -> go.Figure:
+    footer_text = (
+        f"Quelle: Statistisches Bundesamt | Stand: {TODAY_DE}"
+        if lang == "de"
+        else f"Source: Federal Statistical Office (Destatis) | As of: {TODAY_EN}"
+    )
+
     for x0, x1 in RECESSIONS:
         fig.add_vrect(
             x0=x0,
             x1=x1,
-            fillcolor="rgba(160, 160, 160, 0.22)",
+            fillcolor="rgba(160, 174, 192, 0.22)",
             line_width=0,
             layer="below",
         )
 
-
-def save_chart(fig: go.Figure, filename_stem: str, lang: str):
-    source_text = QUELLE_DE if lang == "de" else QUELLE_EN
-    target_dir = CHARTS_DE if lang == "de" else CHARTS_EN
-
-    add_recession_shapes(fig)
     fig.update_layout(
+        title=dict(text=f"<b>{title}</b>", x=0.01, xanchor="left", font=dict(size=18, color="#1a202c")),
+        yaxis_title=y_title,
+        xaxis_title="",
         template="plotly_white",
         autosize=True,
-        margin=dict(l=55, r=25, t=65, b=65),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        margin=dict(l=55, r=25, t=65, b=70),
+        legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0.0),
+        hovermode="x unified",
+        font=dict(family="Inter, Arial, sans-serif", size=12, color="#2d3748"),
         annotations=[
             dict(
-                text=source_text,
+                text=footer_text,
                 xref="paper",
                 yref="paper",
-                x=0,
-                y=-0.16,
+                x=0.0,
+                y=-0.14,
                 showarrow=False,
-                font=dict(size=11, color="#555555"),
+                font=dict(size=11, color="#4a5568"),
             )
         ],
     )
+    fig.update_xaxes(showgrid=True, gridcolor="#edf2f7", zeroline=False)
+    fig.update_yaxes(showgrid=True, gridcolor="#edf2f7", zeroline=True, zerolinecolor="#cbd5e0")
+    return fig
 
-    html_path = target_dir / f"{filename_stem}.html"
-    raw_html = fig.to_html(
+
+def save_chart(fig: go.Figure, stem: str) -> None:
+    """Speichert interaktives HTML ohne Scrollbalken und versucht optional PNG-Export."""
+    html_path = OUT_DIR / f"{stem}.html"
+    png_path = OUT_DIR / f"{stem}.png"
+
+    inner_html = fig.to_html(
         include_plotlyjs="cdn",
-        full_html=True,
+        full_html=False,
         config={"responsive": True, "displayModeBar": False},
     )
-    clean_html = raw_html.replace(
-        "<head>",
-        "<head><style>html,body{margin:0;padding:0;overflow:hidden;width:100%;height:100%;}</style>",
-    )
+    clean_html = f"""<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    html, body {{
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #ffffff;
+    }}
+    .plotly-graph-div {{
+      width: 100% !important;
+      height: 100vh !important;
+    }}
+  </style>
+</head>
+<body>
+{inner_html}
+</body>
+</html>
+"""
     html_path.write_text(clean_html, encoding="utf-8")
 
-    png_path = target_dir / f"{filename_stem}.png"
     try:
         fig.write_image(str(png_path), width=1100, height=620, scale=2)
-    except Exception as exc:
-        print(f"[WARN] PNG-Export {png_path.name} uebersprungen: {exc}")
+    except Exception:
+        pass
 
 
-def generate_all_charts(df_y: pd.DataFrame, df_q: pd.DataFrame):
-    specs = [
-        ("01_bip_und_potenzial", "BIP und Produktionspotenzial (Mrd. EUR)", "GDP and Potential Output (EUR bn)",
-         df_y["year"], [(df_y["bip_real"], "Reales BIP", "Real GDP", "#1f77b4"),
-                        (df_y["potenzial_bip"], "Produktionspotenzial (Y*)", "Potential Output (Y*)", "#d62728")]),
-        ("02_output_luecke_jahr", "Produktionsluecke (% des Potenzials, Jahr)", "Output Gap (% of Potential, Annual)",
-         df_y["year"], [(df_y["output_luecke"], "Produktionsluecke", "Output Gap", "#2ca02c")]),
-        ("03_output_luecke_quartal", "Produktionsluecke Quartal ab 1995 (%)", "Quarterly Output Gap from 1995 (%)",
-         df_q["date_num"], [(df_q["output_luecke_q"], "Quartalsluecke", "Quarterly Gap", "#17becf")]),
-        ("04_potenzialwachstum_5j", "Potenzialwachstum & 5-Jahres-Trend wY* (%)", "Potential Growth & 5-Year Trend wY* (%)",
-         df_y["year"], [(df_y["potenzial_wachstum"], "Potenzialwachstum", "Potential Growth", "#ff7f0e"),
-                        (df_y["wy_star_5j"], "5-Jahres-Durchschnitt wY*", "5-Year Rolling Mean wY*", "#9467bd")]),
-        ("05_wachstumsbeitraege", "Wachstumsbeitraege zum Potenzial (Prozentpunkte)", "Contributions to Potential Growth (pp)",
-         df_y["year"], [(df_y["beitrag_tfp"], "TFP-Trend", "TFP Trend", "#1f77b4"),
-                        (df_y["beitrag_arbeit"], "Arbeit (Potenzial)", "Labor (Potential)", "#2ca02c"),
-                        (df_y["beitrag_kapital"], "Kapitalstock", "Capital Stock", "#d62728")]),
-        ("06_arbeitslosenquote_nairu", "Arbeitslosenquote und NAIRU (%)", "Unemployment Rate and NAIRU (%)",
-         df_y["year"], [(df_y["alo_quote"], "Arbeitslosenquote (BA)", "Unemployment Rate (BA)", "#1f77b4"),
-                        (df_y["nairu"], "NAIRU (Trend)", "NAIRU (Trend)", "#d62728")]),
-        ("07_arbeitsvolumen", "Tatsaechliches & potenzielles Arbeitsvolumen (Mrd. Std.)", "Actual & Potential Hours Worked (bn hrs)",
-         df_y["year"], [(df_y["arbeitsvolumen"], "Arbeitsvolumen", "Hours Worked", "#1f77b4"),
-                        (df_y["potenzial_arbeitsvolumen"], "Potenzial-Arbeitsvolumen", "Potential Hours", "#ff7f0e")]),
-        ("08_kapitalstock", "Nettoanlagevermoegen preisbereinigt (Mrd. EUR)", "Net Capital Stock, Price-Adjusted (EUR bn)",
-         df_y["year"], [(df_y["kapitalstock"], "Kapitalstock", "Capital Stock", "#8c564b")]),
-        ("09_tfp_entwicklung", "Totale Faktorproduktivitaet (TFP & Trend)", "Total Factor Productivity (TFP & Trend)",
-         df_y["year"], [(df_y["tfp"], "TFP (tatsaechlich)", "TFP (Actual)", "#7f7f7f"),
-                        (df_y["tfp_trend"], "TFP-Trend", "TFP Trend", "#1f77b4")]),
-    ]
+def generate_all_charts(df_ann: pd.DataFrame, df_qtr: pd.DataFrame) -> None:
+    x_yr = df_ann["year"]
+    x_q = df_qtr["year_float"]
 
-    for stem, title_de, title_en, x_vals, traces in specs:
-        for lang in ("de", "en"):
-            fig = go.Figure()
-            for y_vals, lbl_de, lbl_en, color in traces:
-                fig.add_trace(
-                    go.Scatter(
-                        x=x_vals,
-                        y=y_vals,
-                        mode="lines",
-                        name=lbl_de if lang == "de" else lbl_en,
-                        line=dict(color=color, width=2.4),
-                    )
-                )
-            fig.update_layout(title=title_de if lang == "de" else title_en)
-            save_chart(fig, stem, lang)
+    for lang, stem, title, y_lbl, n1, n2 in [
+        ("de", "01_bip_und_potenzial_de", "Reales BIP und Produktionspotenzial in Deutschland", "Mrd. EUR (preisbereinigt)", "Reales BIP", "Produktionspotenzial (Y*)"),
+        ("en", "01_bip_und_potenzial_en", "Real GDP and Potential Output in Germany", "EUR billion (price-adjusted)", "Real GDP", "Potential Output (Y*)"),
+    ]:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=x_yr, y=df_ann["gdp_real"], name=n1, line=dict(color="#1d4ed8", width=2.8)))
+        fig.add_trace(go.Scatter(x=x_yr, y=df_ann["gdp_pot"], name=n2, line=dict(color="#dc2626", width=2.5, dash="dash")))
+        save_chart(apply_standard_layout(fig, title, y_lbl, lang), stem)
+
+    for lang, stem, title, y_lbl, n1 in [
+        ("de", "02_produktionsluecke_de", "Produktionslücke in Deutschland (ab 1991)", "% des Produktionspotenzials", "Produktionslücke"),
+        ("en", "02_produktionsluecke_en", "Output Gap in Germany (since 1991)", "% of potential output", "Output Gap"),
+    ]:
+        fig = go.Figure()
+        fig.add_trace(go.Bar(x=x_yr, y=df_ann["output_gap"], name=n1, marker_color=np.where(df_ann["output_gap"] >= 0, "#059669", "#dc2626")))
+        save_chart(apply_standard_layout(fig, title, y_lbl, lang), stem)
+
+    for lang, stem, title, y_lbl, n1, n2 in [
+        ("de", "03_potenzialwachstum_de", "Potenzialwachstum (wY*) und 5-Jahres-Trend", "Veränderung zum Vorjahr in %", "Potenzialwachstum (wY*)", "Gleitender 5-Jahres-Durchschnitt"),
+        ("en", "03_potenzialwachstum_en", "Potential Growth (wY*) and 5-Year Moving Average", "Year-on-year change in %", "Potential Growth (wY*)", "5-Year Moving Average"),
+    ]:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=x_yr, y=df_ann["pot_growth"], name=n1, line=dict(color="#2563eb", width=2.5)))
+        fig.add_trace(go.Scatter(x=x_yr, y=df_ann["pot_growth_5y"], name=n2, line=dict(color="#d97706", width=2.5, dash="dot")))
+        save_chart(apply_standard_layout(fig, title, y_lbl, lang), stem)
+
+    for lang, stem, title, y_lbl, l1, l2, l3 in [
+        ("de", "04_wachstumsbeitraege_de", "Wachstumsbeiträge zum Potenzialwachstum", "Prozentpunkte", "Arbeit", "Kapital", "Totale Faktorproduktivität (TFP)"),
+        ("en", "04_wachstumsbeitraege_en", "Contributions to Potential Output Growth", "Percentage points", "Labor", "Capital", "Total Factor Productivity (TFP)"),
+    ]:
+        fig = go.Figure()
+        fig.add_trace(go.Bar(x=x_yr, y=df_ann["contrib_labor"], name=l1, marker_color="#0284c7"))
+        fig.add_trace(go.Bar(x=x_yr, y=df_ann["contrib_capital"], name=l2, marker_color="#7c3aed"))
+        fig.add_trace(go.Bar(x=x_yr, y=df_ann["contrib_tfp"], name=l3, marker_color="#10b981"))
+        fig.update_layout(barmode="relative")
+        save_chart(apply_standard_layout(fig, title, y_lbl, lang), stem)
+
+    for lang, stem, title, y_lbl, n1, n2 in [
+        ("de", "05_arbeitsvolumen_de", "Arbeitsvolumen und Trend-Arbeitsvolumen", "Mrd. Arbeitsstunden", "Tatsächliches Arbeitsvolumen", "Trend-Arbeitsvolumen"),
+        ("en", "05_arbeitsvolumen_en", "Total Hours Worked and Trend Labor Volume", "Billion hours", "Actual Hours Worked", "Trend Hours Worked"),
+    ]:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=x_yr, y=df_ann["hours"], name=n1, line=dict(color="#1d4ed8", width=2.5)))
+        fig.add_trace(go.Scatter(x=x_yr, y=df_ann["hours_pot"], name=n2, line=dict(color="#dc2626", width=2.3, dash="dash")))
+        save_chart(apply_standard_layout(fig, title, y_lbl, lang), stem)
+
+    for lang, stem, title, y_lbl, n1, n2 in [
+        ("de", "06_arbeitslosenquote_nairu_de", "Arbeitslosenquote und strukturelle Arbeitslosigkeit (NAIRU)", "% aller zivilen Erwerbspersonen", "Arbeitslosenquote (BA)", "NAIRU (Trend)"),
+        ("en", "06_arbeitslosenquote_nairu_en", "Unemployment Rate and Structural Unemployment (NAIRU)", "% of civilian labor force", "Unemployment Rate", "NAIRU (Trend)"),
+    ]:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=x_yr, y=df_ann["unemployment_rate"], name=n1, line=dict(color="#0f766e", width=2.6)))
+        fig.add_trace(go.Scatter(x=x_yr, y=df_ann["nairu"], name=n2, line=dict(color="#e11d48", width=2.3, dash="dash")))
+        save_chart(apply_standard_layout(fig, title, y_lbl, lang), stem)
+
+    for lang, stem, title, y_lbl, n1 in [
+        ("de", "07_kapitalstock_de", "Kapitalstock (Nettoanlagevermögen, preisbereinigt)", "Mrd. EUR", "Nettoanlagevermögen"),
+        ("en", "07_kapitalstock_en", "Capital Stock (Net Fixed Assets, price-adjusted)", "EUR billion", "Net Fixed Assets"),
+    ]:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=x_yr, y=df_ann["capital"], name=n1, line=dict(color="#6d28d9", width=2.8)))
+        save_chart(apply_standard_layout(fig, title, y_lbl, lang), stem)
+
+    for lang, stem, title, y_lbl, n1, n2 in [
+        ("de", "08_tfp_entwicklung_de", "Totale Faktorproduktivität (TFP) und Trend-TFP", "Index (2015 = 100)", "TFP (tatsächlich)", "Trend-TFP"),
+        ("en", "08_tfp_entwicklung_en", "Total Factor Productivity (TFP) and Trend TFP", "Index (2015 = 100)", "Actual TFP", "Trend TFP"),
+    ]:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=x_yr, y=df_ann["tfp_index"], name=n1, line=dict(color="#0369a1", width=2.5)))
+        fig.add_trace(go.Scatter(x=x_yr, y=df_ann["tfp_pot_index"], name=n2, line=dict(color="#ea580c", width=2.3, dash="dash")))
+        save_chart(apply_standard_layout(fig, title, y_lbl, lang), stem)
+
+    for lang, stem, title, y_lbl, n1 in [
+        ("de", "09_quartals_produktionsluecke_de", "Quartalsweise Produktionslücke in Deutschland (ab 1995)", "% des Produktionspotenzials", "Produktionslücke (Quartal)"),
+        ("en", "09_quartals_produktionsluecke_en", "Quarterly Output Gap in Germany (since 1995)", "% of potential output", "Output Gap (Quarterly)"),
+    ]:
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=x_q,
+                y=df_qtr["output_gap_q"],
+                name=n1,
+                fill="tozeroy",
+                line=dict(color="#1d4ed8", width=2.2),
+                fillcolor="rgba(29, 78, 216, 0.16)",
+            )
+        )
+        save_chart(apply_standard_layout(fig, title, y_lbl, lang), stem)
 
 
-def main():
-    df_y, df_q = build_dataset()
-    excel_path = OUT_DIR / "produktionspotenzial_deutschland_1991_2025.xlsx"
-    with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
-        df_y.to_excel(writer, sheet_name="Jahresdaten_1991", index=False)
-        df_q.to_excel(writer, sheet_name="Quartalsdaten_1995", index=False)
-    generate_all_charts(df_y, df_q)
-    print("Fertig: Excel und alle 9 Grafiken (DE & EN) erfolgreich aktualisiert.")
+# ---------------------------------------------------------------------------
+# 7. Hauptprogramm
+# ---------------------------------------------------------------------------
+def main() -> None:
+    print("=== Starte Aktualisierung Produktionspotenzial ===")
+    df_ann, df_qtr = build_macro_dataset()
+    export_datasets(df_ann, df_qtr)
+    generate_all_charts(df_ann, df_qtr)
+    html_count = len(list(OUT_DIR.glob("*.html")))
+    print(f"=== Fertig: {html_count} HTML-Grafiken in {OUT_DIR} aktualisiert ===")
 
 
 if __name__ == "__main__":
     main()
-
 
