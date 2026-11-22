@@ -605,19 +605,120 @@ def load_all_macro_data():
         "fin_q": fin_q,
     }
 
-
 def compute_koehler_tables(d):
+    """Erzeugt Jahres- und Quartalstabellen nach der Claus-Köhler-Methode."""
+
+    def as_series(key):
+        value = d.get(key)
+        if isinstance(value, pd.Series):
+            result = value.copy()
+        else:
+            result = pd.Series(dtype=float)
+
+        result = pd.to_numeric(result, errors="coerce").dropna()
+        result.index = result.index.astype(str).str.strip()
+        return result[~result.index.duplicated(keep="last")].sort_index()
+
+    def annual_from_quarters(series, aggregation="mean"):
+        if series.empty:
+            return pd.Series(dtype=float)
+
+        valid = series[
+            series.index.str.match(r"^\d{4}-Q[1-4]$")
+        ]
+        if valid.empty:
+            return pd.Series(dtype=float)
+
+        grouped = valid.groupby(valid.index.str[:4])
+        return grouped.sum() if aggregation == "sum" else grouped.mean()
+
+    def annual_from_months(series):
+        if series.empty:
+            return pd.Series(dtype=float)
+
+        valid = series[
+            series.index.str.match(r"^\d{4}-\d{2}$")
+        ]
+        if valid.empty:
+            return pd.Series(dtype=float)
+
+        return valid.groupby(valid.index.str[:4]).mean()
+
+    # Jahresreihen laden; fehlende Jahreswerte nach Möglichkeit aus den
+    # verfügbaren Quartals- oder Monatsreihen ableiten.
+    bip_real_y = as_series("bip_real_y")
+    if bip_real_y.empty:
+        bip_real_y = annual_from_quarters(
+            as_series("bip_real_q"),
+            aggregation="mean",
+        )
+        if not bip_real_y.empty:
+            print(
+                "[WARN] Jahresreihe reales BIP (81000-0001) ist leer; "
+                "verwende Jahresmittel aus 81000-0002."
+            )
+
+    et_y = as_series("et_y")
+    if et_y.empty:
+        et_y = annual_from_quarters(
+            as_series("et_q"),
+            aggregation="mean",
+        )
+        if not et_y.empty:
+            print(
+                "[WARN] Jahresreihe Erwerbstätige Inland (81000-0011) "
+                "ist leer; verwende Jahresmittel aus 81000-0012."
+            )
+
+    alo_y = as_series("alo_y")
+    if alo_y.empty:
+        alo_y = annual_from_months(as_series("alo_m"))
+        if not alo_y.empty:
+            print(
+                "[WARN] Jahresreihe Arbeitslose (13211-0002) ist leer; "
+                "verwende Monatsmittel aus 13211-0002."
+            )
+    if alo_y.empty:
+        alo_y = annual_from_quarters(as_series("alo_q"))
+        if not alo_y.empty:
+            print(
+                "[WARN] Jahresreihe Arbeitslose (13211-0002) ist leer; "
+                "verwende Quartalsmittel aus 13211-0002."
+            )
+
+    missing_core = [
+        label
+        for label, series in [
+            ("reales BIP 81000-0001 (Fallback: 81000-0002)", bip_real_y),
+            ("Erwerbstätige Inland 81000-0011 (Fallback: 81000-0012)", et_y),
+            ("Arbeitslose 13211-0002", alo_y),
+        ]
+        if series.empty
+    ]
+    if missing_core:
+        raise ValueError(
+            "Keine Jahres-Köhler-Tabelle möglich; folgende Reihen sind "
+            "nach den Fallbacks leer: " + "; ".join(missing_core)
+        )
+
     idx_y = (
-        d["bip_real_y"]
-        .index
-        .intersection(d["et_y"].index)
-        .intersection(d["alo_y"].index)
+        bip_real_y.index
+        .intersection(et_y.index)
+        .intersection(alo_y.index)
         .sort_values()
     )
+
+    if idx_y.empty:
+        raise ValueError(
+            "Keine gemeinsamen Jahreswerte für die Köhler-Berechnung. "
+            "Prüfe reales BIP (81000-0001/0002), Erwerbstätige Inland "
+            "(81000-0011/0012) und Arbeitslose (13211-0002)."
+        )
+
     df_y = pd.DataFrame(index=idx_y)
-    df_y["bip_real"] = d["bip_real_y"].loc[idx_y]
-    df_y["et"] = d["et_y"].loc[idx_y]
-    df_y["alo"] = d["alo_y"].loc[idx_y]
+    df_y["bip_real"] = bip_real_y.loc[idx_y]
+    df_y["et"] = et_y.loc[idx_y]
+    df_y["alo"] = alo_y.loc[idx_y]
     df_y["prod"] = (df_y["bip_real"] * 1e6) / df_y["et"]
     df_y["pot"] = ((df_y["et"] + df_y["alo"]) * df_y["prod"]) / 1e6
     df_y["ausl"] = (df_y["bip_real"] / df_y["pot"]) * 100.0
@@ -631,51 +732,106 @@ def compute_koehler_tables(d):
     df_y["g_alo"] = (
         df_y["alo"] / df_y["alo"].shift(1) - 1.0
     ) * 100.0
+
+    # Finanzierungssaldo und nominales BIP sind für diese Kennzahl nicht
+    # Teil der Potenzialberechnung; fehlende Reihen bleiben daher NaN.
+    fin_y = as_series("fin_y")
+    if fin_y.empty:
+        fin_y = annual_from_quarters(
+            as_series("fin_q"),
+            aggregation="sum",
+        )
+        if not fin_y.empty:
+            print(
+                "[WARN] Jahresreihe Finanzierungssaldo Gesamtstaat "
+                "(81000-0031) ist leer; verwende Quartalssummen."
+            )
+
+    bip_nom_y = as_series("bip_nom_y")
+    if bip_nom_y.empty:
+        bip_nom_y = annual_from_quarters(
+            as_series("bip_nom_q"),
+            aggregation="mean",
+        )
+        if not bip_nom_y.empty:
+            print(
+                "[WARN] Jahresreihe nominales BIP (81000-0001) ist leer; "
+                "verwende Quartalsmittel aus 81000-0002."
+            )
+
     common_fin_y = (
         idx_y
-        .intersection(d["fin_y"].index)
-        .intersection(d["bip_nom_y"].index)
+        .intersection(fin_y.index)
+        .intersection(bip_nom_y.index)
     )
     df_y["fin_pct"] = np.nan
-    df_y.loc[common_fin_y, "fin_pct"] = (
-        d["fin_y"].loc[common_fin_y]
-        / d["bip_nom_y"].loc[common_fin_y]
-    ) * 100.0
+    if len(common_fin_y):
+        df_y.loc[common_fin_y, "fin_pct"] = (
+            fin_y.loc[common_fin_y]
+            / bip_nom_y.loc[common_fin_y]
+        ) * 100.0
+
+    # Quartalsreihen für dieselbe Köhler-Berechnung.
+    bip_real_q = as_series("bip_real_q")
+    et_q = as_series("et_q")
+    alo_q = as_series("alo_q")
+
+    # Falls die Quartals-Arbeitslosenreihe fehlt, aus den Monatswerten bilden.
+    if alo_q.empty:
+        alo_m = as_series("alo_m")
+        if not alo_m.empty:
+            alo_q = alo_m.groupby(
+                lambda value: (
+                    f"{value[:4]}-Q"
+                    f"{(int(value[5:7]) - 1) // 3 + 1}"
+                )
+            ).mean()
+            print(
+                "[WARN] Quartalsreihe Arbeitslose ist leer; "
+                "verwende Quartalsmittel aus den Monatswerten."
+            )
 
     idx_q = (
-        d["bip_real_q"]
-        .index
-        .intersection(d["et_q"].index)
-        .intersection(d["alo_q"].index)
-        .sort_values()
+        bip_real_q.index
+        .intersection(et_q.index)
+        .intersection(alo_q.index)
     )
+    idx_q = idx_q[
+        idx_q.str.match(r"^\d{4}-Q[1-4]$")
+    ].sort_values()
+
     df_q = pd.DataFrame(index=idx_q)
-    df_q["bip_real"] = d["bip_real_q"].loc[idx_q]
-    df_q["et"] = d["et_q"].loc[idx_q]
-    df_q["alo"] = d["alo_q"].loc[idx_q]
-    df_q["prod"] = (df_q["bip_real"] * 1e6) / df_q["et"]
-    df_q["pot"] = ((df_q["et"] + df_q["alo"]) * df_q["prod"]) / 1e6
-    df_q["ausl"] = (df_q["bip_real"] / df_q["pot"]) * 100.0
-    df_q["g_bip"] = (
-        df_q["bip_real"] / df_q["bip_real"].shift(4) - 1.0
-    ) * 100.0
-    df_q["g_pot"] = (
-        df_q["pot"] / df_q["pot"].shift(4) - 1.0
-    ) * 100.0
-    df_q["diff"] = df_q["g_bip"] - df_q["g_pot"]
-    df_q["g_alo"] = (
-        df_q["alo"] / df_q["alo"].shift(4) - 1.0
-    ) * 100.0
+    if not idx_q.empty:
+        df_q["bip_real"] = bip_real_q.loc[idx_q]
+        df_q["et"] = et_q.loc[idx_q]
+        df_q["alo"] = alo_q.loc[idx_q]
+        df_q["prod"] = (df_q["bip_real"] * 1e6) / df_q["et"]
+        df_q["pot"] = ((df_q["et"] + df_q["alo"]) * df_q["prod"]) / 1e6
+        df_q["ausl"] = (df_q["bip_real"] / df_q["pot"]) * 100.0
+        df_q["g_bip"] = (
+            df_q["bip_real"] / df_q["bip_real"].shift(4) - 1.0
+        ) * 100.0
+        df_q["g_pot"] = (
+            df_q["pot"] / df_q["pot"].shift(4) - 1.0
+        ) * 100.0
+        df_q["diff"] = df_q["g_bip"] - df_q["g_pot"]
+        df_q["g_alo"] = (
+            df_q["alo"] / df_q["alo"].shift(4) - 1.0
+        ) * 100.0
+
+    fin_q = as_series("fin_q")
+    bip_nom_q = as_series("bip_nom_q")
     common_fin_q = (
         idx_q
-        .intersection(d["fin_q"].index)
-        .intersection(d["bip_nom_q"].index)
+        .intersection(fin_q.index)
+        .intersection(bip_nom_q.index)
     )
     df_q["fin_pct"] = np.nan
-    df_q.loc[common_fin_q, "fin_pct"] = (
-        d["fin_q"].loc[common_fin_q]
-        / d["bip_nom_q"].loc[common_fin_q]
-    ) * 100.0
+    if len(common_fin_q):
+        df_q.loc[common_fin_q, "fin_pct"] = (
+            fin_q.loc[common_fin_q]
+            / bip_nom_q.loc[common_fin_q]
+        ) * 100.0
 
     return (
         df_y[df_y.index >= "1991"].copy(),
@@ -684,18 +840,85 @@ def compute_koehler_tables(d):
 
 
 def build_hybrid_series(df_y, df_q, start_year="1991", add_gap=False):
-    q_counts = df_q.index.str[:4].value_counts()
+    """Kombiniert abgeschlossene Jahreswerte mit verfügbaren Quartalswerten."""
+    start_year = str(start_year)
+
+    annual = df_y.copy()
+    quarterly = df_q.copy()
+
+    if not annual.empty:
+        annual.index = annual.index.astype(str).str.strip()
+    if not quarterly.empty:
+        quarterly.index = quarterly.index.astype(str).str.strip()
+
+    annual_years = sorted(
+        year
+        for year in annual.index
+        if re.fullmatch(r"\d{4}", year) and year >= start_year
+    )
+    quarter_keys = sorted(
+        quarter
+        for quarter in quarterly.index
+        if re.fullmatch(r"\d{4}-Q[1-4]", quarter)
+    )
+
+    q_counts = pd.Series(
+        [quarter[:4] for quarter in quarter_keys],
+        dtype="string",
+    ).value_counts()
+
     completed_years = sorted(
-        [
-            year
-            for year, count in q_counts.items()
-            if count == 4 and year in df_y.index and year >= start_year
+        year
+        for year, count in q_counts.items()
+        if count == 4 and year in annual.index and year >= start_year
+    )
+
+    if not completed_years:
+        if annual_years:
+            completed_years = annual_years
+            print(
+                "[WARN] Keine vollständig mit Quartalen abgeglichenen "
+                "Jahre gefunden; verwende die vorhandenen Jahreswerte aus "
+                f"df_y: {', '.join(annual_years)}."
+            )
+        elif quarter_keys:
+            print(
+                "[WARN] Jahresreihe df_y ist leer oder enthält keine "
+                "gültigen Jahreswerte; verwende die verfügbaren Quartale "
+                "aus df_q."
+            )
+        else:
+            missing = []
+            if annual.empty:
+                missing.append("df_y (Jahresreihen: reales BIP, Erwerbstätige, Arbeitslose)")
+            if quarterly.empty:
+                missing.append("df_q (Quartalsreihen: reales BIP, Erwerbstätige, Arbeitslose)")
+            if not missing:
+                missing.append(
+                    "df_y und df_q enthalten keine gültigen Jahres- "
+                    "oder Quartalsindizes"
+                )
+            message = (
+                "build_hybrid_series kann keine Zeitreihe bilden. "
+                "Leer/ungültig: " + "; ".join(missing)
+            )
+            print(f"[ERROR] {message}")
+            raise ValueError(message)
+
+    last_comp_y = completed_years[-1] if completed_years else None
+
+    if last_comp_y is None:
+        remaining_quarters = [
+            quarter
+            for quarter in quarter_keys
+            if quarter[:4] >= start_year
         ]
-    )
-    last_comp_y = completed_years[-1]
-    rem_q = sorted(
-        [quarter for quarter in df_q.index if quarter[:4] > last_comp_y]
-    )
+    else:
+        remaining_quarters = [
+            quarter
+            for quarter in quarter_keys
+            if quarter[:4] > last_comp_y
+        ]
 
     labels = []
     keys = []
@@ -706,31 +929,58 @@ def build_hybrid_series(df_y, df_q, start_year="1991", add_gap=False):
         keys.append(("Y", year))
         is_q.append(False)
 
-    if add_gap and rem_q:
+    if add_gap and remaining_quarters and completed_years:
         labels.append("")
         keys.append(("GAP", ""))
         is_q.append(False)
 
-    for quarter in rem_q:
+    for quarter in remaining_quarters:
         labels.append(
             f"{quarter[:4]} {ROMAN_Q[quarter[-2:]]}"
         )
         keys.append(("Q", quarter))
         is_q.append(True)
 
+    if not keys:
+        available_annual_columns = (
+            ", ".join(map(str, annual.columns))
+            if not annual.empty
+            else "keine"
+        )
+        available_quarter_columns = (
+            ", ".join(map(str, quarterly.columns))
+            if not quarterly.empty
+            else "keine"
+        )
+        message = (
+            "build_hybrid_series fand trotz Prüfung keine verwendbaren "
+            "Jahres- oder Quartalswerte. "
+            f"df_y-Spalten: {available_annual_columns}; "
+            f"df_q-Spalten: {available_quarter_columns}."
+        )
+        print(f"[ERROR] {message}")
+        raise ValueError(message)
+
     def get_col(column):
         values = []
         for kind, key in keys:
             if kind == "Y":
-                values.append(float(df_y.loc[key, column]))
+                values.append(
+                    float(annual.loc[key, column])
+                    if column in annual.columns
+                    else np.nan
+                )
             elif kind == "Q":
-                values.append(float(df_q.loc[key, column]))
+                values.append(
+                    float(quarterly.loc[key, column])
+                    if column in quarterly.columns
+                    else np.nan
+                )
             else:
                 values.append(np.nan)
         return values
 
     return labels, keys, is_q, get_col, completed_years
-
 
 def get_recession_spans(keys, bip_chain_yoy):
     svr_spans = []
