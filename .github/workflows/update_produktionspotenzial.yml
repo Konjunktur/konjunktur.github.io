@@ -36,6 +36,6 @@ jobs:
           git add static/produktionspotenzial/
           if ! git diff --staged --quiet; then
             git commit -m "Update Produktionspotenzial charts"
-            git pull --rebase origin main
+            git pull --rebase -X theirs origin main
             git push
           fi
