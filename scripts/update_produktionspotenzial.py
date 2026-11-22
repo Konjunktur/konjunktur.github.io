@@ -277,6 +277,11 @@ def _filter_series(
     require_labels=False,
 ):
     """Filtert GENESIS-Reihen nach Codes, Bezeichnungen oder beidem."""
+    def _as_text_series(frame, col):
+        s = frame[col]
+        s = s.iloc[:, 0] if isinstance(s, pd.DataFrame) else s
+        return s.astype(str).str.strip().str.lower()
+
     if df is None or df.empty or "ZEIT" not in df.columns or "NUM" not in df.columns:
         return pd.Series(dtype=float)
 
@@ -321,11 +326,11 @@ def _filter_series(
         ]
         if label_cols:
             label_text = (
-                label_df[label_cols]
-                .fillna("")
-                .astype(str)
+                pd.concat(
+                    [_as_text_series(label_df, column) for column in label_cols],
+                    axis=1,
+                )
                 .agg(" | ".join, axis=1)
-                .str.lower()
             )
             mask = pd.Series(True, index=label_df.index)
             for term in lbl_terms:
