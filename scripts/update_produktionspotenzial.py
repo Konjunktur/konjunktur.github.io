@@ -502,27 +502,22 @@ def load_all_macro_data():
     df_alo = _destatis_ffcsv("13211-0002", "2005")
 
     def _unemployed_monthly(df):
+        if "2_variable_attribute_label" in df.columns:
+            df = df.loc[
+                df["2_variable_attribute_label"].astype(str).str.strip()
+                == "Insgesamt"
+            ].copy()
         series = _filter_series(
             df,
-            {"ARB001"},
-            ["arbeitslose"],
+            {"ERW006"},
+            [],
             r"^\d{4}-\d{2}$",
-            excl_terms=["quote"],
-            pick="max",
+            pick="first",
         )
-        if series.empty:
-            series = _filter_series(
-                df,
-                set(),
-                ["arbeitslose"],
-                r"^\d{4}-\d{2}$",
-                excl_terms=["quote"],
-                pick="max",
-            )
-        # Einheit gegebenenfalls von Personen auf Tausend Personen normieren.
+        # Wie im Spannungszahl-Skript: Personen in Tausend Personen umrechnen.
         return (
-            series / 1000.0
-            if not series.empty and series.median() > 50000
+            series * 0.001
+            if not series.empty and series.median() > 20000
             else series
         )
 
@@ -656,6 +651,26 @@ def compute_koehler_tables(d):
     for series in (bip_real_y, et_y, alo_y):
         series.index = series.index.astype(str).str.strip()
 
+    series_by_name = {
+        "bip_real_y": bip_real_y,
+        "et_y": et_y,
+        "alo_y": alo_y,
+    }
+    year_coverage = {
+        name: sorted(
+            {
+                year
+                for year in series.index.astype(str)
+                if re.fullmatch(r"\d{4}", year)
+            }
+        )
+        for name, series in series_by_name.items()
+    }
+    coverage_text = "; ".join(
+        f"{name}: {', '.join(years) if years else 'keine Jahreswerte'}"
+        for name, years in year_coverage.items()
+    )
+
     idx_y = (
         bip_real_y.index
         .intersection(et_y.index)
@@ -668,19 +683,22 @@ def compute_koehler_tables(d):
     if idx_y.empty:
         raise ValueError(
             "Keine gemeinsamen Jahreswerte für die Köhler-Berechnung: "
-            "prüfe reales BIP (81000-0001), Erwerbstätige Inland "
-            "(81000-0011) und Arbeitslose (13211-0001/0002)."
+            "prüfe die Reihenabdeckung. "
+            f"Abdeckung (Jahre): {coverage_text}."
         )
 
     expected_years = pd.Index(
-        [str(year) for year in range(1991, int(idx_y[-1]) + 1)]
+        [
+            str(year)
+            for year in range(1991, max(1991, int(idx_y[-1])) + 1)
+        ]
     )
     missing_years = expected_years.difference(idx_y)
     if len(missing_years):
         raise ValueError(
             "Die gemeinsame Köhler-Jahresreihe ist nicht lückenlos ab 1991. "
-            f"Fehlende Jahre: {', '.join(missing_years)}. Prüfe insbesondere "
-            "die kombinierte Arbeitslosenreihe aus 13211-0001 und 13211-0002."
+            f"Fehlende gemeinsame Jahre: {', '.join(missing_years)}. "
+            f"Abdeckung (Jahre): {coverage_text}."
         )
 
     df_y = pd.DataFrame(index=idx_y)
