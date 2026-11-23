@@ -758,8 +758,12 @@ def load_all_macro_data():
     print("81000-0031: erste 10 rohe Zeilen:")
     print(df_fin.head(10).to_string(index=False))
 
-    def _government_amount_series(value_code, time_pattern):
-        if df_fin.empty or "value_variable_code" not in df_fin.columns:
+    def _government_amount_series(
+        time_pattern,
+        value_code=None,
+        value_label=None,
+    ):
+        if df_fin.empty:
             return pd.Series(dtype=float)
 
         frame = df_fin.loc[:, ~df_fin.columns.duplicated()].copy()
@@ -776,6 +780,26 @@ def load_all_macro_data():
         if not code_cols:
             return pd.Series(dtype=float)
 
+        if value_label is not None:
+            if "value_variable_label" not in frame.columns:
+                return pd.Series(dtype=float)
+            is_series = (
+                frame["value_variable_label"]
+                .astype(str)
+                .str.strip()
+                .eq(value_label)
+            )
+        elif value_code is not None and "value_variable_code" in frame.columns:
+            is_series = (
+                frame["value_variable_code"]
+                .astype(str)
+                .str.strip()
+                .str.upper()
+                .eq(value_code)
+            )
+        else:
+            return pd.Series(dtype=float)
+
         is_total = (
             frame[code_cols]
             .fillna("")
@@ -785,14 +809,7 @@ def load_all_macro_data():
                 axis=1,
             )
         )
-        selected = frame.loc[
-            frame["value_variable_code"]
-            .astype(str)
-            .str.strip()
-            .str.upper()
-            .eq(value_code)
-            & is_total
-        ].copy()
+        selected = frame.loc[is_series & is_total].copy()
         selected = selected.loc[
             selected["ZEIT"].astype(str).str.fullmatch(time_pattern)
         ]
@@ -806,7 +823,8 @@ def load_all_macro_data():
         )
         if not conflicting_years.empty:
             raise ValueError(
-                f"81000-0031 enthält mehrere Werte für {value_code} / DINSG "
+                f"81000-0031 enthält mehrere Werte für "
+                f"{value_label or value_code} / DINSG "
                 f"in: {', '.join(conflicting_years.index.astype(str))}."
             )
         return (
@@ -816,8 +834,21 @@ def load_all_macro_data():
         )
 
     def _financing_balance(time_pattern):
-        einnahmen = _government_amount_series("EIN003", time_pattern)
-        ausgaben = _government_amount_series("ASG009", time_pattern)
+        balance = _government_amount_series(
+            time_pattern,
+            value_label="Finanzierungssaldo des Staates",
+        )
+        if not balance.empty:
+            return balance
+
+        einnahmen = _government_amount_series(
+            time_pattern,
+            value_code="INM003",
+        )
+        ausgaben = _government_amount_series(
+            time_pattern,
+            value_code="ASG009",
+        )
         return einnahmen.subtract(ausgaben).dropna()
 
     fin_y = _financing_balance(r"\d{4}")
@@ -826,8 +857,9 @@ def load_all_macro_data():
     fin_q_is_pct = False
     if fin_y.empty:
         raise ValueError(
-            "81000-0031 enthält für DINSG keine gemeinsamen Jahreswerte "
-            "von EIN003 (Einnahmen) und ASG009 (Ausgaben)."
+            "81000-0031 enthält für DINSG weder die direkte "
+            "Finanzierungssaldo-Reihe noch gemeinsame Jahreswerte von INM003 "
+            "(Einnahmen) und ASG009 (Ausgaben)."
         )
 
     # Jahresreihen aus Quartals- bzw. Monatsreihen ergänzen, falls nötig.
