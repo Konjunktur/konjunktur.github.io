@@ -19,7 +19,7 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 ### Inhaltsverzeichnis
 
 1. [**Produktionspotenzial, Auslastung des Produktionspotenzials, angemessenes/nicht angemessenes Wirtschaftswachstum in der langen Frist**](#lange-frist)
-   * [Produktionspotenzial und reales Bruttoinlandsprodukt (ab 1991)](#potenzial-lang)
+   * [Produktionspotenzial (ab 1991)](#potenzial-lang)
    * [Auslastung des Produktionspotenzials (ab 1991)](#auslastung-lang)
    * [Angemessenes/nicht angemessenes Wirtschaftswachstum und Arbeitslosigkeit (ab 1991)](#angemessen-alo-lang)
    * [Angemessenes/nicht angemessenes Wirtschaftswachstum und Öffentliche Haushalte (ab 1991)](#angemessen-staat-lang)
@@ -35,7 +35,7 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 ## Produktionspotenzial, Auslastung des Produktionspotenzials, angemessenes/nicht angemessenes Wirtschaftswachstum in der langen Frist {#lange-frist}
 
-### Produktionspotenzial und reales Bruttoinlandsprodukt {#potenzial-lang}
+### Produktionspotenzial {#potenzial-lang}
 
 <iframe src="/produktionspotenzial/01_potenzial_lang.html" width="100%" height="520" frameborder="0" style="border:none;"></iframe>
 
@@ -119,7 +119,7 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 [Grafik als Vollbild öffnen (.png)](/produktionspotenzial/08_notwendig_jahr.png)
 
-* **Konstruktion:** Ausgehend von der Arbeitslosenquote im Januar des aktuellen Jahres wird der jährliche reale Wirtschaftswachstumspfad berechnet, der erforderlich ist, um die Arbeitslosenquote um jeweils 1,0 Prozentpunkt pro Jahr bis zum Erreichen der Vollbeschäftigungsgrenze (≤ 3,0 %) abzubauen: $wY_{r,\text{notwendig}} = wY^* - w(1 + \text{ALQ})$.
+* **Konstruktion:** Ausgehend von der Arbeitslosenquote im Januar des aktuellen Jahres wird der jährliche reale Wirtschaftswachstumspfad berechnet, der erforderlich ist, um die Arbeitslosenquote um jeweils 1,0 Prozentpunkt pro Jahr bis zum Erreichen der Vollbeschäftigungsgrenze (≤ 3,0 %) abzubauen: wY<sub>r, notwendig</sub> = wY* − w(1 + ALQ).
 
 ---
 

@@ -19,7 +19,7 @@ See also on the life and work of Claus Köhler: [Duncker & Humblot – Claus Kö
 ### Table of Contents
 
 * **Part 1: Long-Term Perspective (from 1991 to Latest Available Date)**
-  * [1. Potential Output and Real GDP (in EUR bn)](#potential-output-long)
+  * [Potential Output (in EUR bn)](#potential-output-long)
   * [2. Capacity Utilization of Potential Output (%)](#utilization-long)
   * [3. Appropriate / Inappropriate Economic Growth and Unemployment](#appropriate-unemployment-long)
   * [4. Appropriate / Inappropriate Economic Growth and Public Finances](#appropriate-fiscal-long)
@@ -35,7 +35,7 @@ See also on the life and work of Claus Köhler: [Duncker & Humblot – Claus Kö
 
 ## Potential Output, Capacity Utilization of Potential Output, Appropriate/Inappropriate Economic Growth in the Long Term
 
-### 1. Potential Output and Real GDP (in EUR bn) {#potential-output-long}
+### Potential Output (in EUR bn) {#potential-output-long}
 
 <iframe src="/produktionspotenzial/01_potenzial_lang_en.html" width="100%" height="515" style="border:none;" loading="lazy"></iframe>
 
@@ -115,7 +115,7 @@ See also on the life and work of Claus Köhler: [Duncker & Humblot – Claus Kö
 
 [Open full-screen chart (PNG)](/produktionspotenzial/08_notwendig_jahr_en.png)
 
-**Construction & Sources:** Starting from the unemployment rate in January of the current year, the chart shows the annual reduction path of the unemployment rate by 1.0 percentage point per year until reaching the full-employment threshold (≤ 3.0%), along with the necessary real GDP growth rate according to Claus Köhler (`wYr_necessary = wY* − w(1 + UR)`). Source: Federal Statistical Office (Destatis GENESIS-Online) and Federal Employment Agency.
+**Construction & Sources:** Starting from the unemployment rate in January of the current year, the chart shows the annual reduction path of the unemployment rate by 1.0 percentage point per year until reaching the full-employment threshold (≤ 3.0%), along with the necessary real GDP growth rate according to Claus Köhler (wY<sub>r, necessary</sub> = wY* − w(1 + UR)). Source: Federal Statistical Office (Destatis GENESIS-Online) and Federal Employment Agency.
 
 ---
 

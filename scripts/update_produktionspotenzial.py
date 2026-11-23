@@ -52,9 +52,9 @@ TXT = {
         "src": "Quelle: Statistisches Bundesamt | Stand: ",
         "leg_svr": "Rezession/Schwäche (SVR/BBK)",
         "leg_bip": "Reales BIP < 0 % gg. Vj.",
-        "c1_t": "Produktionspotenzial und reales Bruttoinlandsprodukt in Deutschland",
+        "c1_t": "Produktionspotenzial in Deutschland",
         "c1_s": "Jahreswerte ab 1991 bis zum zuletzt abgeschlossenen Jahr, danach auf Jahresrate hochgerechnete Quartalswerte, in Mrd. €",
-        "c1_l": ["Produktionspotenzial (Mrd. €)", "Reales Bruttoinlandsprodukt (Mrd. €)"],
+        "c1_l": ["Produktionspotenzial (Mrd. €)"],
         "c2_t": "Auslastung des Produktionspotenzials",
         "c2_s": "Reales BIP in % des Produktionspotenzials (Jahreswerte ab 1991 + aktuelle Quartale)",
         "c2_l": ["Auslastung des Produktionspotenzials (%)", "Mittelwert 1991–2019"],
@@ -87,9 +87,9 @@ TXT = {
         "src": "Source: Federal Statistical Office | As of: ",
         "leg_svr": "Recession/Weakness (GCEE/BBK)",
         "leg_bip": "Real GDP < 0% YoY",
-        "c1_t": "Potential Output and Real Gross Domestic Product in Germany",
+        "c1_t": "Potential Output in Germany",
         "c1_s": "Annual values from 1991 up to the last completed year, followed by annualized quarterly values, in EUR bn",
-        "c1_l": ["Potential output (EUR bn)", "Real gross domestic product (EUR bn)"],
+        "c1_l": ["Potential output (EUR bn)"],
         "c2_t": "Capacity Utilization of Potential Output",
         "c2_s": "Real GDP as a percentage of potential output (annual values from 1991 + latest quarters)",
         "c2_l": ["Utilization of potential output (%)", "Average 1991–2019"],
@@ -1995,14 +1995,9 @@ def main():
 
         # 1–4: Lange Frist ab 1991
         pot_long = get_long("pot")
-        bip_real_long = get_long("bip_real")
         pot_long = [
             value * 4 if is_quarter else value
             for value, is_quarter in zip(pot_long, isq_long)
-        ]
-        bip_real_long = [
-            value * 4 if is_quarter else value
-            for value, is_quarter in zip(bip_real_long, isq_long)
         ]
         save_single_series_chart(
             lang,
@@ -2015,11 +2010,6 @@ def main():
                     pot_long,
                     t["c1_l"][0],
                     "#1B3A6B",
-                ),
-                (
-                    bip_real_long,
-                    t["c1_l"][1],
-                    "#2563EB",
                 ),
             ],
             isq_long,
