@@ -382,75 +382,14 @@ def load_all_macro_data():
     df_bip_y = _destatis_ffcsv("81000-0001", "1991")
     df_bip_q = _destatis_ffcsv("81000-0002", "1991")
 
-    def _person_factor(frame, values, value_code=None, value_label=None):
-        unit_frame = frame
-        code_cols = [
-            column
-            for column in frame.columns
-            if column.endswith("_code")
-            and column not in {"statistics_code", "time_code"}
-        ]
-        if value_code and code_cols:
-            code_mask = frame[code_cols].fillna("").astype(str).apply(
-                lambda row: any(
-                    str(value).strip().upper() == value_code.upper()
-                    for value in row
-                ),
-                axis=1,
-            )
-            if code_mask.any():
-                unit_frame = frame.loc[code_mask]
-        elif value_label:
-            label_cols = [
-                column
-                for column in frame.columns
-                if "label" in column.lower()
-            ]
-            if label_cols:
-                row_labels = frame[label_cols].fillna("").astype(str).agg(
-                    " | ".join,
-                    axis=1,
-                ).str.strip().str.lower()
-                label_mask = row_labels.str.contains(
-                    value_label.lower(),
-                    regex=False,
-                )
-                if label_mask.any():
-                    unit_frame = frame.loc[label_mask]
-        unit_cols = [
-            column
-            for column in unit_frame.columns
-            if "unit" in column.lower() or "einheit" in column.lower()
-        ]
-        unit_text = " ".join(
-            str(value)
-            for column in unit_cols
-            for value in unit_frame[column].dropna().unique()
-        ).lower()
-        if any(
-            marker in unit_text
-            for marker in ("tausend", "thousand", "tsd", "1000", "1 000", "1.000")
-        ):
-            return 1000.0
-        if "million" in unit_text or "mio" in unit_text:
-            return 1_000_000.0
-        if "anzahl" in unit_text or "person" in unit_text or "people" in unit_text:
-            return 1.0
-
-        median = pd.to_numeric(values, errors="coerce").median()
-        if median >= 100_000:
-            return 1.0
-        if median >= 1_000:
-            return 1000.0
-        return 1_000_000.0 if median > 0 else 1.0
-
-    def _normalize_persons(series, frame, value_code=None, value_label=None):
-        return pd.to_numeric(series, errors="coerce") * _person_factor(
-            frame,
-            series,
-            value_code,
-            value_label,
-        )
+    def _normalize_persons(series):
+        values = pd.to_numeric(series, errors="coerce")
+        magnitude = values.abs()
+        factors = pd.Series(1.0, index=values.index)
+        # GENESIS can switch units within a table; normalize each observation.
+        factors.loc[(magnitude > 0) & (magnitude < 1_000)] = 1_000_000.0
+        factors.loc[(magnitude >= 1_000) & (magnitude < 100_000)] = 1_000.0
+        return values * factors
 
     bip_real_y = _filter_series(
         df_bip_y,
@@ -536,7 +475,6 @@ def load_all_macro_data():
     df_et_y = _destatis_ffcsv("81000-0011", "1991")
     df_et_q = _destatis_ffcsv("81000-0012", "1991")
 
-    et_y_code = "ERW060"
     et_y = _filter_series(
         df_et_y,
         {"WERTORG", "ERW060"},
@@ -545,7 +483,6 @@ def load_all_macro_data():
         pick="max",
     )
     if et_y.empty:
-        et_y_code = None
         et_y = _filter_series(
             df_et_y,
             {"WERTORG"},
@@ -553,14 +490,8 @@ def load_all_macro_data():
             r"^\d{4}$",
             pick="max",
         )
-    et_y = _normalize_persons(
-        et_y,
-        df_et_y,
-        value_code=et_y_code,
-        value_label="erwerbstätige",
-    )
+    et_y = _normalize_persons(et_y)
 
-    et_q_code = "ERW060"
     et_q = _filter_series(
         df_et_q,
         {"WERTORG", "ERW060"},
@@ -569,7 +500,6 @@ def load_all_macro_data():
         pick="max",
     )
     if et_q.empty:
-        et_q_code = None
         et_q = _filter_series(
             df_et_q,
             {"WERTORG"},
@@ -577,12 +507,7 @@ def load_all_macro_data():
             r"^\d{4}-Q[1-4]$",
             pick="max",
         )
-    et_q = _normalize_persons(
-        et_q,
-        df_et_q,
-        value_code=et_q_code,
-        value_label="erwerbstätige",
-    )
+    et_q = _normalize_persons(et_q)
 
     df_alo_1991 = _destatis_ffcsv("13211-0001", "1991")
     df_alo = _destatis_ffcsv("13211-0002", "2005")
@@ -612,12 +537,7 @@ def load_all_macro_data():
                 excl_terms=["quote"],
                 pick="first",
             )
-            return _normalize_persons(
-                series,
-                df,
-                value_label="arbeitslose",
-            )
-        return _normalize_persons(series, df, value_code=value_code)
+        return _normalize_persons(series)
 
     def _unemployed_annual(df):
         if df.empty or "ZEIT" not in df.columns or "NUM" not in df.columns:
@@ -658,9 +578,8 @@ def load_all_macro_data():
         if subset.empty:
             return pd.Series(dtype=float)
 
-        subset["PERSONS"] = (
-            pd.to_numeric(_as_series(subset, "NUM"), errors="coerce")
-            * _person_factor(subset, _as_series(subset, "NUM"))
+        subset["PERSONS"] = _normalize_persons(
+            _as_series(subset, "NUM"),
         )
         subset = subset.dropna(subset=["PERSONS"])
         output = {}
@@ -777,9 +696,7 @@ def load_all_macro_data():
             r"^\d{4}-\d{2}$",
             pick="max",
         )
-        civilian_labor_force_code = "ERW001"
         if civilian_labor_force.empty:
-            civilian_labor_force_code = None
             civilian_labor_force = _filter_series(
                 df_alo,
                 set(),
@@ -787,12 +704,7 @@ def load_all_macro_data():
                 r"^\d{4}-\d{2}$",
                 pick="max",
             )
-        civilian_labor_force = _normalize_persons(
-            civilian_labor_force,
-            df_alo,
-            value_code=civilian_labor_force_code,
-            value_label="zivile erwerbspersonen",
-        )
+        civilian_labor_force = _normalize_persons(civilian_labor_force)
 
         common_months = alo_m.index.intersection(
             civilian_labor_force.index
@@ -841,60 +753,99 @@ def load_all_macro_data():
         )
 
     df_fin = _destatis_ffcsv("81000-0031", "1991")
-    fin_y_direct = _filter_series(
-        df_fin,
-        set(),
-        ["finanzierungssaldo", "prozent", "bip"],
-        r"^\d{4}$",
-        pick="first",
-        require_labels=True,
-    )
-    fin_y_is_pct = not fin_y_direct.empty
-    fin_y = fin_y_direct if not fin_y_direct.empty else _filter_series(
-        df_fin,
-        {"WERTORG"},
-        ["finanzierungssaldo", "gesamtstaat"],
-        r"^\d{4}$",
-        pick="first",
-        require_labels=True,
-    )
+    def _financing_series(time_pattern):
+        if df_fin.empty:
+            return pd.Series(dtype=float), False
 
-    fin_q_direct = _filter_series(
-        df_fin,
-        set(),
-        ["finanzierungssaldo", "prozent", "bip"],
-        r"^\d{4}-Q[1-4]$",
-        pick="first",
-        require_labels=True,
-    )
-    fin_q_is_pct = not fin_q_direct.empty
-    fin_q = fin_q_direct if not fin_q_direct.empty else _filter_series(
-        df_fin,
-        {"WERTORG"},
-        ["finanzierungssaldo", "gesamtstaat"],
-        r"^\d{4}-Q[1-4]$",
-        pick="first",
-        require_labels=True,
-    )
+        frame = df_fin.loc[:, ~df_fin.columns.duplicated()].copy()
+        label_cols = [
+            column for column in frame.columns if "label" in column.lower()
+        ]
+        if not label_cols:
+            return pd.Series(dtype=float), False
+        labels = (
+            frame[label_cols]
+            .fillna("")
+            .astype(str)
+            .agg(" | ".join, axis=1)
+            .str.casefold()
+        )
+        finance_mask = labels.str.contains(
+            "finanzierungssaldo",
+            regex=False,
+        )
+        code_cols = [
+            column
+            for column in frame.columns
+            if column.endswith("_code")
+            and column not in {"statistics_code", "time_code"}
+        ]
+        if code_cols:
+            original_values = frame[code_cols].fillna("").astype(str).apply(
+                lambda row: row.str.strip().str.upper().eq("WERTORG").any(),
+                axis=1,
+            )
+            if original_values.any():
+                finance_mask &= original_values
 
-    # Finanzierungssaldo gegebenenfalls von Millionen auf Milliarden Euro.
-    unit_cols = [
-        column
-        for column in df_fin.columns
-        if "unit" in column.lower() or "einheit" in column.lower()
-    ]
-    if unit_cols and not fin_y_is_pct:
-        unit_text = " ".join(
-            df_fin[unit_cols[0]].dropna().astype(str).unique()
-        ).lower()
-        if "mill" in unit_text or "mio" in unit_text:
-            fin_y = fin_y / 1000.0
-    if unit_cols and not fin_q_is_pct:
-        unit_text = " ".join(
-            df_fin[unit_cols[0]].dropna().astype(str).unique()
-        ).lower()
-        if "mill" in unit_text or "mio" in unit_text:
-            fin_q = fin_q / 1000.0
+        is_pct = finance_mask & (
+            labels.str.contains("prozent", regex=False)
+            | labels.str.contains("%", regex=False)
+            | labels.str.contains("bip", regex=False)
+        )
+        total_terms = (
+            "gesamtstaat",
+            "staat insgesamt",
+            "staat, insgesamt",
+            "staat (insgesamt)",
+            "deutschland",
+        )
+        is_total = labels.apply(
+            lambda value: any(term in value for term in total_terms)
+        )
+        disaggregated = labels.str.contains(
+            "bundes|länder|laender|gemeinden|sozialversicherung",
+            regex=True,
+        )
+        amount_mask = finance_mask & is_total & ~disaggregated
+        if not amount_mask.any():
+            amount_mask = finance_mask & labels.str.contains(
+                "staat",
+                regex=False,
+            ) & ~disaggregated
+
+        percent_total_mask = is_pct & (
+            is_total
+            | (
+                labels.str.contains("staat", regex=False)
+                & ~disaggregated
+            )
+        )
+        for mask, direct_pct in (
+            (percent_total_mask, True),
+            (amount_mask, False),
+        ):
+            if not mask.any():
+                continue
+            selected = frame.loc[mask].copy()
+            result = _filter_series(
+                selected,
+                set(),
+                [],
+                time_pattern,
+                pick="first",
+            )
+            if not result.empty:
+                return result, direct_pct
+        return pd.Series(dtype=float), False
+
+    fin_y, fin_y_is_pct = _financing_series(r"^\d{4}$")
+    fin_q, fin_q_is_pct = _financing_series(r"^\d{4}-Q[1-4]$")
+    if fin_y.empty:
+        print("81000-0031: fin_y leer; rohe Spaltennamen:")
+        print(df_fin.columns.tolist())
+        print("81000-0031: erste 10 rohen Zeilen:")
+        print(df_fin.head(10).to_string(index=False))
 
     # Jahresreihen aus Quartals- bzw. Monatsreihen ergänzen, falls nötig.
     if bip_real_y.empty and not bip_real_q.empty:
@@ -1024,13 +975,6 @@ def compute_koehler_tables(d):
             if np.isfinite(previous_pot):
                 df_y["pot"].iat[pos] = previous_pot * (1.0 + baseline / 100.0)
 
-    print("Letzte sechs Jahreswerte df_y[[bip_real, pot, g_pot]]:")
-    print(
-        df_y[["bip_real", "pot", "g_pot"]]
-        .tail(6)
-        .to_string()
-    )
-
     df_y["diff"] = df_y["g_bip"] - df_y["g_pot"]
     df_y["g_alo"] = (
         df_y["alo"] / df_y["alo"].shift(1) - 1.0
@@ -1054,19 +998,22 @@ def compute_koehler_tables(d):
         else:
             fin_values = fin_y.loc[common_fin_y].astype(float)
             bip_values = bip_nom_y.loc[common_fin_y].astype(float)
-            fin_median = float(fin_values.abs().median()) if len(fin_values) else 0.0
-            bip_median = float(bip_values.abs().median()) if len(bip_values) else 0.0
-            if bip_median > 1000.0:
-                bip_values = bip_values / 1000.0
-            if fin_median > 1000.0:
-                fin_values = fin_values / 1000.0
+            bip_values = bip_values.where(
+                bip_values.abs() <= 100_000.0,
+                bip_values / 1000.0,
+            )
+            fin_values = fin_values.where(
+                fin_values.abs() <= 1_000.0,
+                fin_values / 1000.0,
+            )
             df_y.loc[common_fin_y, "fin_pct"] = (
                 fin_values / bip_values
             ) * 100.0
     print("fin_y.tail(10):")
     print(fin_y.tail(10).to_string())
-    print("df_y['fin_pct'].tail(10):")
-    print(df_y["fin_pct"].tail(10).to_string())
+    fin_pct = df_y["fin_pct"]
+    print("fin_pct.tail(10):")
+    print(fin_pct.tail(10).to_string())
 
     bip_real_q = d["bip_real_q"].copy()
     et_q = d["et_q"].copy()
@@ -1122,12 +1069,14 @@ def compute_koehler_tables(d):
         else:
             fin_values = fin_q.loc[common_fin_q].astype(float)
             bip_values = bip_nom_q.loc[common_fin_q].astype(float)
-            fin_median = float(fin_values.abs().median()) if len(fin_values) else 0.0
-            bip_median = float(bip_values.abs().median()) if len(bip_values) else 0.0
-            if bip_median > 1000.0:
-                bip_values = bip_values / 1000.0
-            if fin_median > 1000.0:
-                fin_values = fin_values / 1000.0
+            bip_values = bip_values.where(
+                bip_values.abs() <= 100_000.0,
+                bip_values / 1000.0,
+            )
+            fin_values = fin_values.where(
+                fin_values.abs() <= 1_000.0,
+                fin_values / 1000.0,
+            )
             df_q.loc[common_fin_q, "fin_pct"] = (
                 fin_values / bip_values
             ) * 100.0
@@ -2441,11 +2390,11 @@ def main():
             f"{wy_y!r} != {wy_q!r}"
         )
     print(
-        'df_y[["bip_real", "et", "alo", "prod", "pot", "g_pot"]].tail(8):'
+        'df_y[["bip_real", "et", "alo", "prod", "pot", "g_pot"]].tail(10):'
     )
     print(
         df_y[["bip_real", "et", "alo", "prod", "pot", "g_pot"]]
-        .tail(8)
+        .tail(10)
         .to_string()
     )
 
