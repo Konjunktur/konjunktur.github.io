@@ -730,6 +730,12 @@ def load_all_macro_data():
 
     alo_1991_y = _unemployed_annual(df_alo_1991)
     if alo_1991_y.empty:
+        alo_1991_m = _unemployed_monthly(df_alo_1991, "ERW006")
+        if not alo_1991_m.empty:
+            alo_1991_y = alo_1991_m.groupby(
+                lambda value: value[:4]
+            ).mean()
+    if alo_1991_y.empty:
         print(
             "[DIAG] 13211-0001 enthält nach dem Arbeitslosen-/Gebietsfilter "
             "keine Jahresreihe. Spalten:"
@@ -835,7 +841,16 @@ def load_all_macro_data():
         )
 
     df_fin = _destatis_ffcsv("81000-0031", "1991")
-    fin_y = _filter_series(
+    fin_y_direct = _filter_series(
+        df_fin,
+        set(),
+        ["finanzierungssaldo", "prozent", "bip"],
+        r"^\d{4}$",
+        pick="first",
+        require_labels=True,
+    )
+    fin_y_is_pct = not fin_y_direct.empty
+    fin_y = fin_y_direct if not fin_y_direct.empty else _filter_series(
         df_fin,
         {"WERTORG"},
         ["finanzierungssaldo", "gesamtstaat"],
@@ -844,7 +859,16 @@ def load_all_macro_data():
         require_labels=True,
     )
 
-    fin_q = _filter_series(
+    fin_q_direct = _filter_series(
+        df_fin,
+        set(),
+        ["finanzierungssaldo", "prozent", "bip"],
+        r"^\d{4}-Q[1-4]$",
+        pick="first",
+        require_labels=True,
+    )
+    fin_q_is_pct = not fin_q_direct.empty
+    fin_q = fin_q_direct if not fin_q_direct.empty else _filter_series(
         df_fin,
         {"WERTORG"},
         ["finanzierungssaldo", "gesamtstaat"],
@@ -859,12 +883,17 @@ def load_all_macro_data():
         for column in df_fin.columns
         if "unit" in column.lower() or "einheit" in column.lower()
     ]
-    if unit_cols:
+    if unit_cols and not fin_y_is_pct:
         unit_text = " ".join(
             df_fin[unit_cols[0]].dropna().astype(str).unique()
         ).lower()
         if "mill" in unit_text or "mio" in unit_text:
             fin_y = fin_y / 1000.0
+    if unit_cols and not fin_q_is_pct:
+        unit_text = " ".join(
+            df_fin[unit_cols[0]].dropna().astype(str).unique()
+        ).lower()
+        if "mill" in unit_text or "mio" in unit_text:
             fin_q = fin_q / 1000.0
 
     # Jahresreihen aus Quartals- bzw. Monatsreihen ergänzen, falls nötig.
@@ -889,6 +918,8 @@ def load_all_macro_data():
         "alo_y": alo_y,
         "fin_y": fin_y,
         "fin_q": fin_q,
+        "fin_y_is_pct": fin_y_is_pct,
+        "fin_q_is_pct": fin_q_is_pct,
     }
 
 
@@ -1007,6 +1038,7 @@ def compute_koehler_tables(d):
 
     fin_y = d["fin_y"].copy()
     bip_nom_y = d["bip_nom_y"].copy()
+    fin_y_is_pct = bool(d.get("fin_y_is_pct", False))
     fin_y.index = fin_y.index.astype(str).str.strip()
     bip_nom_y.index = bip_nom_y.index.astype(str).str.strip()
 
@@ -1017,10 +1049,24 @@ def compute_koehler_tables(d):
     )
     df_y["fin_pct"] = np.nan
     if len(common_fin_y):
-        df_y.loc[common_fin_y, "fin_pct"] = (
-            fin_y.loc[common_fin_y]
-            / bip_nom_y.loc[common_fin_y]
-        ) * 100.0
+        if fin_y_is_pct:
+            df_y.loc[common_fin_y, "fin_pct"] = fin_y.loc[common_fin_y]
+        else:
+            fin_values = fin_y.loc[common_fin_y].astype(float)
+            bip_values = bip_nom_y.loc[common_fin_y].astype(float)
+            fin_median = float(fin_values.abs().median()) if len(fin_values) else 0.0
+            bip_median = float(bip_values.abs().median()) if len(bip_values) else 0.0
+            if bip_median > 1000.0:
+                bip_values = bip_values / 1000.0
+            if fin_median > 1000.0:
+                fin_values = fin_values / 1000.0
+            df_y.loc[common_fin_y, "fin_pct"] = (
+                fin_values / bip_values
+            ) * 100.0
+    print("fin_y.tail(10):")
+    print(fin_y.tail(10).to_string())
+    print("df_y['fin_pct'].tail(10):")
+    print(df_y["fin_pct"].tail(10).to_string())
 
     bip_real_q = d["bip_real_q"].copy()
     et_q = d["et_q"].copy()
@@ -1060,6 +1106,7 @@ def compute_koehler_tables(d):
 
     fin_q = d["fin_q"].copy()
     bip_nom_q = d["bip_nom_q"].copy()
+    fin_q_is_pct = bool(d.get("fin_q_is_pct", False))
     fin_q.index = fin_q.index.astype(str).str.strip()
     bip_nom_q.index = bip_nom_q.index.astype(str).str.strip()
 
@@ -1070,10 +1117,20 @@ def compute_koehler_tables(d):
     )
     df_q["fin_pct"] = np.nan
     if len(common_fin_q):
-        df_q.loc[common_fin_q, "fin_pct"] = (
-            fin_q.loc[common_fin_q]
-            / bip_nom_q.loc[common_fin_q]
-        ) * 100.0
+        if fin_q_is_pct:
+            df_q.loc[common_fin_q, "fin_pct"] = fin_q.loc[common_fin_q]
+        else:
+            fin_values = fin_q.loc[common_fin_q].astype(float)
+            bip_values = bip_nom_q.loc[common_fin_q].astype(float)
+            fin_median = float(fin_values.abs().median()) if len(fin_values) else 0.0
+            bip_median = float(bip_values.abs().median()) if len(bip_values) else 0.0
+            if bip_median > 1000.0:
+                bip_values = bip_values / 1000.0
+            if fin_median > 1000.0:
+                fin_values = fin_values / 1000.0
+            df_q.loc[common_fin_q, "fin_pct"] = (
+                fin_values / bip_values
+            ) * 100.0
 
     return (
         df_y[df_y.index >= "1991"].copy(),
@@ -1513,14 +1570,8 @@ def save_dual_chart(
     bar_array = np.array(bar_vals, dtype=float)
     finite_line = np.abs(line_array[np.isfinite(line_array)])
     finite_bar = np.abs(bar_array[np.isfinite(bar_array)])
-    line_limit = max(
-        lmax,
-        float(finite_line.max()) if finite_line.size else lmax,
-    )
-    bar_limit = max(
-        bmax,
-        float(finite_bar.max()) if finite_bar.size else bmax,
-    )
+    line_limit = float(lmax)
+    bar_limit = float(bmax)
     line_range = (-line_limit, line_limit)
     bar_range = (-bar_limit, bar_limit)
     line_ticks = np.linspace(*line_range, 7)
@@ -2461,7 +2512,7 @@ def main():
             isq_long,
             svr_long,
             bip_long,
-            6.0,
+            3.0,
             30.0,
             show_y_grid=False,
         )
@@ -2479,8 +2530,8 @@ def main():
             isq_long,
             svr_long,
             bip_long,
-            6.0,
-            6.0,
+            3.0,
+            12.0,
             show_y_grid=False,
         )
 
@@ -2519,7 +2570,7 @@ def main():
             isq_short,
             svr_short,
             bip_short,
-            6.0,
+            3.0,
             30.0,
             is_short=True,
         )
@@ -2537,8 +2588,8 @@ def main():
             isq_short,
             svr_short,
             bip_short,
-            6.0,
-            6.0,
+            3.0,
+            12.0,
             is_short=True,
         )
 

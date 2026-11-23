@@ -51,7 +51,7 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 * [Grafik in Vollbild anzeigen](/produktionspotenzial/02_auslastung_lang.png)
 * *Erläuterung* – Reales Bruttoinlandsprodukt in Prozent des Produktionspotenzials. Grau hinterlegt sind Rezessions- und Schwächephasen des Sachverständigenrats und der Bundesbank, hellblau Phasen mit realem BIP-Wachstum unter 0 % gegenüber dem Vorjahr.
-* *Quelle* – Statistisches Bundesamt (GENESIS-Online), eigene Berechnungen.
+* *Quelle* – Statistisches Bundesamt (GENESIS-Online, Tabellen 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0001, 13211-0002), eigene Berechnungen.
 
 ---
 
@@ -61,7 +61,7 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 * [Grafik in Vollbild anzeigen](/produktionspotenzial/03_angemessen_alo_lang.png)
 * *Erläuterung* – Angemessenes Wachstum (positiv), wenn das reale BIP schneller wächst als das Produktionspotenzial; nicht angemessenes Wachstum (negativ), wenn es langsamer wächst. Gegenübergestellt ist die Veränderungsrate der registrierten Arbeitslosen gegenüber dem Vorjahr. Grau hinterlegt sind Rezessions- und Schwächephasen des Sachverständigenrats und der Bundesbank, hellblau Phasen mit realem BIP-Wachstum unter 0 % gegenüber dem Vorjahr.
-* *Quelle* – Statistisches Bundesamt und Bundesagentur für Arbeit (GENESIS-Online), eigene Berechnungen.
+* *Quelle* – Statistisches Bundesamt und Bundesagentur für Arbeit (GENESIS-Online, Tabellen 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0001, 13211-0002), eigene Berechnungen.
 
 ---
 
@@ -71,7 +71,7 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 * [Grafik in Vollbild anzeigen](/produktionspotenzial/04_angemessen_staat_lang.png)
 * *Erläuterung* – Angemessenes (+) beziehungsweise nicht angemessenes (−) Wachstum in Prozentpunkten im Vergleich zum Finanzierungssaldo des Staates in Prozent des nominalen BIP. Grau hinterlegt sind Rezessions- und Schwächephasen des Sachverständigenrats und der Bundesbank, hellblau Phasen mit realem BIP-Wachstum unter 0 % gegenüber dem Vorjahr.
-* *Quelle* – Statistisches Bundesamt (GENESIS-Online), eigene Berechnungen.
+* *Quelle* – Statistisches Bundesamt (GENESIS-Online, Tabellen 81000-0001, 81000-0002, 81000-0031), eigene Berechnungen.
 
 ---
 
@@ -83,7 +83,7 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 * [Grafik in Vollbild anzeigen](/produktionspotenzial/05_auslastung_kurz.png)
 * *Erläuterung* – Reales Bruttoinlandsprodukt in Prozent des Produktionspotenzials ab 2019, mit Jahreswerten bis zum letzten abgeschlossenen Kalenderjahr und anschließenden Quartalswerten.
-* *Quelle* – Statistisches Bundesamt (GENESIS-Online), eigene Berechnungen.
+* *Quelle* – Statistisches Bundesamt (GENESIS-Online, Tabellen 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0001, 13211-0002), eigene Berechnungen.
 
 ---
 
@@ -93,7 +93,7 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 * [Grafik in Vollbild anzeigen](/produktionspotenzial/06_angemessen_alo_kurz.png)
 * *Erläuterung* – Angemessenes (+) beziehungsweise nicht angemessenes (−) Wachstum in Prozentpunkten sowie die Veränderungsrate der registrierten Arbeitslosen gegenüber dem Vorjahr.
-* *Quelle* – Statistisches Bundesamt und Bundesagentur für Arbeit (GENESIS-Online), eigene Berechnungen.
+* *Quelle* – Statistisches Bundesamt und Bundesagentur für Arbeit (GENESIS-Online, Tabellen 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0001, 13211-0002), eigene Berechnungen.
 
 ---
 
@@ -103,7 +103,7 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 * [Grafik in Vollbild anzeigen](/produktionspotenzial/07_angemessen_staat_kurz.png)
 * *Erläuterung* – Angemessenes (+) beziehungsweise nicht angemessenes (−) Wachstum in Prozentpunkten sowie der Finanzierungssaldo des Staates in Prozent des nominalen BIP.
-* *Quelle* – Statistisches Bundesamt (GENESIS-Online), eigene Berechnungen.
+* *Quelle* – Statistisches Bundesamt (GENESIS-Online, Tabellen 81000-0001, 81000-0002, 81000-0031), eigene Berechnungen.
 
 ---
 
@@ -115,7 +115,7 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 * [Grafik in Vollbild anzeigen](/produktionspotenzial/08_notwendig_jahr.png)
 * *Erläuterung* – Ausgehend von der Arbeitslosenquote im Januar wird der Wachstumspfad zum jährlichen Abbau um einen Prozentpunkt bis auf höchstens 3,0 % dargestellt. wY* ist das Mittel der letzten fünf abgeschlossenen jährlichen Potenzialwachstumsraten; das notwendige Wachstum ergibt sich aus wY* abzüglich des Wachstumsbeitrags der sinkenden Arbeitslosigkeit.
-* *Quelle* – Statistisches Bundesamt und Bundesagentur für Arbeit (GENESIS-Online), eigene Berechnungen.
+* *Quelle* – Statistisches Bundesamt und Bundesagentur für Arbeit (GENESIS-Online, Tabellen 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0001, 13211-0002), eigene Berechnungen.
 
 ---
 
@@ -125,7 +125,7 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 * [Grafik in Vollbild anzeigen](/produktionspotenzial/09_notwendig_quartal.png)
 * *Erläuterung* – Quartalsweise aktualisierter Wachstumspfad ausgehend von der Arbeitslosenquote am Ende des letzten verfügbaren Quartals, mit einem jährlichen Abbau um einen Prozentpunkt bis auf höchstens 3,0 %. wY* basiert auf dem Mittel der letzten fünf abgeschlossenen jährlichen Potenzialwachstumsraten.
-* *Quelle* – Statistisches Bundesamt und Bundesagentur für Arbeit (GENESIS-Online), eigene Berechnungen.
+* *Quelle* – Statistisches Bundesamt und Bundesagentur für Arbeit (GENESIS-Online, Tabellen 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0001, 13211-0002), eigene Berechnungen.
 
 ---
 
