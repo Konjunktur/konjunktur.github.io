@@ -501,28 +501,75 @@ def load_all_macro_data():
     df_alo_1991 = _destatis_ffcsv("13211-0001", "1991")
     df_alo = _destatis_ffcsv("13211-0002", "2005")
 
-    def _unemployed_monthly(df):
-        if "2_variable_attribute_label" in df.columns:
-            df = df.loc[
-                df["2_variable_attribute_label"].astype(str).str.strip()
-                == "Insgesamt"
-            ].copy()
+    def _unemployed_monthly(df, value_code):
+        dimension_col = "2_variable_attribute_label"
+        if dimension_col in df.columns:
+            total_mask = (
+                df[dimension_col].astype(str).str.strip() == "Insgesamt"
+            )
+            if total_mask.any():
+                df = df.loc[total_mask].copy()
+
         series = _filter_series(
             df,
-            {"ERW006"},
+            {value_code},
             [],
             r"^\d{4}-\d{2}$",
             pick="first",
         )
-        # Wie im Spannungszahl-Skript: Personen in Tausend Personen umrechnen.
-        return (
-            series * 0.001
-            if not series.empty and series.median() > 20000
-            else series
-        )
+        if series.empty:
+            series = _filter_series(
+                df,
+                set(),
+                ["arbeitslose"],
+                r"^\d{4}-\d{2}$",
+                excl_terms=["quote"],
+                pick="first",
+            )
 
-    alo_m = _unemployed_monthly(df_alo).combine_first(
-        _unemployed_monthly(df_alo_1991)
+        # Die Köhler-Rechnung verwendet Erwerbstätige in Tausend Personen.
+        unit_cols = [
+            column
+            for column in df.columns
+            if "unit" in column.lower() or "einheit" in column.lower()
+        ]
+        unit_text = " ".join(
+            str(value)
+            for column in unit_cols
+            for value in df[column].dropna().unique()
+        ).lower()
+        median = series.median() if not series.empty else np.nan
+        is_thousand = any(
+            marker in unit_text
+            for marker in ("tausend", "thousand", "tsd", "1000", "1 000")
+        )
+        is_million = "million" in unit_text or "mio" in unit_text
+        is_person = "person" in unit_text or "people" in unit_text
+
+        if series.empty:
+            return series
+        if is_million:
+            return series * 1000.0
+        if is_person and not is_thousand:
+            return series / 1000.0
+        if median > 20000:
+            return series / 1000.0
+        if 0 < median < 100 and not is_thousand:
+            return series * 1000.0
+        return series
+
+    alo_1991_m = _unemployed_monthly(df_alo_1991, "ERW086")
+    if alo_1991_m.empty:
+        print(
+            "[DIAG] 13211-0001 enthält nach ERW086-/Label-Filter keine "
+            "Arbeitslosenreihe. Spalten:"
+        )
+        print(df_alo_1991.columns.tolist())
+        print("Erste 5 Zeilen der 13211-0001-Antwort:")
+        print(df_alo_1991.head(5).to_string(index=False))
+
+    alo_m = _unemployed_monthly(df_alo, "ERW006").combine_first(
+        alo_1991_m
     ).sort_index()
 
     alq_m = _filter_series(
