@@ -382,6 +382,76 @@ def load_all_macro_data():
     df_bip_y = _destatis_ffcsv("81000-0001", "1991")
     df_bip_q = _destatis_ffcsv("81000-0002", "1991")
 
+    def _person_factor(frame, values, value_code=None, value_label=None):
+        unit_frame = frame
+        code_cols = [
+            column
+            for column in frame.columns
+            if column.endswith("_code")
+            and column not in {"statistics_code", "time_code"}
+        ]
+        if value_code and code_cols:
+            code_mask = frame[code_cols].fillna("").astype(str).apply(
+                lambda row: any(
+                    str(value).strip().upper() == value_code.upper()
+                    for value in row
+                ),
+                axis=1,
+            )
+            if code_mask.any():
+                unit_frame = frame.loc[code_mask]
+        elif value_label:
+            label_cols = [
+                column
+                for column in frame.columns
+                if "label" in column.lower()
+            ]
+            if label_cols:
+                row_labels = frame[label_cols].fillna("").astype(str).agg(
+                    " | ".join,
+                    axis=1,
+                ).str.strip().str.lower()
+                label_mask = row_labels.str.contains(
+                    value_label.lower(),
+                    regex=False,
+                )
+                if label_mask.any():
+                    unit_frame = frame.loc[label_mask]
+        unit_cols = [
+            column
+            for column in unit_frame.columns
+            if "unit" in column.lower() or "einheit" in column.lower()
+        ]
+        unit_text = " ".join(
+            str(value)
+            for column in unit_cols
+            for value in unit_frame[column].dropna().unique()
+        ).lower()
+        if any(
+            marker in unit_text
+            for marker in ("tausend", "thousand", "tsd", "1000", "1 000", "1.000")
+        ):
+            return 1000.0
+        if "million" in unit_text or "mio" in unit_text:
+            return 1_000_000.0
+        if "anzahl" in unit_text or "person" in unit_text or "people" in unit_text:
+            return 1.0
+
+        median = pd.to_numeric(values, errors="coerce").median()
+        if median >= 100_000:
+            return 1.0
+        if median >= 1_000:
+            return 1000.0
+        return 1_000_000.0 if median > 0 else 1.0
+
+    def _normalize_persons(series, frame, value_code=None, value_label=None):
+        return pd.to_numeric(series, errors="coerce") * _person_factor(
+            frame,
+            series,
+            value_code,
+            value_label,
+        )
+
     bip_real_y = _filter_series(
         df_bip_y,
         {"WERTORG", "VGR014"},
@@ -466,6 +536,7 @@ def load_all_macro_data():
     df_et_y = _destatis_ffcsv("81000-0011", "1991")
     df_et_q = _destatis_ffcsv("81000-0012", "1991")
 
+    et_y_code = "ERW060"
     et_y = _filter_series(
         df_et_y,
         {"WERTORG", "ERW060"},
@@ -474,6 +545,7 @@ def load_all_macro_data():
         pick="max",
     )
     if et_y.empty:
+        et_y_code = None
         et_y = _filter_series(
             df_et_y,
             {"WERTORG"},
@@ -481,7 +553,14 @@ def load_all_macro_data():
             r"^\d{4}$",
             pick="max",
         )
+    et_y = _normalize_persons(
+        et_y,
+        df_et_y,
+        value_code=et_y_code,
+        value_label="erwerbstätige",
+    )
 
+    et_q_code = "ERW060"
     et_q = _filter_series(
         df_et_q,
         {"WERTORG", "ERW060"},
@@ -490,6 +569,7 @@ def load_all_macro_data():
         pick="max",
     )
     if et_q.empty:
+        et_q_code = None
         et_q = _filter_series(
             df_et_q,
             {"WERTORG"},
@@ -497,6 +577,12 @@ def load_all_macro_data():
             r"^\d{4}-Q[1-4]$",
             pick="max",
         )
+    et_q = _normalize_persons(
+        et_q,
+        df_et_q,
+        value_code=et_q_code,
+        value_label="erwerbstätige",
+    )
 
     df_alo_1991 = _destatis_ffcsv("13211-0001", "1991")
     df_alo = _destatis_ffcsv("13211-0002", "2005")
@@ -526,51 +612,73 @@ def load_all_macro_data():
                 excl_terms=["quote"],
                 pick="first",
             )
+            return _normalize_persons(
+                series,
+                df,
+                value_label="arbeitslose",
+            )
+        return _normalize_persons(series, df, value_code=value_code)
 
-        # Die Köhler-Rechnung verwendet Erwerbstätige in Tausend Personen.
-        unit_cols = [
-            column
-            for column in df.columns
-            if "unit" in column.lower() or "einheit" in column.lower()
-        ]
-        unit_text = " ".join(
-            str(value)
-            for column in unit_cols
-            for value in df[column].dropna().unique()
-        ).lower()
-        median = series.median() if not series.empty else np.nan
-        is_thousand = any(
-            marker in unit_text
-            for marker in ("tausend", "thousand", "tsd", "1000", "1 000")
+    def _unemployed_annual(df):
+        label_col = "value_variable_label"
+        region_col = "1_variable_attribute_label"
+        if df.empty or label_col not in df.columns:
+            return pd.Series(dtype=float)
+
+        df = df.loc[:, ~df.columns.duplicated()].copy()
+        value_labels = _as_series(df, label_col).astype(str).str.strip()
+        years = _as_series(df, "ZEIT").astype(str).str.strip()
+        subset = df.loc[
+            value_labels.eq("Arbeitslose")
+            & years.str.fullmatch(r"\d{4}")
+        ].copy()
+        if subset.empty:
+            return pd.Series(dtype=float)
+
+        subset["PERSONS"] = (
+            pd.to_numeric(_as_series(subset, "NUM"), errors="coerce")
+            * _person_factor(subset, _as_series(subset, "NUM"))
         )
-        is_million = "million" in unit_text or "mio" in unit_text
-        is_person = "person" in unit_text or "people" in unit_text
+        subset = subset.dropna(subset=["PERSONS"])
+        output = {}
+        for year, year_rows in subset.groupby("ZEIT", sort=True):
+            if region_col not in year_rows.columns:
+                output[str(year)] = float(year_rows["PERSONS"].iloc[0])
+                continue
 
-        if series.empty:
-            return series
-        if is_million:
-            return series * 1000.0
-        if is_person and not is_thousand:
-            return series / 1000.0
-        if median > 20000:
-            return series / 1000.0
-        if 0 < median < 100 and not is_thousand:
-            return series * 1000.0
-        return series
+            regions = _as_series(year_rows, region_col).astype(str).str.strip()
+            normalized_regions = regions.str.casefold()
+            for total_label in ("deutschland", "insgesamt"):
+                total_rows = year_rows.loc[normalized_regions == total_label]
+                if not total_rows.empty:
+                    output[str(year)] = float(total_rows["PERSONS"].iloc[0])
+                    break
+            else:
+                former_west = year_rows.loc[
+                    normalized_regions == "früheres bundesgebiet",
+                    "PERSONS",
+                ]
+                new_states = year_rows.loc[
+                    normalized_regions == "neue länder",
+                    "PERSONS",
+                ]
+                if not former_west.empty and not new_states.empty:
+                    output[str(year)] = float(
+                        former_west.iloc[0] + new_states.iloc[0]
+                    )
+        return pd.Series(output, dtype=float).sort_index()
 
-    alo_1991_m = _unemployed_monthly(df_alo_1991, "ERW086")
-    if alo_1991_m.empty:
+    alo_1991_y = _unemployed_annual(df_alo_1991)
+    if alo_1991_y.empty:
         print(
-            "[DIAG] 13211-0001 enthält nach ERW086-/Label-Filter keine "
-            "Arbeitslosenreihe. Spalten:"
+            "[DIAG] 13211-0001 enthält nach dem Arbeitslosen-/Gebietsfilter "
+            "keine Jahresreihe. Spalten:"
         )
         print(df_alo_1991.columns.tolist())
         print("Erste 5 Zeilen der 13211-0001-Antwort:")
         print(df_alo_1991.head(5).to_string(index=False))
 
-    alo_m = _unemployed_monthly(df_alo, "ERW006").combine_first(
-        alo_1991_m
-    ).sort_index()
+    alo_m = _unemployed_monthly(df_alo, "ERW006").sort_index()
 
     alq_m = _filter_series(
         df_alo,
@@ -604,7 +712,9 @@ def load_all_macro_data():
             r"^\d{4}-\d{2}$",
             pick="max",
         )
+        civilian_labor_force_code = "ERW001"
         if civilian_labor_force.empty:
+            civilian_labor_force_code = None
             civilian_labor_force = _filter_series(
                 df_alo,
                 set(),
@@ -612,6 +722,12 @@ def load_all_macro_data():
                 r"^\d{4}-\d{2}$",
                 pick="max",
             )
+        civilian_labor_force = _normalize_persons(
+            civilian_labor_force,
+            df_alo,
+            value_code=civilian_labor_force_code,
+            value_label="zivile erwerbspersonen",
+        )
 
         common_months = alo_m.index.intersection(
             civilian_labor_force.index
@@ -629,7 +745,9 @@ def load_all_macro_data():
             f"{(int(value[5:7]) - 1) // 3 + 1}"
         )
     ).mean()
-    alo_y = alo_m.groupby(lambda value: value[:4]).mean()
+    alo_y = alo_m.groupby(lambda value: value[:4]).mean().combine_first(
+        alo_1991_y
+    ).sort_index()
 
     df_fin = _destatis_ffcsv("81000-0031", "1991")
     fin_y = _filter_series(
