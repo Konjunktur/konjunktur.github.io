@@ -748,6 +748,14 @@ def load_all_macro_data():
     alo_y = alo_m.groupby(lambda value: value[:4]).mean().combine_first(
         alo_1991_y
     ).sort_index()
+    alo_y_from_1991 = alo_y.loc[alo_y.index.astype(str) >= "1991"]
+    print("Erste fünf Jahreswerte alo_y ab 1991:")
+    print(alo_y_from_1991.head(5).to_string())
+    if alo_y_from_1991.empty or alo_y_from_1991.index[0] != "1991":
+        raise ValueError(
+            "alo_y beginnt nicht 1991. Verfügbare Jahreswerte ab 1991: "
+            f"{', '.join(alo_y_from_1991.index.astype(str)) or 'keine'}."
+        )
 
     df_fin = _destatis_ffcsv("81000-0031", "1991")
     fin_y = _filter_series(
@@ -863,6 +871,12 @@ def compute_koehler_tables(d):
         raise ValueError(
             "Die gemeinsame Köhler-Jahresreihe ist nicht lückenlos ab 1991. "
             f"Fehlende gemeinsame Jahre: {', '.join(missing_years)}. "
+            f"Abdeckung (Jahre): {coverage_text}."
+        )
+    if idx_y[0] != "1991":
+        raise ValueError(
+            "Die gemeinsame Köhler-Jahresreihe beginnt nicht 1991. "
+            f"Erstes gemeinsames Jahr: {idx_y[0]}. "
             f"Abdeckung (Jahre): {coverage_text}."
         )
 
@@ -1071,64 +1085,77 @@ def build_hybrid_series(df_y, df_q, start_year="1991", add_gap=False):
     return labels, keys, is_q, get_col, completed_years
 
 
-def get_recession_spans(keys, bip_chain_yoy, annual_bip_yoy):
-    """Ermittelt SVR- und BIP-Rezessionsspans für die Hybrid-Zeitachse."""
-    def period_bounds(kind, key):
+def get_recession_spans(keys, bip_chain_yoy):
+    """Projiziert quartalsgenaue Phasen auf Jahres- und Quartalskategorien."""
+    def month_number(year_month):
+        year, month = (int(part) for part in year_month.split("-"))
+        return year * 12 + month - 1
+
+    def key_month_bounds(kind, key):
         if kind == "Y":
-            return f"{key}-01", f"{key}-12"
+            start = int(key) * 12
+            return start, start + 12
         if kind == "Q":
-            quarter = int(key[-1])
-            first_month = (quarter - 1) * 3 + 1
-            last_month = first_month + 2
-            return (
-                f"{key[:4]}-{first_month:02d}",
-                f"{key[:4]}-{last_month:02d}",
-            )
+            quarter_start_month = (int(key[-1]) - 1) * 3
+            start = int(key[:4]) * 12 + quarter_start_month
+            return start, start + 3
         return None
 
-    def overlaps(kind, key, start, end):
-        bounds = period_bounds(kind, key)
-        return bounds is not None and bounds[0] <= end and bounds[1] >= start
-
-    def in_svr(kind, key):
-        return any(
-            overlaps(kind, key, start, end)
-            for start, end in SVR_PHASES
-        )
-
-    def spans_for(predicate):
+    def project_period(start_month, end_month):
         spans = []
-        start = None
-        end = None
         for index, (kind, key) in enumerate(keys):
-            if kind != "GAP" and predicate(kind, key):
-                if start is None:
-                    start = index
-                end = index
-            elif start is not None:
-                spans.append((start - 0.5, end + 0.5))
-                start = None
-        if start is not None:
-            spans.append((start - 0.5, len(keys) - 0.5))
+            bounds = key_month_bounds(kind, key)
+            if bounds is None:
+                continue
+            cell_start, cell_end = bounds
+            overlap_start = max(start_month, cell_start)
+            overlap_end = min(end_month, cell_end)
+            if overlap_start >= overlap_end:
+                continue
+
+            cell_width = cell_end - cell_start
+            x_start = index - 0.5 + (overlap_start - cell_start) / cell_width
+            x_end = index - 0.5 + (overlap_end - cell_start) / cell_width
+            if spans and abs(spans[-1][1] - x_start) < 1e-9:
+                spans[-1] = (spans[-1][0], x_end)
+            else:
+                spans.append((x_start, x_end))
         return spans
+
+    def project_intervals(intervals):
+        return [
+            span
+            for start_month, end_month in intervals
+            for span in project_period(start_month, end_month)
+        ]
+
+    svr_intervals = [
+        (month_number(start), month_number(end) + 1)
+        for start, end in SVR_PHASES
+    ]
 
     quarterly_bip_yoy = bip_chain_yoy.copy()
     quarterly_bip_yoy.index = quarterly_bip_yoy.index.astype(str)
-    annual_bip_yoy = annual_bip_yoy.copy()
-    annual_bip_yoy.index = annual_bip_yoy.index.astype(str)
+    negative_quarters = []
+    for quarter, value in quarterly_bip_yoy.items():
+        if pd.notna(value) and value < 0 and re.fullmatch(r"\d{4}-Q[1-4]", quarter):
+            bounds = key_month_bounds("Q", quarter)
+            negative_quarters.append(bounds)
 
-    def is_negative_bip_growth(kind, key):
-        if kind == "Y":
-            value = annual_bip_yoy.get(key, np.nan)
-        elif kind == "Q":
-            value = quarterly_bip_yoy.get(key, np.nan)
+    negative_quarters.sort()
+    bip_intervals = []
+    for start_month, end_month in negative_quarters:
+        if bip_intervals and start_month <= bip_intervals[-1][1]:
+            bip_intervals[-1] = (
+                bip_intervals[-1][0],
+                max(bip_intervals[-1][1], end_month),
+            )
         else:
-            return False
-        return pd.notna(value) and value < 0
+            bip_intervals.append((start_month, end_month))
 
     return (
-        spans_for(lambda kind, key: in_svr(kind, key)),
-        spans_for(is_negative_bip_growth),
+        project_intervals(svr_intervals),
+        project_intervals(bip_intervals),
     )
 
 
@@ -1162,7 +1189,7 @@ def add_shades_mpl(ax, svr_spans, bip_spans, t):
         patches.append(
             mpatches.Patch(
                 color="#93C5FD",
-                alpha=0.45,
+                alpha=0.55,
                 label=t["leg_bip"],
             )
         )
@@ -1298,11 +1325,7 @@ def compute_necessary_growth(d, df_y, completed_years, mode="year"):
 
     # Arithmetisches Mittel der letzten fünf abgeschlossenen
     # Jahreswachstumsraten aus der Köhler-Jahrestabelle.
-    completed_year_set = {str(year) for year in completed_years}
-    completed_growth = df_y.loc[
-        df_y.index.astype(str).isin(completed_year_set),
-        "g_pot",
-    ].dropna().tail(5)
+    completed_growth = df_y["g_pot"].dropna().tail(5)
     if len(completed_growth) < 5:
         raise ValueError(
             "compute_necessary_growth: Für wY* liegen weniger als fünf "
@@ -1310,8 +1333,8 @@ def compute_necessary_growth(d, df_y, completed_years, mode="year"):
         )
     wy_star = float(completed_growth.mean())
     if mode == "year":
-        print("Letzte fünf abgeschlossene Werte df_y['g_pot'] (%):")
-        print(completed_growth.to_string())
+        print("Letzte fünf Werte df_y['g_pot'] (%):")
+        print(df_y["g_pot"].tail(5).to_string())
         print(f"wY* (5-Jahres-Mittel) = {wy_star:.6f} %")
 
     rows = [
@@ -2174,12 +2197,10 @@ def main():
     svr_long, bip_long = get_recession_spans(
         keys_long,
         d["bip_chain_yoy"],
-        df_y["g_bip"],
     )
     svr_short, _ = get_recession_spans(
         keys_short,
         d["bip_chain_yoy"],
-        df_y["g_bip"],
     )
     bip_short = []
 
