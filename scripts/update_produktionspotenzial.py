@@ -892,9 +892,37 @@ def compute_koehler_tables(d):
     df_y["g_bip"] = (
         df_y["bip_real"] / df_y["bip_real"].shift(1) - 1.0
     ) * 100.0
-    df_y["g_pot"] = (
+    df_y["g_pot_raw"] = (
         df_y["pot"] / df_y["pot"].shift(1) - 1.0
     ) * 100.0
+
+    # Bei einem Wechsel der Destatis-Einheit kann ein einzelnes pot-Niveau
+    # einen Kettenindex-Sprung erzeugen. Solche Sprünge werden gegen die
+    # vorausgehenden normalen Jahresraten abgeglichen und aus pot sowie
+    # g_pot entfernt.
+    df_y["g_pot"] = df_y["g_pot_raw"].copy()
+    for pos in range(1, len(df_y)):
+        raw_growth = float(df_y["g_pot"].iloc[pos])
+        if not np.isfinite(raw_growth):
+            continue
+        previous = df_y["g_pot"].iloc[max(0, pos - 5):pos]
+        previous = previous.dropna()
+        if previous.empty:
+            continue
+        baseline = float(previous.median())
+        if abs(raw_growth - baseline) >= 3.0:
+            df_y["g_pot"].iat[pos] = baseline
+            previous_pot = float(df_y["pot"].iloc[pos - 1])
+            if np.isfinite(previous_pot):
+                df_y["pot"].iat[pos] = previous_pot * (1.0 + baseline / 100.0)
+
+    print("Letzte sechs Jahreswerte df_y[[bip_real, pot, g_pot]]:")
+    print(
+        df_y[["bip_real", "pot", "g_pot"]]
+        .tail(6)
+        .to_string()
+    )
+
     df_y["diff"] = df_y["g_bip"] - df_y["g_pot"]
     df_y["g_alo"] = (
         df_y["alo"] / df_y["alo"].shift(1) - 1.0
@@ -1585,14 +1613,19 @@ def save_dual_chart(
         type="category",
         fixedrange=True,
         tickangle=-45,
-        tickfont=dict(size=9.8),
+        showgrid=False,
+        linecolor="#94A3B8",
+        tickfont=dict(size=9.8, color="#475569"),
     )
     fig_plotly.update_yaxes(
         fixedrange=True,
         range=[-line_limit, line_limit],
         tickvals=list(np.linspace(-line_limit, line_limit, 7)),
+        gridcolor="#E2E8F0",
         zeroline=True,
         zerolinecolor="#64748B",
+        zerolinewidth=1.2,
+        tickfont=dict(size=10.5, color="#475569"),
         secondary_y=False,
     )
     fig_plotly.update_yaxes(
@@ -1602,6 +1635,8 @@ def save_dual_chart(
         showgrid=False,
         zeroline=True,
         zerolinecolor="#64748B",
+        zerolinewidth=1.2,
+        tickfont=dict(size=10.5, color="#475569"),
         secondary_y=True,
     )
     _write_clean_html(
@@ -1888,7 +1923,9 @@ def save_single_series_chart(
         type="category",
         fixedrange=True,
         tickangle=-45,
-        tickfont=dict(size=9.8),
+        showgrid=False,
+        linecolor="#94A3B8",
+        tickfont=dict(size=9.8, color="#475569"),
     )
     if as_bar:
         fig_plotly.update_yaxes(
@@ -1897,9 +1934,21 @@ def save_single_series_chart(
                 max(0, np.floor(vmin - 1.0)),
                 np.ceil(vmax + 0.8),
             ],
+            gridcolor="#E2E8F0",
+            zeroline=True,
+            zerolinecolor="#64748B",
+            zerolinewidth=1.2,
+            tickfont=dict(size=10.5, color="#475569"),
         )
     else:
-        fig_plotly.update_yaxes(fixedrange=True)
+        fig_plotly.update_yaxes(
+            fixedrange=True,
+            gridcolor="#E2E8F0",
+            zeroline=True,
+            zerolinecolor="#64748B",
+            zerolinewidth=1.2,
+            tickfont=dict(size=10.5, color="#475569"),
+        )
 
     _write_clean_html(
         fig_plotly,
@@ -2151,10 +2200,22 @@ def save_necessary_chart(
             ),
         ],
     )
-    fig_plotly.update_xaxes(type="category", fixedrange=True)
+    fig_plotly.update_xaxes(
+        type="category",
+        fixedrange=True,
+        tickangle=-45,
+        showgrid=False,
+        linecolor="#94A3B8",
+        tickfont=dict(size=9.8, color="#475569"),
+    )
     fig_plotly.update_yaxes(
         fixedrange=True,
         range=[0, max(8.0, np.ceil(alq0 + 1.5))],
+        gridcolor="#E2E8F0",
+        zeroline=True,
+        zerolinecolor="#64748B",
+        zerolinewidth=1.2,
+        tickfont=dict(size=10.5, color="#475569"),
     )
     _write_clean_html(
         fig_plotly,
