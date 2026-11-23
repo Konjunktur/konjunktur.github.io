@@ -753,6 +753,11 @@ def load_all_macro_data():
         )
 
     df_fin = _destatis_ffcsv("81000-0031", "1991")
+    print("81000-0031: rohe Spaltennamen:")
+    print(df_fin.columns.tolist())
+    print("81000-0031: erste 10 rohe Zeilen:")
+    print(df_fin.head(10).to_string(index=False))
+
     def _financing_series(time_pattern):
         if df_fin.empty:
             return pd.Series(dtype=float), False
@@ -791,7 +796,6 @@ def load_all_macro_data():
         is_pct = finance_mask & (
             labels.str.contains("prozent", regex=False)
             | labels.str.contains("%", regex=False)
-            | labels.str.contains("bip", regex=False)
         )
         total_terms = (
             "gesamtstaat",
@@ -807,45 +811,65 @@ def load_all_macro_data():
             "bundes|länder|laender|gemeinden|sozialversicherung",
             regex=True,
         )
-        amount_mask = finance_mask & is_total & ~disaggregated
+        amount_mask = finance_mask & is_total & ~is_pct & ~disaggregated
         if not amount_mask.any():
-            amount_mask = finance_mask & labels.str.contains(
+            amount_mask = finance_mask & ~is_pct & labels.str.contains(
                 "staat",
                 regex=False,
             ) & ~disaggregated
 
-        percent_total_mask = is_pct & (
-            is_total
-            | (
-                labels.str.contains("staat", regex=False)
-                & ~disaggregated
-            )
+        if not amount_mask.any():
+            return pd.Series(dtype=float), False
+
+        selected = frame.loc[amount_mask].copy()
+        selected_labels = labels.loc[amount_mask]
+        units_million = selected_labels.str.contains(
+            r"\bmio\.?\b|million",
+            regex=True,
         )
-        for mask, direct_pct in (
-            (percent_total_mask, True),
-            (amount_mask, False),
-        ):
-            if not mask.any():
-                continue
-            selected = frame.loc[mask].copy()
-            result = _filter_series(
-                selected,
-                set(),
-                [],
-                time_pattern,
-                pick="first",
-            )
-            if not result.empty:
-                return result, direct_pct
-        return pd.Series(dtype=float), False
+        units_thousand = selected_labels.str.contains(
+            r"\btsd\.?\b|tausend|thousand",
+            regex=True,
+        )
+        units_billion = selected_labels.str.contains(
+            r"\bmrd\.?\b|milliarden",
+            regex=True,
+        )
+        units_euro = selected_labels.str.contains(
+            r"euro|eur|€",
+            regex=True,
+        )
+        scale = pd.Series(1.0, index=selected.index)
+        scale.loc[units_million] = 1e-3
+        scale.loc[units_thousand] = 1e-6
+        absolute_euro = (
+            units_euro
+            & ~units_million
+            & ~units_thousand
+            & ~units_billion
+        )
+        scale.loc[absolute_euro] = 1e-9
+        selected["NUM"] = selected["NUM"] * scale
+
+        selected = selected.loc[
+            selected["ZEIT"].astype(str).str.match(time_pattern)
+        ]
+        if selected.empty:
+            return pd.Series(dtype=float), False
+        result = (
+            selected.drop_duplicates(subset=["ZEIT"], keep="first")
+            .set_index("ZEIT")["NUM"]
+            .sort_index()
+        )
+        return result, False
 
     fin_y, fin_y_is_pct = _financing_series(r"^\d{4}$")
     fin_q, fin_q_is_pct = _financing_series(r"^\d{4}-Q[1-4]$")
     if fin_y.empty:
-        print("81000-0031: fin_y leer; rohe Spaltennamen:")
-        print(df_fin.columns.tolist())
-        print("81000-0031: erste 10 rohen Zeilen:")
-        print(df_fin.head(10).to_string(index=False))
+        raise ValueError(
+            "81000-0031 enthält nach Filterung des Finanzierungssaldos "
+            "des Gesamtstaates in Geldbeträgen keine Jahreswerte."
+        )
 
     # Jahresreihen aus Quartals- bzw. Monatsreihen ergänzen, falls nötig.
     if bip_real_y.empty and not bip_real_q.empty:
@@ -1009,6 +1033,12 @@ def compute_koehler_tables(d):
             df_y.loc[common_fin_y, "fin_pct"] = (
                 fin_values / bip_values
             ) * 100.0
+    if not df_y["fin_pct"].notna().any():
+        raise ValueError(
+            "fin_pct ist leer: Finanzierungssaldo aus 81000-0031 und "
+            "nominales BIP aus 81000-0001 haben keine gemeinsamen "
+            "Jahreswerte."
+        )
     print("fin_y.tail(10):")
     print(fin_y.tail(10).to_string())
     fin_pct = df_y["fin_pct"]
@@ -1443,7 +1473,17 @@ def compute_necessary_growth(d, df_y, completed_years, mode="year"):
 
     # Arithmetisches Mittel der letzten fünf abgeschlossenen
     # Jahreswachstumsraten aus der Köhler-Jahrestabelle.
-    completed_growth = df_y["g_pot"].dropna().tail(5)
+    completed_year_index = pd.Index(
+        [str(year) for year in completed_years]
+    )
+    completed_growth = (
+        df_y.loc[
+            df_y.index.astype(str).isin(completed_year_index),
+            "g_pot",
+        ]
+        .dropna()
+        .tail(5)
+    )
     if len(completed_growth) < 5:
         raise ValueError(
             "compute_necessary_growth: Für wY* liegen weniger als fünf "
@@ -1451,8 +1491,8 @@ def compute_necessary_growth(d, df_y, completed_years, mode="year"):
         )
     wy_star = float(completed_growth.mean())
     if mode == "year":
-        print("Letzte fünf Werte df_y['g_pot'] (%):")
-        print(df_y["g_pot"].tail(5).to_string())
+        print("Letzte fünf abgeschlossene Werte df_y['g_pot'] (%):")
+        print(completed_growth.to_string())
         print(f"wY* (5-Jahres-Mittel) = {wy_star:.6f} %")
 
     rows = [
@@ -2325,6 +2365,15 @@ def main():
 
     d = load_all_macro_data()
     df_y, df_q = compute_koehler_tables(d)
+    df_y_recent = df_y.loc[
+        (df_y.index >= "2018") & (df_y.index <= "2025"),
+        ["bip_real", "et", "alo", "prod", "pot", "g_pot"],
+    ]
+    print(
+        'df_y[["bip_real", "et", "alo", "prod", "pot", "g_pot"]] '
+        "2018–2025:"
+    )
+    print(df_y_recent.to_string())
 
     (
         lbl_long,
@@ -2389,15 +2438,6 @@ def main():
             "wY* weicht zwischen Grafik 8 und Grafik 9 ab: "
             f"{wy_y!r} != {wy_q!r}"
         )
-    print(
-        'df_y[["bip_real", "et", "alo", "prod", "pot", "g_pot"]].tail(10):'
-    )
-    print(
-        df_y[["bip_real", "et", "alo", "prod", "pot", "g_pot"]]
-        .tail(10)
-        .to_string()
-    )
-
     for lang in ("de", "en"):
         t = TXT[lang]
 
