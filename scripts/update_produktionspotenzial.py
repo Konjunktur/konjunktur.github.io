@@ -620,18 +620,41 @@ def load_all_macro_data():
         return _normalize_persons(series, df, value_code=value_code)
 
     def _unemployed_annual(df):
-        label_col = "value_variable_label"
-        region_col = "1_variable_attribute_label"
-        if df.empty or label_col not in df.columns:
+        if df.empty or "ZEIT" not in df.columns or "NUM" not in df.columns:
             return pd.Series(dtype=float)
 
         df = df.loc[:, ~df.columns.duplicated()].copy()
-        value_labels = _as_series(df, label_col).astype(str).str.strip()
         years = _as_series(df, "ZEIT").astype(str).str.strip()
-        subset = df.loc[
-            value_labels.eq("Arbeitslose")
-            & years.str.fullmatch(r"\d{4}")
-        ].copy()
+        year_mask = years.str.fullmatch(r"\d{4}")
+        label_cols = [
+            column for column in df.columns if "label" in column.lower()
+        ]
+        code_cols = [
+            column
+            for column in df.columns
+            if column.endswith("_code")
+            and column not in {"statistics_code", "time_code"}
+        ]
+        subset = pd.DataFrame()
+        if label_cols:
+            labels = (
+                df[label_cols]
+                .fillna("")
+                .astype(str)
+                .agg(" | ".join, axis=1)
+                .str.casefold()
+            )
+            unemployed_mask = labels.str.contains(
+                "arbeitslose",
+                regex=False,
+            ) & ~labels.str.contains("arbeitslosenquote", regex=False)
+            subset = df.loc[year_mask & unemployed_mask].copy()
+        if subset.empty and code_cols:
+            codes = df[code_cols].fillna("").astype(str).apply(
+                lambda row: row.str.strip().str.upper().eq("ERW006").any(),
+                axis=1,
+            )
+            subset = df.loc[year_mask & codes].copy()
         if subset.empty:
             return pd.Series(dtype=float)
 
@@ -641,32 +664,69 @@ def load_all_macro_data():
         )
         subset = subset.dropna(subset=["PERSONS"])
         output = {}
+        region_cols = [
+            column
+            for column in subset.columns
+            if "region" in column.lower()
+            or "gebiet" in column.lower()
+            or column == "1_variable_attribute_label"
+        ]
         for year, year_rows in subset.groupby("ZEIT", sort=True):
-            if region_col not in year_rows.columns:
+            if not region_cols:
                 output[str(year)] = float(year_rows["PERSONS"].iloc[0])
                 continue
 
-            regions = _as_series(year_rows, region_col).astype(str).str.strip()
-            normalized_regions = regions.str.casefold()
-            for total_label in ("deutschland", "insgesamt"):
-                total_rows = year_rows.loc[normalized_regions == total_label]
+            region_values = (
+                year_rows[region_cols]
+                .fillna("")
+                .astype(str)
+                .apply(lambda column: column.str.casefold().str.strip())
+            )
+            for total_label in (
+                "deutschland",
+                "gesamtdeutschland",
+                "insgesamt",
+                "bundesgebiet",
+            ):
+                total_rows = year_rows.loc[
+                    region_values.eq(total_label).any(axis=1)
+                ]
                 if not total_rows.empty:
                     output[str(year)] = float(total_rows["PERSONS"].iloc[0])
                     break
             else:
                 former_west = year_rows.loc[
-                    normalized_regions == "früheres bundesgebiet",
+                    region_values.apply(
+                        lambda column: column.str.contains(
+                            "früheres bundesgebiet",
+                            regex=False,
+                        )
+                    ).any(axis=1),
                     "PERSONS",
                 ]
                 new_states = year_rows.loc[
-                    normalized_regions == "neue länder",
+                    region_values.apply(
+                        lambda column: column.str.contains(
+                            "neue länder",
+                            regex=False,
+                        )
+                    ).any(axis=1),
                     "PERSONS",
                 ]
                 if not former_west.empty and not new_states.empty:
                     output[str(year)] = float(
                         former_west.iloc[0] + new_states.iloc[0]
                     )
+                elif len(year_rows) == 1:
+                    output[str(year)] = float(
+                        year_rows["PERSONS"].iloc[0]
+                    )
         return pd.Series(output, dtype=float).sort_index()
+
+    print("Rohe Spaltennamen von 13211-0001:")
+    print(df_alo_1991.columns.tolist())
+    print("Erste 10 rohen Zeilen von 13211-0001:")
+    print(df_alo_1991.head(10).to_string(index=False))
 
     alo_1991_y = _unemployed_annual(df_alo_1991)
     if alo_1991_y.empty:
@@ -675,8 +735,7 @@ def load_all_macro_data():
             "keine Jahresreihe. Spalten:"
         )
         print(df_alo_1991.columns.tolist())
-        print("Erste 5 Zeilen der 13211-0001-Antwort:")
-        print(df_alo_1991.head(5).to_string(index=False))
+        print("Keine Jahreswerte aus 13211-0001 extrahiert.")
 
     alo_m = _unemployed_monthly(df_alo, "ERW006").sort_index()
 
@@ -745,9 +804,27 @@ def load_all_macro_data():
             f"{(int(value[5:7]) - 1) // 3 + 1}"
         )
     ).mean()
-    alo_y = alo_m.groupby(lambda value: value[:4]).mean().combine_first(
-        alo_1991_y
-    ).sort_index()
+    alo_monthly_y = alo_m.groupby(
+        lambda value: value[:4]
+    ).mean()
+    alo_1991_y = alo_1991_y.loc[
+        (alo_1991_y.index.astype(str) >= "1991")
+        & (alo_1991_y.index.astype(str) <= "2004")
+    ]
+    expected_alo_years = pd.Index(
+        [str(year) for year in range(1991, 2005)]
+    )
+    missing_alo_years = expected_alo_years.difference(alo_1991_y.index)
+    if len(missing_alo_years):
+        raise ValueError(
+            "13211-0001 liefert keine lückenlose Arbeitslosen-Jahresreihe "
+            "1991–2004. Fehlende Jahre: "
+            f"{', '.join(missing_alo_years)}."
+        )
+    alo_monthly_y = alo_monthly_y.loc[
+        alo_monthly_y.index.astype(str) >= "2005"
+    ]
+    alo_y = pd.concat([alo_1991_y, alo_monthly_y]).sort_index()
     alo_y_from_1991 = alo_y.loc[alo_y.index.astype(str) >= "1991"]
     print("Erste fünf Jahreswerte alo_y ab 1991:")
     print(alo_y_from_1991.head(5).to_string())
@@ -1151,11 +1228,18 @@ def get_recession_spans(keys, bip_chain_yoy):
         return spans
 
     def project_intervals(intervals):
-        return [
+        spans = sorted(
             span
             for start_month, end_month in intervals
             for span in project_period(start_month, end_month)
-        ]
+        )
+        merged = []
+        for x0, x1 in spans:
+            if merged and x0 <= merged[-1][1] + 1e-9:
+                merged[-1] = (merged[-1][0], max(merged[-1][1], x1))
+            else:
+                merged.append((x0, x1))
+        return merged
 
     svr_intervals = [
         (month_number(start), month_number(end) + 1)
@@ -1418,6 +1502,7 @@ def save_dual_chart(
     lmax,
     bmax,
     is_short=False,
+    show_y_grid=True,
 ):
     t = TXT[lang]
     use_c = t["comma"]
@@ -1436,6 +1521,12 @@ def save_dual_chart(
         bmax,
         float(finite_bar.max()) if finite_bar.size else bmax,
     )
+    line_range = (-line_limit, line_limit)
+    bar_range = (-bar_limit, bar_limit)
+    line_ticks = np.linspace(*line_range, 7)
+    bar_ticks = np.linspace(*bar_range, 7)
+    line_ticks[3] = 0.0
+    bar_ticks[3] = 0.0
 
     fig, ax1 = plt.subplots(
         figsize=(8.2, 5.2),
@@ -1480,10 +1571,10 @@ def save_dual_chart(
         zorder=4,
     )
 
-    ax1.set_ylim(-line_limit, line_limit)
-    ax2.set_ylim(-bar_limit, bar_limit)
-    ax1.set_yticks(np.linspace(-line_limit, line_limit, 7))
-    ax2.set_yticks(np.linspace(-bar_limit, bar_limit, 7))
+    ax1.set_ylim(*line_range)
+    ax2.set_ylim(*bar_range)
+    ax1.set_yticks(line_ticks)
+    ax2.set_yticks(bar_ticks)
 
     ax1.set_xticks(x)
     label_step = 1 if is_short else 2
@@ -1498,7 +1589,7 @@ def save_dual_chart(
     )
     ax1.tick_params(axis="y", labelsize=8.3, colors="#1B3A6B", length=0)
     ax2.tick_params(axis="y", labelsize=8.3, colors=bar_color, length=0)
-    ax1.yaxis.grid(True, color="#E2E8F0", lw=0.8, zorder=0)
+    ax1.yaxis.grid(show_y_grid, color="#E2E8F0", lw=0.8, zorder=0)
 
     for axis in (ax1, ax2):
         for spine in ("top", "left", "right"):
@@ -1619,8 +1710,9 @@ def save_dual_chart(
     )
     fig_plotly.update_yaxes(
         fixedrange=True,
-        range=[-line_limit, line_limit],
-        tickvals=list(np.linspace(-line_limit, line_limit, 7)),
+        range=list(line_range),
+        tickvals=line_ticks.tolist(),
+        showgrid=show_y_grid,
         gridcolor="#E2E8F0",
         zeroline=True,
         zerolinecolor="#64748B",
@@ -1630,8 +1722,8 @@ def save_dual_chart(
     )
     fig_plotly.update_yaxes(
         fixedrange=True,
-        range=[-bar_limit, bar_limit],
-        tickvals=list(np.linspace(-bar_limit, bar_limit, 7)),
+        range=list(bar_range),
+        tickvals=bar_ticks.tolist(),
         showgrid=False,
         zeroline=True,
         zerolinecolor="#64748B",
@@ -1660,6 +1752,7 @@ def save_single_series_chart(
     mean_lbl=None,
     as_bar=False,
     is_short=False,
+    show_y_grid=True,
 ):
     t = TXT[lang]
     use_c = t["comma"]
@@ -1781,7 +1874,7 @@ def save_single_series_chart(
         color="#475569",
     )
     ax.tick_params(axis="y", labelsize=8.4, colors="#475569", length=0)
-    ax.yaxis.grid(True, color="#E2E8F0", lw=0.8, zorder=0)
+    ax.yaxis.grid(show_y_grid, color="#E2E8F0", lw=0.8, zorder=0)
     for spine in ("top", "left", "right"):
         ax.spines[spine].set_visible(False)
     ax.spines["bottom"].set_color("#94A3B8")
@@ -1934,6 +2027,7 @@ def save_single_series_chart(
                 max(0, np.floor(vmin - 1.0)),
                 np.ceil(vmax + 0.8),
             ],
+            showgrid=show_y_grid,
             gridcolor="#E2E8F0",
             zeroline=True,
             zerolinecolor="#64748B",
@@ -1943,6 +2037,7 @@ def save_single_series_chart(
     else:
         fig_plotly.update_yaxes(
             fixedrange=True,
+            showgrid=show_y_grid,
             gridcolor="#E2E8F0",
             zeroline=True,
             zerolinecolor="#64748B",
@@ -1977,6 +2072,7 @@ def save_necessary_chart(
     necessary_values = [row["w_growth"] for row in rows]
 
     title = t[title_key]
+    print(f"{sub_key}: wy_star exakt vor Untertitel = {wy_star!r}")
     subtitle = t[sub_key].format(
         start_lbl=start_label,
         alq0=fmt_v(alq0, use_c, 1),
@@ -2288,6 +2384,19 @@ def main():
         completed_years,
         mode="quarter",
     )
+    if wy_y != wy_q:
+        raise RuntimeError(
+            "wY* weicht zwischen Grafik 8 und Grafik 9 ab: "
+            f"{wy_y!r} != {wy_q!r}"
+        )
+    print(
+        'df_y[["bip_real", "et", "alo", "prod", "pot", "g_pot"]].tail(8):'
+    )
+    print(
+        df_y[["bip_real", "et", "alo", "prod", "pot", "g_pot"]]
+        .tail(8)
+        .to_string()
+    )
 
     for lang in ("de", "en"):
         t = TXT[lang]
@@ -2315,6 +2424,7 @@ def main():
             "Mrd. €" if lang == "de" else "EUR bn",
             svr_long,
             bip_long,
+            show_y_grid=False,
         )
         save_single_series_chart(
             lang,
@@ -2335,6 +2445,7 @@ def main():
             bip_long,
             mean_val=mean_ausl_91_19,
             mean_lbl=t["c2_l"][1],
+            show_y_grid=False,
         )
         save_dual_chart(
             lang,
@@ -2352,6 +2463,7 @@ def main():
             bip_long,
             6.0,
             30.0,
+            show_y_grid=False,
         )
         save_dual_chart(
             lang,
@@ -2369,6 +2481,7 @@ def main():
             bip_long,
             6.0,
             6.0,
+            show_y_grid=False,
         )
 
         # 5–7: Kürzere Frist ab 2019
