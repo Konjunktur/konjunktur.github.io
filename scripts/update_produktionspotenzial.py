@@ -34,11 +34,10 @@ D_PASS = os.environ.get("DESTATIS_PASS", "").strip()
 OUT_DIR = "static/produktionspotenzial"
 
 SVR_PHASES = [
-    ("1992-Q1", "1993-Q2"),
-    ("2001-Q1", "2003-Q2"),
-    ("2008-Q2", "2009-Q2"),
-    ("2020-Q1", "2020-Q2"),
-    ("2022-Q4", "2025-Q4"),
+    ("2008-04", "2009-06"),
+    ("2012-10", "2013-03"),
+    ("2020-02", "2020-04"),
+    ("2022-10", "2025-12"),
 ]
 
 ROMAN_Q = {"Q1": "I", "Q2": "II", "Q3": "III", "Q4": "IV"}
@@ -54,7 +53,7 @@ TXT = {
         "leg_bip": "Reales BIP < 0 % gg. Vj.",
         "c1_t": "Produktionspotenzial in Deutschland",
         "c1_s": "Jahreswerte ab 1991 bis zum zuletzt abgeschlossenen Jahr, danach auf Jahresrate hochgerechnete Quartalswerte, in Mrd. €",
-        "c1_l": ["Produktionspotenzial (Mrd. €)"],
+        "c1_l": ["Produktionspotenzial"],
         "c2_t": "Auslastung des Produktionspotenzials",
         "c2_s": "Reales BIP in % des Produktionspotenzials (Jahreswerte ab 1991 + aktuelle Quartale)",
         "c2_l": ["Auslastung des Produktionspotenzials (%)", "Mittelwert 1991–2019"],
@@ -89,7 +88,7 @@ TXT = {
         "leg_bip": "Real GDP < 0% YoY",
         "c1_t": "Potential Output in Germany",
         "c1_s": "Annual values from 1991 up to the last completed year, followed by annualized quarterly values, in EUR bn",
-        "c1_l": ["Potential output (EUR bn)"],
+        "c1_l": ["Potential output"],
         "c2_t": "Capacity Utilization of Potential Output",
         "c2_s": "Real GDP as a percentage of potential output (annual values from 1991 + latest quarters)",
         "c2_l": ["Utilization of potential output (%)", "Average 1991–2019"],
@@ -673,6 +672,17 @@ def compute_koehler_tables(d):
             "(81000-0011) und Arbeitslose (13211-0001/0002)."
         )
 
+    expected_years = pd.Index(
+        [str(year) for year in range(1991, int(idx_y[-1]) + 1)]
+    )
+    missing_years = expected_years.difference(idx_y)
+    if len(missing_years):
+        raise ValueError(
+            "Die gemeinsame Köhler-Jahresreihe ist nicht lückenlos ab 1991. "
+            f"Fehlende Jahre: {', '.join(missing_years)}. Prüfe insbesondere "
+            "die kombinierte Arbeitslosenreihe aus 13211-0001 und 13211-0002."
+        )
+
     df_y = pd.DataFrame(index=idx_y)
     df_y["bip_real"] = bip_real_y.loc[idx_y]
     df_y["et"] = et_y.loc[idx_y]
@@ -880,17 +890,28 @@ def build_hybrid_series(df_y, df_q, start_year="1991", add_gap=False):
 
 def get_recession_spans(keys, bip_chain_yoy, annual_bip_yoy):
     """Ermittelt SVR- und BIP-Rezessionsspans für die Hybrid-Zeitachse."""
-    svr_spans = []
+    def period_bounds(kind, key):
+        if kind == "Y":
+            return f"{key}-01", f"{key}-12"
+        if kind == "Q":
+            quarter = int(key[-1])
+            first_month = (quarter - 1) * 3 + 1
+            last_month = first_month + 2
+            return (
+                f"{key[:4]}-{first_month:02d}",
+                f"{key[:4]}-{last_month:02d}",
+            )
+        return None
+
+    def overlaps(kind, key, start, end):
+        bounds = period_bounds(kind, key)
+        return bounds is not None and bounds[0] <= end and bounds[1] >= start
 
     def in_svr(kind, key):
-        if kind == "Q":
-            return any(start <= key <= end for start, end in SVR_PHASES)
-        if kind == "Y":
-            return any(
-                start[:4] <= key <= end[:4]
-                for start, end in SVR_PHASES
-            )
-        return False
+        return any(
+            overlaps(kind, key, start, end)
+            for start, end in SVR_PHASES
+        )
 
     def spans_for(predicate):
         spans = []
@@ -935,8 +956,8 @@ def add_shades_mpl(ax, svr_spans, bip_spans, t):
         ax.axvspan(
             x0,
             x1,
-            color="#CBD5E1",
-            alpha=0.38,
+            color="#E2E8F0",
+            alpha=0.85,
             zorder=0,
         )
     for x0, x1 in bip_spans:
@@ -944,14 +965,13 @@ def add_shades_mpl(ax, svr_spans, bip_spans, t):
             x0,
             x1,
             color="#93C5FD",
-            alpha=0.30,
-            zorder=0,
+            alpha=0.45,
+            zorder=0.5,
         )
     if svr_spans:
         patches.append(
             mpatches.Patch(
-                color="#CBD5E1",
-                alpha=0.55,
+                color="#E2E8F0",
                 label=t["leg_svr"],
             )
         )
@@ -977,7 +997,7 @@ def add_shades_plotly(fp, svr_spans, bip_spans, t):
             x1=x1,
             y0=0,
             y1=1,
-            fillcolor="rgba(203, 213, 225, 0.38)",
+            fillcolor="rgba(203, 213, 225, 0.45)",
             line=dict(width=0),
             layer="below",
         )
@@ -992,7 +1012,7 @@ def add_shades_plotly(fp, svr_spans, bip_spans, t):
             x1=x1,
             y0=0,
             y1=1,
-            fillcolor="rgba(147, 197, 253, 0.30)",
+            fillcolor="rgba(147, 197, 253, 0.40)",
             line=dict(width=0),
             layer="below",
         )
@@ -1009,7 +1029,7 @@ def add_shades_plotly(fp, svr_spans, bip_spans, t):
                 marker=dict(
                     size=10,
                     symbol="square",
-                    color="rgba(203, 213, 225, 0.55)",
+                    color="rgba(203, 213, 225, 0.85)",
                 ),
                 name=t["leg_svr"],
                 hoverinfo="skip",
@@ -1095,7 +1115,21 @@ def compute_necessary_growth(d, df_y, completed_years, mode="year"):
 
     # Arithmetisches Mittel der letzten fünf abgeschlossenen
     # Jahreswachstumsraten aus der Köhler-Jahrestabelle.
-    wy_star = df_y["g_pot"].dropna().tail(5).mean()
+    completed_year_set = {str(year) for year in completed_years}
+    completed_growth = df_y.loc[
+        df_y.index.astype(str).isin(completed_year_set),
+        "g_pot",
+    ].dropna().tail(5)
+    if len(completed_growth) < 5:
+        raise ValueError(
+            "compute_necessary_growth: Für wY* liegen weniger als fünf "
+            "abgeschlossene Jahreswachstumsraten vor."
+        )
+    wy_star = float(completed_growth.mean())
+    if mode == "year":
+        print("Letzte fünf abgeschlossene Werte df_y['g_pot'] (%):")
+        print(completed_growth.to_string())
+        print(f"wY* (5-Jahres-Mittel) = {wy_star:.6f} %")
 
     rows = [
         {

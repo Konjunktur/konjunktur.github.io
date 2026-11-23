@@ -39,9 +39,9 @@ See also on the life and work of Claus Köhler: [Duncker & Humblot – Claus Kö
 
 <iframe src="/produktionspotenzial/01_potenzial_lang_en.html" width="100%" height="515" style="border:none;" loading="lazy"></iframe>
 
-[Open full-screen chart (PNG)](/produktionspotenzial/01_potenzial_lang_en.png)
-
-**Construction & Sources:** Potential output is calculated following Claus Köhler by multiplying the potential labor force (persons in employment plus registered unemployed persons; extended variant additionally including cyclical short-time workers) by actual labor productivity per person employed (real GDP divided by persons in employment). Annual values up to the last completed year and annualized quarterly values for the current year. Source: Federal Statistical Office (Destatis GENESIS-Online, Tables 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0001, 13211-0002) and Federal Employment Agency.
+* [Open full-screen chart](/produktionspotenzial/01_potenzial_lang_en.png)
+* *Explanation* – Potential output following Claus Köhler: potential labor force (persons in employment plus registered unemployed persons) multiplied by real GDP per employed person. Only potential output is shown, as annual values through the last completed calendar year and annualized quarterly values thereafter. Gray shading marks recession and slowdown phases identified by the German Council of Economic Experts and the Bundesbank; light blue marks periods of negative real GDP growth year over year.
+* *Source* – Federal Statistical Office (Destatis GENESIS-Online, Tables 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0001, 13211-0002), own calculations.
 
 ---
 
@@ -49,9 +49,9 @@ See also on the life and work of Claus Köhler: [Duncker & Humblot – Claus Kö
 
 <iframe src="/produktionspotenzial/02_auslastung_lang_en.html" width="100%" height="515" style="border:none;" loading="lazy"></iframe>
 
-[Open full-screen chart (PNG)](/produktionspotenzial/02_auslastung_lang_en.png)
-
-**Construction & Sources:** Capacity utilization shows real GDP in EUR bn as a percentage of potential output in EUR bn (`Real GDP / Potential Output × 100`). Source: Federal Statistical Office (Destatis GENESIS-Online) and Federal Employment Agency.
+* [Open full-screen chart](/produktionspotenzial/02_auslastung_lang_en.png)
+* *Explanation* – Real GDP as a percentage of potential output. Gray shading marks recession and slowdown phases identified by the German Council of Economic Experts and the Bundesbank; light blue marks periods of negative real GDP growth year over year.
+* *Source* – Federal Statistical Office (Destatis GENESIS-Online), own calculations.
 
 ---
 
@@ -59,9 +59,9 @@ See also on the life and work of Claus Köhler: [Duncker & Humblot – Claus Kö
 
 <iframe src="/produktionspotenzial/03_angemessen_alo_lang_en.html" width="100%" height="515" style="border:none;" loading="lazy"></iframe>
 
-[Open full-screen chart (PNG)](/produktionspotenzial/03_angemessen_alo_lang_en.png)
-
-**Construction & Sources:** Economic growth is appropriate when the difference between the growth rate of real GDP and the growth rate of potential output is positive (left axis, in percentage points), and inappropriate when this difference is negative. Bars (right axis, in %) show the year-on-year growth rate of registered unemployed persons. Source: Federal Statistical Office (Destatis GENESIS-Online) and Federal Employment Agency.
+* [Open full-screen chart](/produktionspotenzial/03_angemessen_alo_lang_en.png)
+* *Explanation* – Growth is appropriate (positive) when real GDP grows faster than potential output, and inappropriate (negative) when it grows more slowly. The chart also shows the year-on-year growth rate of registered unemployed persons. Gray shading marks recession and slowdown phases identified by the German Council of Economic Experts and the Bundesbank; light blue marks periods of negative real GDP growth year over year.
+* *Source* – Federal Statistical Office and Federal Employment Agency (Destatis GENESIS-Online), own calculations.
 
 ---
 
@@ -69,9 +69,9 @@ See also on the life and work of Claus Köhler: [Duncker & Humblot – Claus Kö
 
 <iframe src="/produktionspotenzial/04_angemessen_staat_lang_en.html" width="100%" height="515" style="border:none;" loading="lazy"></iframe>
 
-[Open full-screen chart (PNG)](/produktionspotenzial/04_angemessen_staat_lang_en.png)
-
-**Construction & Sources:** Line (left axis, in percentage points): Difference between real GDP growth and potential output growth. Bars (right axis, in %): General government net lending/net borrowing (budget balance) as a percentage of nominal GDP. Source: Federal Statistical Office (Destatis GENESIS-Online, Tables 81000-0031, 81000-0001, 81000-0002).
+* [Open full-screen chart](/produktionspotenzial/04_angemessen_staat_lang_en.png)
+* *Explanation* – Appropriate (+) or inappropriate (−) growth in percentage points compared with the general government balance as a percentage of nominal GDP. Gray shading marks recession and slowdown phases identified by the German Council of Economic Experts and the Bundesbank; light blue marks periods of negative real GDP growth year over year.
+* *Source* – Federal Statistical Office (Destatis GENESIS-Online), own calculations.
 
 ---
 
@@ -81,9 +81,9 @@ See also on the life and work of Claus Köhler: [Duncker & Humblot – Claus Kö
 
 <iframe src="/produktionspotenzial/05_auslastung_kurz_en.html" width="100%" height="515" style="border:none;" loading="lazy"></iframe>
 
-[Open full-screen chart (PNG)](/produktionspotenzial/05_auslastung_kurz_en.png)
-
-**Construction & Sources:** Real GDP as a percentage of potential output from 2019 onward (annual values up to the last completed year, followed after the gap by the available quarters of the current year). Source: Federal Statistical Office (Destatis GENESIS-Online) and Federal Employment Agency.
+* [Open full-screen chart](/produktionspotenzial/05_auslastung_kurz_en.png)
+* *Explanation* – Real GDP as a percentage of potential output from 2019, with annual values through the last completed calendar year followed by quarterly values.
+* *Source* – Federal Statistical Office (Destatis GENESIS-Online), own calculations.
 
 ---
 
@@ -91,9 +91,9 @@ See also on the life and work of Claus Köhler: [Duncker & Humblot – Claus Kö
 
 <iframe src="/produktionspotenzial/06_angemessen_alo_kurz_en.html" width="100%" height="515" style="border:none;" loading="lazy"></iframe>
 
-[Open full-screen chart (PNG)](/produktionspotenzial/06_angemessen_alo_kurz_en.png)
-
-**Construction & Sources:** Appropriate (+) / inappropriate (−) real GDP growth in percentage points (left axis) compared with the year-on-year growth rate of registered unemployed persons in % (right axis). Source: Federal Statistical Office (Destatis GENESIS-Online) and Federal Employment Agency.
+* [Open full-screen chart](/produktionspotenzial/06_angemessen_alo_kurz_en.png)
+* *Explanation* – Appropriate (+) or inappropriate (−) growth in percentage points compared with the year-on-year growth rate of registered unemployed persons.
+* *Source* – Federal Statistical Office and Federal Employment Agency (Destatis GENESIS-Online), own calculations.
 
 ---
 
@@ -101,9 +101,9 @@ See also on the life and work of Claus Köhler: [Duncker & Humblot – Claus Kö
 
 <iframe src="/produktionspotenzial/07_angemessen_staat_kurz_en.html" width="100%" height="515" style="border:none;" loading="lazy"></iframe>
 
-[Open full-screen chart (PNG)](/produktionspotenzial/07_angemessen_staat_kurz_en.png)
-
-**Construction & Sources:** Appropriate (+) / inappropriate (−) real GDP growth in percentage points (left axis) compared with the general government budget balance in % of nominal GDP (right axis). Source: Federal Statistical Office (Destatis GENESIS-Online, Tables 81000-0031, 81000-0001, 81000-0002).
+* [Open full-screen chart](/produktionspotenzial/07_angemessen_staat_kurz_en.png)
+* *Explanation* – Appropriate (+) or inappropriate (−) growth in percentage points compared with the general government balance as a percentage of nominal GDP.
+* *Source* – Federal Statistical Office (Destatis GENESIS-Online), own calculations.
 
 ---
 
@@ -113,9 +113,9 @@ See also on the life and work of Claus Köhler: [Duncker & Humblot – Claus Kö
 
 <iframe src="/produktionspotenzial/08_notwendig_jahr_en.html" width="100%" height="515" style="border:none;" loading="lazy"></iframe>
 
-[Open full-screen chart (PNG)](/produktionspotenzial/08_notwendig_jahr_en.png)
-
-**Construction & Sources:** Starting from the unemployment rate in January of the current year, the chart shows the annual reduction path of the unemployment rate by 1.0 percentage point per year until reaching the full-employment threshold (≤ 3.0%), along with the necessary real GDP growth rate according to Claus Köhler (wY<sub>r, necessary</sub> = wY* − w(1 + UR)). Source: Federal Statistical Office (Destatis GENESIS-Online) and Federal Employment Agency.
+* [Open full-screen chart](/produktionspotenzial/08_notwendig_jahr_en.png)
+* *Explanation* – Starting from the unemployment rate in January, the chart shows the growth path required to reduce unemployment by one percentage point per year to 3.0% or below. wY* is the mean of the last five completed annual potential growth rates; necessary growth subtracts the contribution of the falling unemployment rate from wY*.
+* *Source* – Federal Statistical Office and Federal Employment Agency (Destatis GENESIS-Online), own calculations.
 
 ---
 
@@ -123,7 +123,7 @@ See also on the life and work of Claus Köhler: [Duncker & Humblot – Claus Kö
 
 <iframe src="/produktionspotenzial/09_notwendig_quartal_en.html" width="100%" height="515" style="border:none;" loading="lazy"></iframe>
 
-[Open full-screen chart (PNG)](/produktionspotenzial/09_notwendig_quartal_en.png)
-
-**Construction & Sources:** Quarterly update of the necessary real GDP growth path starting from the unemployment rate at the end of the latest completed quarter, reducing the unemployment rate by 1.0 percentage point per year until reaching full employment (≤ 3.0%). Source: Federal Statistical Office (Destatis GENESIS-Online) and Federal Employment Agency.
+* [Open full-screen chart](/produktionspotenzial/09_notwendig_quartal_en.png)
+* *Explanation* – Quarterly update of the growth path from the unemployment rate at the end of the latest available quarter, reducing unemployment by one percentage point per year to 3.0% or below. wY* is based on the mean of the last five completed annual potential growth rates.
+* *Source* – Federal Statistical Office and Federal Employment Agency (Destatis GENESIS-Online), own calculations.
 

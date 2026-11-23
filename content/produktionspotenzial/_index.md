@@ -39,10 +39,9 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 <iframe src="/produktionspotenzial/01_potenzial_lang.html" width="100%" height="520" frameborder="0" style="border:none;"></iframe>
 
-[Grafik als Vollbild öffnen (.png)](/produktionspotenzial/01_potenzial_lang.png)
-
-* **Konstruktion:** Das Produktionspotenzial nach Claus Köhler ergibt sich aus dem vorhandenen Arbeitskräftepotenzial (Erwerbstätige im Inland zuzüglich registrierte Arbeitslose) multipliziert mit der tatsächlichen Arbeitsproduktivität je Erwerbstätigem (reales BIP je Erwerbstätigem). Bis zum zuletzt abgeschlossenen Kalenderjahr werden Jahreswerte und für das laufende Jahr auf Jahresrate hochgerechnete Quartalswerte ausgewiesen.
-* **Quellen:** Statistisches Bundesamt (GENESIS-Online, Tabellen 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0001, 13211-0002).
+* [Grafik in Vollbild anzeigen](/produktionspotenzial/01_potenzial_lang.png)
+* *Erläuterung* – Produktionspotenzial nach Claus Köhler: Arbeitskräftepotenzial (Erwerbstätige im Inland plus registrierte Arbeitslose) multipliziert mit dem realen BIP je Erwerbstätigem. Gezeigt wird ausschließlich das Produktionspotenzial, als Jahreswerte bis zum letzten abgeschlossenen Kalenderjahr und danach als annualisierte Quartalswerte. Grau hinterlegt sind Rezessions- und Schwächephasen des Sachverständigenrats und der Bundesbank, hellblau Phasen mit realem BIP-Wachstum unter 0 % gegenüber dem Vorjahr.
+* *Quelle* – Statistisches Bundesamt (GENESIS-Online, Tabellen 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0001, 13211-0002), eigene Berechnungen.
 
 ---
 
@@ -50,10 +49,9 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 <iframe src="/produktionspotenzial/02_auslastung_lang.html" width="100%" height="510" frameborder="0" style="border:none;"></iframe>
 
-[Grafik als Vollbild öffnen (.png)](/produktionspotenzial/02_auslastung_lang.png)
-
-* **Konstruktion:** Verhältnis des realen Bruttoinlandsprodukts (in Mrd. Euro) zum Produktionspotenzial (in Mrd. Euro) in Prozent.
-* **Quellen:** Eigene Berechnungen auf Basis der amtlichen Daten des Statistischen Bundesamtes.
+* [Grafik in Vollbild anzeigen](/produktionspotenzial/02_auslastung_lang.png)
+* *Erläuterung* – Reales Bruttoinlandsprodukt in Prozent des Produktionspotenzials. Grau hinterlegt sind Rezessions- und Schwächephasen des Sachverständigenrats und der Bundesbank, hellblau Phasen mit realem BIP-Wachstum unter 0 % gegenüber dem Vorjahr.
+* *Quelle* – Statistisches Bundesamt (GENESIS-Online), eigene Berechnungen.
 
 ---
 
@@ -61,10 +59,9 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 <iframe src="/produktionspotenzial/03_angemessen_alo_lang.html" width="100%" height="520" frameborder="0" style="border:none;"></iframe>
 
-[Grafik als Vollbild öffnen (.png)](/produktionspotenzial/03_angemessen_alo_lang.png)
-
-* **Konstruktion:** Ein Wirtschaftswachstum ist angemessen (positiver Wert in Prozentpunkten, linke Skala), wenn die Zuwachsrate des realen BIP die Zuwachsrate des Produktionspotenzials übersteigt, und nicht angemessen (negativer Wert), wenn sie dahinter zurückbleibt. Gegenübergestellt wird die jährliche Veränderungsrate der Zahl der registrierten Arbeitslosen in Prozent (rechte Skala).
-* **Quellen:** Statistisches Bundesamt / Bundesagentur für Arbeit (GENESIS-Online, Tabellen 81000-0001, 81000-0002, 81000-0011, 81000-0012, 13211-0001, 13211-0002).
+* [Grafik in Vollbild anzeigen](/produktionspotenzial/03_angemessen_alo_lang.png)
+* *Erläuterung* – Angemessenes Wachstum (positiv), wenn das reale BIP schneller wächst als das Produktionspotenzial; nicht angemessenes Wachstum (negativ), wenn es langsamer wächst. Gegenübergestellt ist die Veränderungsrate der registrierten Arbeitslosen gegenüber dem Vorjahr. Grau hinterlegt sind Rezessions- und Schwächephasen des Sachverständigenrats und der Bundesbank, hellblau Phasen mit realem BIP-Wachstum unter 0 % gegenüber dem Vorjahr.
+* *Quelle* – Statistisches Bundesamt und Bundesagentur für Arbeit (GENESIS-Online), eigene Berechnungen.
 
 ---
 
@@ -72,10 +69,9 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 <iframe src="/produktionspotenzial/04_angemessen_staat_lang.html" width="100%" height="520" frameborder="0" style="border:none;"></iframe>
 
-[Grafik als Vollbild öffnen (.png)](/produktionspotenzial/04_angemessen_staat_lang.png)
-
-* **Konstruktion:** Gegenüberstellung des angemessenen (+)/nicht angemessenen (−) Wirtschaftswachstums in Prozentpunkten (linke Skala) und des Finanzierungssaldos des Staates in Prozent des nominalen Bruttoinlandsprodukts (rechte Skala).
-* **Quellen:** Statistisches Bundesamt (GENESIS-Online, Tabellen 81000-0031, 81000-0001, 81000-0002).
+* [Grafik in Vollbild anzeigen](/produktionspotenzial/04_angemessen_staat_lang.png)
+* *Erläuterung* – Angemessenes (+) beziehungsweise nicht angemessenes (−) Wachstum in Prozentpunkten im Vergleich zum Finanzierungssaldo des Staates in Prozent des nominalen BIP. Grau hinterlegt sind Rezessions- und Schwächephasen des Sachverständigenrats und der Bundesbank, hellblau Phasen mit realem BIP-Wachstum unter 0 % gegenüber dem Vorjahr.
+* *Quelle* – Statistisches Bundesamt (GENESIS-Online), eigene Berechnungen.
 
 ---
 
@@ -85,9 +81,9 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 <iframe src="/produktionspotenzial/05_auslastung_kurz.html" width="100%" height="500" frameborder="0" style="border:none;"></iframe>
 
-[Grafik als Vollbild öffnen (.png)](/produktionspotenzial/05_auslastung_kurz.png)
-
-* **Konstruktion:** Reales Bruttoinlandsprodukt in Prozent des Produktionspotenzials ab 2019 (Jahreswerte bis zum zuletzt abgeschlossenen Jahr sowie Quartalswerte des laufenden Jahres).
+* [Grafik in Vollbild anzeigen](/produktionspotenzial/05_auslastung_kurz.png)
+* *Erläuterung* – Reales Bruttoinlandsprodukt in Prozent des Produktionspotenzials ab 2019, mit Jahreswerten bis zum letzten abgeschlossenen Kalenderjahr und anschließenden Quartalswerten.
+* *Quelle* – Statistisches Bundesamt (GENESIS-Online), eigene Berechnungen.
 
 ---
 
@@ -95,9 +91,9 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 <iframe src="/produktionspotenzial/06_angemessen_alo_kurz.html" width="100%" height="515" frameborder="0" style="border:none;"></iframe>
 
-[Grafik als Vollbild öffnen (.png)](/produktionspotenzial/06_angemessen_alo_kurz.png)
-
-* **Konstruktion:** Angemessenes (+)/nicht angemessenes (−) Wirtschaftswachstum in Prozentpunkten (linke Skala) und Veränderungsrate der Zahl der Arbeitslosen gegenüber dem Vorjahr in Prozent (rechte Skala).
+* [Grafik in Vollbild anzeigen](/produktionspotenzial/06_angemessen_alo_kurz.png)
+* *Erläuterung* – Angemessenes (+) beziehungsweise nicht angemessenes (−) Wachstum in Prozentpunkten sowie die Veränderungsrate der registrierten Arbeitslosen gegenüber dem Vorjahr.
+* *Quelle* – Statistisches Bundesamt und Bundesagentur für Arbeit (GENESIS-Online), eigene Berechnungen.
 
 ---
 
@@ -105,9 +101,9 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 <iframe src="/produktionspotenzial/07_angemessen_staat_kurz.html" width="100%" height="515" frameborder="0" style="border:none;"></iframe>
 
-[Grafik als Vollbild öffnen (.png)](/produktionspotenzial/07_angemessen_staat_kurz.png)
-
-* **Konstruktion:** Angemessenes (+)/nicht angemessenes (−) Wirtschaftswachstum in Prozentpunkten (linke Skala) und Finanzierungssaldo des Staates in Prozent des nominalen Bruttoinlandsprodukts (rechte Skala).
+* [Grafik in Vollbild anzeigen](/produktionspotenzial/07_angemessen_staat_kurz.png)
+* *Erläuterung* – Angemessenes (+) beziehungsweise nicht angemessenes (−) Wachstum in Prozentpunkten sowie der Finanzierungssaldo des Staates in Prozent des nominalen BIP.
+* *Quelle* – Statistisches Bundesamt (GENESIS-Online), eigene Berechnungen.
 
 ---
 
@@ -117,9 +113,9 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 <iframe src="/produktionspotenzial/08_notwendig_jahr.html" width="100%" height="500" frameborder="0" style="border:none;"></iframe>
 
-[Grafik als Vollbild öffnen (.png)](/produktionspotenzial/08_notwendig_jahr.png)
-
-* **Konstruktion:** Ausgehend von der Arbeitslosenquote im Januar des aktuellen Jahres wird der jährliche reale Wirtschaftswachstumspfad berechnet, der erforderlich ist, um die Arbeitslosenquote um jeweils 1,0 Prozentpunkt pro Jahr bis zum Erreichen der Vollbeschäftigungsgrenze (≤ 3,0 %) abzubauen: wY<sub>r, notwendig</sub> = wY* − w(1 + ALQ).
+* [Grafik in Vollbild anzeigen](/produktionspotenzial/08_notwendig_jahr.png)
+* *Erläuterung* – Ausgehend von der Arbeitslosenquote im Januar wird der Wachstumspfad zum jährlichen Abbau um einen Prozentpunkt bis auf höchstens 3,0 % dargestellt. wY* ist das Mittel der letzten fünf abgeschlossenen jährlichen Potenzialwachstumsraten; das notwendige Wachstum ergibt sich aus wY* abzüglich des Wachstumsbeitrags der sinkenden Arbeitslosigkeit.
+* *Quelle* – Statistisches Bundesamt und Bundesagentur für Arbeit (GENESIS-Online), eigene Berechnungen.
 
 ---
 
@@ -127,9 +123,9 @@ Siehe zur Person und zum Werk Claus Köhlers auch: [Duncker & Humblot – Claus 
 
 <iframe src="/produktionspotenzial/09_notwendig_quartal.html" width="100%" height="500" frameborder="0" style="border:none;"></iframe>
 
-[Grafik als Vollbild öffnen (.png)](/produktionspotenzial/09_notwendig_quartal.png)
-
-* **Konstruktion:** Quartalsweise aktualisierter Abbaupfad ausgehend vom Endmonat des jeweils aktuellsten Quartals bis zum Erreichen einer Arbeitslosenquote von ≤ 3,0 %.
+* [Grafik in Vollbild anzeigen](/produktionspotenzial/09_notwendig_quartal.png)
+* *Erläuterung* – Quartalsweise aktualisierter Wachstumspfad ausgehend von der Arbeitslosenquote am Ende des letzten verfügbaren Quartals, mit einem jährlichen Abbau um einen Prozentpunkt bis auf höchstens 3,0 %. wY* basiert auf dem Mittel der letzten fünf abgeschlossenen jährlichen Potenzialwachstumsraten.
+* *Quelle* – Statistisches Bundesamt und Bundesagentur für Arbeit (GENESIS-Online), eigene Berechnungen.
 
 ---
 
