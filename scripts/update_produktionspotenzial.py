@@ -758,117 +758,76 @@ def load_all_macro_data():
     print("81000-0031: erste 10 rohe Zeilen:")
     print(df_fin.head(10).to_string(index=False))
 
-    def _financing_series(time_pattern):
-        if df_fin.empty:
-            return pd.Series(dtype=float), False
+    def _government_amount_series(value_code, time_pattern):
+        if df_fin.empty or "value_variable_code" not in df_fin.columns:
+            return pd.Series(dtype=float)
 
         frame = df_fin.loc[:, ~df_fin.columns.duplicated()].copy()
-        label_cols = [
-            column for column in frame.columns if "label" in column.lower()
-        ]
-        if not label_cols:
-            return pd.Series(dtype=float), False
-        labels = (
-            frame[label_cols]
-            .fillna("")
-            .astype(str)
-            .agg(" | ".join, axis=1)
-            .str.casefold()
-        )
-        finance_mask = labels.str.contains(
-            "finanzierungssaldo",
-            regex=False,
-        )
         code_cols = [
             column
             for column in frame.columns
             if column.endswith("_code")
-            and column not in {"statistics_code", "time_code"}
+            and column not in {
+                "statistics_code",
+                "time_code",
+                "value_variable_code",
+            }
         ]
-        if code_cols:
-            original_values = frame[code_cols].fillna("").astype(str).apply(
-                lambda row: row.str.strip().str.upper().eq("WERTORG").any(),
+        if not code_cols:
+            return pd.Series(dtype=float)
+
+        is_total = (
+            frame[code_cols]
+            .fillna("")
+            .astype(str)
+            .apply(
+                lambda row: row.str.strip().str.upper().eq("DINSG").any(),
                 axis=1,
             )
-            if original_values.any():
-                finance_mask &= original_values
-
-        is_pct = finance_mask & (
-            labels.str.contains("prozent", regex=False)
-            | labels.str.contains("%", regex=False)
         )
-        total_terms = (
-            "gesamtstaat",
-            "staat insgesamt",
-            "staat, insgesamt",
-            "staat (insgesamt)",
-            "deutschland",
-        )
-        is_total = labels.apply(
-            lambda value: any(term in value for term in total_terms)
-        )
-        disaggregated = labels.str.contains(
-            "bundes|länder|laender|gemeinden|sozialversicherung",
-            regex=True,
-        )
-        amount_mask = finance_mask & is_total & ~is_pct & ~disaggregated
-        if not amount_mask.any():
-            amount_mask = finance_mask & ~is_pct & labels.str.contains(
-                "staat",
-                regex=False,
-            ) & ~disaggregated
-
-        if not amount_mask.any():
-            return pd.Series(dtype=float), False
-
-        selected = frame.loc[amount_mask].copy()
-        selected_labels = labels.loc[amount_mask]
-        units_million = selected_labels.str.contains(
-            r"\bmio\.?\b|million",
-            regex=True,
-        )
-        units_thousand = selected_labels.str.contains(
-            r"\btsd\.?\b|tausend|thousand",
-            regex=True,
-        )
-        units_billion = selected_labels.str.contains(
-            r"\bmrd\.?\b|milliarden",
-            regex=True,
-        )
-        units_euro = selected_labels.str.contains(
-            r"euro|eur|€",
-            regex=True,
-        )
-        scale = pd.Series(1.0, index=selected.index)
-        scale.loc[units_million] = 1e-3
-        scale.loc[units_thousand] = 1e-6
-        absolute_euro = (
-            units_euro
-            & ~units_million
-            & ~units_thousand
-            & ~units_billion
-        )
-        scale.loc[absolute_euro] = 1e-9
-        selected["NUM"] = selected["NUM"] * scale
-
+        selected = frame.loc[
+            frame["value_variable_code"]
+            .astype(str)
+            .str.strip()
+            .str.upper()
+            .eq(value_code)
+            & is_total
+        ].copy()
         selected = selected.loc[
-            selected["ZEIT"].astype(str).str.match(time_pattern)
+            selected["ZEIT"].astype(str).str.fullmatch(time_pattern)
         ]
         if selected.empty:
-            return pd.Series(dtype=float), False
-        result = (
-            selected.drop_duplicates(subset=["ZEIT"], keep="first")
+            return pd.Series(dtype=float)
+
+        conflicting_years = (
+            selected.groupby("ZEIT")["NUM"]
+            .nunique()
+            .loc[lambda values: values > 1]
+        )
+        if not conflicting_years.empty:
+            raise ValueError(
+                f"81000-0031 enthält mehrere Werte für {value_code} / DINSG "
+                f"in: {', '.join(conflicting_years.index.astype(str))}."
+            )
+        return (
+            selected.drop_duplicates(subset=["ZEIT"])
             .set_index("ZEIT")["NUM"]
             .sort_index()
         )
-        return result, False
 
-    fin_y, fin_y_is_pct = _financing_series(r"^\d{4}$")
-    fin_q, fin_q_is_pct = _financing_series(r"^\d{4}-Q[1-4]$")
+    def _financing_balance(time_pattern):
+        einnahmen = _government_amount_series("EIN003", time_pattern)
+        ausgaben = _government_amount_series("ASG009", time_pattern)
+        return einnahmen.subtract(ausgaben).dropna()
+
+    fin_y = _financing_balance(r"\d{4}")
+    fin_q = _financing_balance(r"\d{4}-Q[1-4]")
+    fin_y_is_pct = False
+    fin_q_is_pct = False
     if fin_y.empty:
         raise ValueError(
-            "81000-0031 enthält nach Filterung des Finanzierungssaldos "
-            "des Gesamtstaates in Geldbeträgen keine Jahreswerte."
+            "81000-0031 enthält für DINSG keine gemeinsamen Jahreswerte "
+            "von EIN003 (Einnahmen) und ASG009 (Ausgaben)."
         )
 
     # Jahresreihen aus Quartals- bzw. Monatsreihen ergänzen, falls nötig.
@@ -1020,18 +979,14 @@ def compute_koehler_tables(d):
         if fin_y_is_pct:
             df_y.loc[common_fin_y, "fin_pct"] = fin_y.loc[common_fin_y]
         else:
-            fin_values = fin_y.loc[common_fin_y].astype(float)
+            fin_mrd = fin_y.loc[common_fin_y].astype(float)
             bip_values = bip_nom_y.loc[common_fin_y].astype(float)
             bip_values = bip_values.where(
                 bip_values.abs() <= 100_000.0,
                 bip_values / 1000.0,
             )
-            fin_values = fin_values.where(
-                fin_values.abs() <= 1_000.0,
-                fin_values / 1000.0,
-            )
             df_y.loc[common_fin_y, "fin_pct"] = (
-                fin_values / bip_values
+                fin_mrd / bip_values
             ) * 100.0
     if not df_y["fin_pct"].notna().any():
         raise ValueError(
@@ -1097,18 +1052,14 @@ def compute_koehler_tables(d):
         if fin_q_is_pct:
             df_q.loc[common_fin_q, "fin_pct"] = fin_q.loc[common_fin_q]
         else:
-            fin_values = fin_q.loc[common_fin_q].astype(float)
+            fin_mrd = fin_q.loc[common_fin_q].astype(float)
             bip_values = bip_nom_q.loc[common_fin_q].astype(float)
             bip_values = bip_values.where(
                 bip_values.abs() <= 100_000.0,
                 bip_values / 1000.0,
             )
-            fin_values = fin_values.where(
-                fin_values.abs() <= 1_000.0,
-                fin_values / 1000.0,
-            )
             df_q.loc[common_fin_q, "fin_pct"] = (
-                fin_values / bip_values
+                fin_mrd / bip_values
             ) * 100.0
 
     return (
