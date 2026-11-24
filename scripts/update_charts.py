@@ -166,42 +166,67 @@ def print_bip_value_variables(tables):
         for code, label in pairs.itertuples(index=False, name=None):
             print(f"  {table}: {code.strip()} | {label.strip()}")
 
-def extract_bip_yoy_rate(dfs, target_times):
-    values = {}
+def filter_bip_values(df, price_basis, unit):
+    if not {"ZEIT", "WERT"}.issubset(df.columns):
+        return df.iloc[0:0]
+    sub = filter_original_values(filter_rows_by_exact_label(df, "Bruttoinlandsprodukt")).copy()
+    if "value_variable_code" in sub.columns:
+        sub = sub[sub["value_variable_code"].fillna("").astype(str).str.strip().eq("VGR014")]
+    elif "_CODES" in sub.columns:
+        sub = sub[sub["_CODES"].apply(lambda codes: "VGR014" in codes)]
+    else:
+        return sub.iloc[0:0]
+    if "value_variable_label" not in sub.columns:
+        return sub.iloc[0:0]
+
+    def has_price_basis(label):
+        parts = [part.strip().casefold() for part in str(label).split(",")]
+        unit_label = parts[1] if len(parts) >= 2 else ""
+        unit_matches = unit_label == unit.casefold() or (
+            unit.casefold() == "kettenindex" and unit_label.startswith("kettenindex ")
+        )
+        return (
+            len(parts) >= 2
+            and parts[0] == price_basis.casefold()
+            and unit_matches
+        )
+
+    return sub[sub["value_variable_label"].fillna("").apply(has_price_basis)].copy()
+
+def extract_bip_yoy_rate(dfs, target_times, price_basis, unit):
+    observations = []
     for df in dfs:
-        if not {"ZEIT", "WERT"}.issubset(df.columns):
-            continue
-        sub = filter_original_values(filter_rows_by_exact_label(df, "Bruttoinlandsprodukt")).copy()
-        if sub.empty:
-            continue
+        sub = filter_bip_values(df, price_basis, unit)
+        if not sub.empty:
+            observations.append(sub)
+    if not observations:
+        return [np.nan] * len(target_times)
 
-        if "value_variable_code" in sub.columns:
-            sub = sub[sub["value_variable_code"].fillna("").astype(str).str.strip().eq("VGR014")]
-        elif "_CODES" in sub.columns:
-            sub = sub[sub["_CODES"].apply(lambda codes: "VGR014" in codes)]
-        else:
-            continue
-        sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
-        sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first")
-        values.update(dict(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"])))
+    sub = pd.concat(observations, ignore_index=True)
+    sub["ZEIT"] = sub["ZEIT"].astype(str).str.strip()
+    sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
+    values = (
+        sub.dropna(subset=["ZEIT", "V"])
+        .sort_values("ZEIT")
+        .drop_duplicates(subset=["ZEIT"], keep="first")
+        .set_index("ZEIT")["V"]
+    )
+    lag = 4 if any("-Q" in period for period in target_times) else 1
+    rates = (values / values.shift(lag) - 1) * 100
+    rates = rates.replace([np.inf, -np.inf], np.nan)
+    return [
+        round(float(rates[period]), 1) if period in rates and pd.notna(rates[period]) else np.nan
+        for period in target_times
+    ]
 
-    rates = []
-    for period in target_times:
-        year, suffix = period[:4], period[4:]
-        previous_period = f"{int(year) - 1}{suffix}"
-        current, previous = values.get(period, np.nan), values.get(previous_period, np.nan)
-        rate = (current / previous - 1) * 100 if not np.isnan(current) and not np.isnan(previous) and previous != 0 else np.nan
-        rates.append(round(rate, 1) if not np.isnan(rate) else np.nan)
-    return rates
-
-def valid_bip_times(dfs, pattern):
+def valid_bip_times(dfs, pattern, price_basis, unit):
     found = set()
     for df in dfs:
-        if not {"ZEIT", "WERT"}.issubset(df.columns):
+        sub = filter_bip_values(df, price_basis, unit)
+        if sub.empty:
             continue
-        sub = filter_original_values(filter_rows_by_exact_label(df, "Bruttoinlandsprodukt")).copy()
         sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
-        sub = sub.dropna(subset=["V"])
+        sub = sub.dropna(subset=["ZEIT", "V"])
         found.update(z for z in sub["ZEIT"].astype(str).str.strip().unique() if re.match(pattern, z))
     return sorted(found)
 
@@ -304,7 +329,7 @@ def add_dashboard_shading(fig, data, texts):
                 run = [idx]
         runs.append(run)
         for span in runs:
-            fig.add_vrect(x0=span[0] - 0.5, x1=span[-1] + 0.5, fillcolor=color, layer="between", line_width=0)
+            fig.add_vrect(x0=span[0] - 0.5, x1=span[-1] + 0.5, fillcolor=color, layer="below", line_width=0)
 
     svr_indices = set()
     for start, end in (("2008-04", "2009-06"), ("2012-10", "2013-03"), ("2020-02", "2020-04"), ("2022-10", "2025-12")):
@@ -594,9 +619,12 @@ def main():
         ("81000-0013", df_y1_br), ("81000-0014", df_q1_br),
         ("81000-0019", df_y2), ("81000-0020", df_q2),
     ])
-    year_tables, quarter_tables = [df_y1, df_y1_br, df_y2], [df_q1, df_q1_br, df_q2]
-    available_years = valid_bip_times(year_tables, r"^\d{4}$")
-    available_quarters = valid_bip_times(quarter_tables, r"^\d{4}-Q[1-4]$")
+    real_years = valid_bip_times([df_y1], r"^\d{4}$", "preisbereinigt", "Kettenindex")
+    nominal_years = valid_bip_times([df_y2], r"^\d{4}$", "in jeweiligen Preisen", "Mrd. EUR")
+    real_quarters = valid_bip_times([df_q1], r"^\d{4}-Q[1-4]$", "preisbereinigt", "Kettenindex")
+    nominal_quarters = valid_bip_times([df_q2], r"^\d{4}-Q[1-4]$", "in jeweiligen Preisen", "Mrd. EUR")
+    available_years = sorted(set(real_years) & set(nominal_years))
+    available_quarters = sorted(set(real_quarters) & set(nominal_quarters))
     if not available_years or not available_quarters:
         raise RuntimeError("Destatis lieferte keine Jahres- bzw. Quartalswerte für die BIP-Grafiken.")
     yrs = tuple(str(year) for year in range(2019, 2026))
@@ -607,10 +635,10 @@ def main():
     def get_bip_series(df_y, df_q, codes_y, codes_q):
         return get_series_by_codes(df_y, df_q, codes_y, codes_q, yrs, qtrs, "preisbereinigt, Kettenindex")
 
-    bip_r_y = extract_bip_yoy_rate([df_y1], yrs)
-    bip_r_q = extract_bip_yoy_rate([df_q1], qtrs)
-    bip_n_y = extract_bip_yoy_rate([df_y2], yrs)
-    bip_n_q = extract_bip_yoy_rate([df_q2], qtrs)
+    bip_r_y = extract_bip_yoy_rate([df_y1], yrs, "preisbereinigt", "Kettenindex")
+    bip_r_q = extract_bip_yoy_rate([df_q1], qtrs, "preisbereinigt", "Kettenindex")
+    bip_n_y = extract_bip_yoy_rate([df_y2], yrs, "in jeweiligen Preisen", "Mrd. EUR")
+    bip_n_q = extract_bip_yoy_rate([df_q2], qtrs, "in jeweiligen Preisen", "Mrd. EUR")
     bip_r = np.array(bip_r_y + [np.nan] + bip_r_q, dtype=float)
     bip_n = np.array(bip_n_y + [np.nan] + bip_n_q, dtype=float)
     annual_indices = [i for i, period in enumerate(yrs) if "2019" <= period <= "2025"]
