@@ -167,59 +167,38 @@ def print_bip_value_variables(tables):
             print(f"  {table}: {code.strip()} | {label.strip()}")
 
 def extract_bip_yoy_rate(dfs, target_times):
-    values = {}
+    direct_values, fallback_values = {}, {}
     for df in dfs:
-        if not {"value_variable_label", "ZEIT", "WERT"}.issubset(df.columns):
-            continue
-        sub = df.copy()
-        rate_label = sub["value_variable_label"].fillna("").astype(str).str.casefold()
-        sub = sub[
-            rate_label.str.contains("veränderung", regex=False)
-            & rate_label.str.contains("vorjahr", regex=False)
-        ]
-        unit_cols = [c for c in sub.columns if "unit" in c.lower() and "label" in c.lower()]
-        if unit_cols:
-            has_percent_unit = sub[unit_cols].fillna("").astype(str).apply(
-                lambda column: column.str.strip().eq("%")
-            ).any(axis=1)
-            sub = sub[has_percent_unit]
-        else:
-            sub = sub.iloc[0:0]
-        sub = filter_rows_by_exact_label(sub, "Bruttoinlandsprodukt")
-        sub = filter_original_values(sub)
-        if sub.empty:
-            continue
-        sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
-        sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first")
-        values.update(dict(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"])))
-    return [values.get(t, np.nan) for t in target_times]
-
-def extract_bip_yoy_from_levels(dfs, target_times, measure):
-    values = {}
-    for df in dfs:
-        if not {"value_variable_label", "ZEIT", "WERT"}.issubset(df.columns):
+        if not {"ZEIT", "WERT"}.issubset(df.columns):
             continue
         sub = filter_original_values(filter_rows_by_exact_label(df, "Bruttoinlandsprodukt"))
-        variable_label = sub["value_variable_label"].fillna("").astype(str).str.casefold()
-        if measure == "real":
-            matches = variable_label.str.contains("preisbereinigt", regex=False) & variable_label.str.contains("kettenindex", regex=False)
-        else:
-            matches = variable_label.str.contains("jeweiligen preisen", regex=False)
-        sub = sub[matches].copy()
-        sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
-        sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first")
-        values.update(dict(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"])))
+        if sub.empty:
+            continue
 
-    rates = []
-    for period in target_times:
-        year, quarter = period.split("-Q") if "-Q" in period else (period, "")
-        previous = f"{int(year) - 1}-Q{quarter}" if quarter else str(int(year) - 1)
-        current_value, previous_value = values.get(period, np.nan), values.get(previous, np.nan)
-        if np.isfinite(current_value) and np.isfinite(previous_value) and previous_value != 0:
-            rates.append(round((current_value / previous_value - 1.0) * 100.0, 1))
+        if "value_variable_code" in sub.columns:
+            direct = sub[
+                sub["value_variable_code"].fillna("").astype(str).str.strip().eq("BIP005")
+            ].copy()
         else:
-            rates.append(np.nan)
-    return rates
+            direct = sub.iloc[0:0]
+        direct["V"] = pd.to_numeric(direct["WERT"].astype(str).str.replace(",", "."), errors="coerce")
+        direct = direct.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first")
+        direct_values.update(dict(zip(direct["ZEIT"].astype(str).str.strip(), direct["V"])))
+
+        if "_CODES" not in sub.columns:
+            continue
+        fallback = sub[sub["_CODES"].apply(lambda codes: "VGR014" in codes)].copy()
+        unit_cols = [c for c in sub.columns if "unit" in c.lower() and "label" in c.lower()]
+        if unit_cols:
+            has_percent_unit = fallback[unit_cols].fillna("").astype(str).apply(
+                lambda column: column.str.strip().eq("%")
+            ).any(axis=1)
+            fallback = fallback[has_percent_unit]
+        fallback["V"] = pd.to_numeric(fallback["WERT"].astype(str).str.replace(",", "."), errors="coerce")
+        fallback = fallback.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first")
+        fallback_values.update(dict(zip(fallback["ZEIT"].astype(str).str.strip(), fallback["V"])))
+
+    return [direct_values.get(t, fallback_values.get(t, np.nan)) for t in target_times]
 
 def valid_bip_times(dfs, pattern):
     found = set()
@@ -626,8 +605,7 @@ def main():
     available_quarters = valid_bip_times(quarter_tables, r"^\d{4}-Q[1-4]$")
     if not available_years or not available_quarters:
         raise RuntimeError("Destatis lieferte keine Jahres- bzw. Quartalswerte für die BIP-Grafiken.")
-    last_year = min(int(available_years[-1]), datetime.now().year - 1)
-    yrs = tuple(str(year) for year in range(2019, last_year + 1))
+    yrs = tuple(str(year) for year in range(2019, 2026))
     qtrs = tuple(pd.Series(available_quarters, dtype=str).dropna().tail(5))
     xl_bip = yrs + ("",) + tuple(f"Q{q[-1]} {q[2:4]}" for q in qtrs)
     xi = np.arange(len(xl_bip))
@@ -639,13 +617,6 @@ def main():
     bip_r_q = extract_bip_yoy_rate([df_q1], qtrs)
     bip_n_y = extract_bip_yoy_rate([df_y2], yrs)
     bip_n_q = extract_bip_yoy_rate([df_q2], qtrs)
-    for direct, fallback in ((bip_r_y, extract_bip_yoy_from_levels([df_y1], yrs, "real")),
-                             (bip_r_q, extract_bip_yoy_from_levels([df_q1], qtrs, "real")),
-                             (bip_n_y, extract_bip_yoy_from_levels([df_y2], yrs, "nominal")),
-                             (bip_n_q, extract_bip_yoy_from_levels([df_q2], qtrs, "nominal"))):
-        for idx, value in enumerate(direct):
-            if pd.isna(value):
-                direct[idx] = fallback[idx]
     bip_r = np.array(bip_r_y + [np.nan] + bip_r_q, dtype=float)
     bip_n = np.array(bip_n_y + [np.nan] + bip_n_q, dtype=float)
     annual_indices = [i for i, period in enumerate(yrs) if "2019" <= period <= "2025"]
