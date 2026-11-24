@@ -818,11 +818,14 @@ def load_all_macro_data():
                 f"{value_code} / DG "
                 f"in: {', '.join(conflicting_years.index.astype(str))}."
             )
-        return (
+        series = (
             selected.drop_duplicates(subset=["ZEIT"])
             .set_index("ZEIT")["NUM"]
             .sort_index()
         )
+        if time_pattern == r"\d{4}":
+            series.index = series.index.astype(int)
+        return series
 
     def _financing_balance(time_pattern):
         balance = _government_amount_series(

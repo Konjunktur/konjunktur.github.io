@@ -425,11 +425,11 @@ def build_for_lang(lang, data):
     draw_p1(ax1, t, data); draw_p2(ax2, t, data); draw_p3(ax3, t, data); draw_p4(ax4, t, data); draw_p5(ax5, t, data); draw_p6(ax6, t, data)
     fig.text(0.06, 0.015, f"{t['src_all']}{datetime.now().strftime(t['date_fmt'])}", fontsize=8, color="#64748B")
     plt.savefig(f"static/dashboard/dashboard{t['sfx']}.png", dpi=300); plt.close()
-    for fn, nm, sk, tp in ((draw_p1, "01_bip_entstehung", "src_bip", 0.68), (draw_p2, "02_bip_verwendung", "src_bip", 0.60), (draw_p3, "03_auftragseingaenge", "src_destatis", 0.68), (draw_p4, "04_produktion_einzelhandel", "src_destatis", 0.68), (draw_p5, "05_leistungsbilanz", "src_bbk", 0.68), (draw_p6, "06_arbeitslosigkeit_inflation", "src_ba_destatis", 0.68)):
+    for fn, nm, sk, tp in ((draw_p3, "03_auftragseingaenge", "src_destatis", 0.68), (draw_p4, "04_produktion_einzelhandel", "src_destatis", 0.68), (draw_p5, "05_leistungsbilanz", "src_bbk", 0.68), (draw_p6, "06_arbeitslosigkeit_inflation", "src_ba_destatis", 0.68)):
         save_single(fn, t, data, nm, sk, tp)
     now_str_p, fmt_arr = datetime.now().strftime(t["date_fmt"]), lambda seq: [fmt_num(v, use_c) for v in seq]
 
-    def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p, top_m=132, height_p=470, mobile_layout=False):
+    def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p, top_m=132, height_p=470, mobile_layout=False, save_png=False):
         title_text = title_p.replace(": ", ":<br>") if mobile_layout else title_p
         subtitle_text = sub_p.replace(" in % (", " in %<br>(") if mobile_layout else sub_p
         legend_settings = (
@@ -453,7 +453,10 @@ def build_for_lang(lang, data):
         else:
             fig_p.update_xaxes(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.5, color="#475569"))
         fig_p.update_yaxes(fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, tickfont=dict(size=10.5, color="#475569"))
-        out_path = f"static/dashboard/{fname_p}{t['sfx']}.html"
+        out_base = f"static/dashboard/{fname_p}{t['sfx']}"
+        if save_png:
+            fig_p.write_image(f"{out_base}.png", scale=2)
+        out_path = f"{out_base}.html"
         fig_p.write_html(out_path, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
         with open(out_path, "r", encoding="utf-8") as fh: html_s = fh.read().replace("<body>", '<body style="margin:0;padding:0;overflow:hidden;">')
         with open(out_path, "w", encoding="utf-8") as fh: fh.write(html_s)
@@ -465,7 +468,7 @@ def build_for_lang(lang, data):
         ys = [None if np.isnan(v) else round(float(v), 1) for v in data[key_s]]
         fp1.add_trace(go.Scatter(x=list(data["xi"]), y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.1), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
     add_dashboard_shading(fp1, data, t)
-    save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_bip", "01_bip_entstehung", 142, 480, mobile_layout=True)
+    save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_bip", "01_bip_entstehung", 142, 480, mobile_layout=True, save_png=True)
 
     fp2 = go.Figure(); l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]; h2_0, h2_1, h2_2, h2_3, h2_4, h2_5, h2_6 = t["p2_h"]; y2_0 = [None if np.isnan(v) else round(float(v), 1) for v in data["bip_n"]]
     fp2.add_trace(go.Bar(x=list(data["xi"]), y=y2_0, customdata=fmt_arr(y2_0), text=fmt_arr(y2_0), texttemplate="%{text}%", textposition="outside", cliponaxis=False, name=l2_0, marker=dict(color="#F8FAFC", line=dict(color="#1E3A8A", width=1.4)), hovertemplate=f"{h2_0}: <b>%{{customdata}} %</b><extra></extra>"))
@@ -473,7 +476,7 @@ def build_for_lang(lang, data):
         ys = [None if np.isnan(v) else round(float(v), 1) for v in data[key_s]]
         fp2.add_trace(go.Scatter(x=list(data["xi"]), y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0, dash=d_style), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
     add_dashboard_shading(fp2, data, t)
-    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_bip", "02_bip_verwendung", 197, 535, mobile_layout=True)
+    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_bip", "02_bip_verwendung", 197, 535, mobile_layout=True, save_png=True)
 
     fp3 = go.Figure(); l3_0, l3_1 = t["p3_l"]; s_ai, s_ab = data["s_ai"], data["s_ab"]; y3_0, y3_1 = [None if np.isnan(v) else round(float(v), 1) for v in s_ai.values], [None if np.isnan(v) else round(float(v), 1) for v in s_ab.values]
     fp3.add_trace(go.Scatter(x=list(s_ai.index), y=y3_0, customdata=fmt_arr(y3_0), name=l3_0, mode="lines+markers", marker=dict(size=5), line=dict(color="#1B3A6B", width=2.3), hovertemplate=f"{l3_0}: <b>%{{customdata}} %</b><extra></extra>"))
