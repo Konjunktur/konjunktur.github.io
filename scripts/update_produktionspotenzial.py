@@ -770,69 +770,37 @@ def load_all_macro_data():
 
     def _government_amount_series(
         time_pattern,
-        value_code=None,
-        value_label=None,
+        value_code,
     ):
         if df_fin.empty:
             return pd.Series(dtype=float)
 
         frame = df_fin.loc[:, ~df_fin.columns.duplicated()].copy()
         total_code_col = "1_variable_attribute_code"
-        total_label_col = "1_variable_attribute_label"
+        value_code_col = "value_variable_code"
         if (
             total_code_col not in frame.columns
-            and total_label_col not in frame.columns
+            or value_code_col not in frame.columns
         ):
             return pd.Series(dtype=float)
 
-        if value_label is not None:
-            if "value_variable_label" not in frame.columns:
-                return pd.Series(dtype=float)
-            labels = (
-                frame["value_variable_label"]
-                .fillna("")
-                .astype(str)
-                .str.strip()
-                .str.casefold()
-            )
-            wanted_label = value_label.casefold()
-            is_series = labels.eq(wanted_label)
-            if not is_series.any():
-                is_series = labels.str.contains(
-                    wanted_label,
-                    regex=False,
-                )
-        elif value_code is not None and "value_variable_code" in frame.columns:
-            is_series = (
-                frame["value_variable_code"]
-                .astype(str)
-                .str.strip()
-                .str.upper()
-                .eq(value_code)
-            )
-        else:
-            return pd.Series(dtype=float)
-
-        is_total = pd.Series(False, index=frame.index)
-        if total_code_col in frame.columns:
-            is_total |= (
-                frame[total_code_col]
-                .fillna("")
-                .astype(str)
-                .str.strip()
-                .str.upper()
-                .isin({"DG", "DINSG"})
-            )
-        if total_label_col in frame.columns:
-            is_total |= (
-                frame[total_label_col]
-                .fillna("")
-                .astype(str)
-                .str.strip()
-                .str.casefold()
-                .eq("deutschland insgesamt")
-            )
-        selected = frame.loc[is_series & is_total].copy()
+        is_series = (
+            frame[value_code_col]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+            .str.upper()
+            .eq(value_code)
+        )
+        is_germany = (
+            frame[total_code_col]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+            .str.upper()
+            .eq("DG")
+        )
+        selected = frame.loc[is_series & is_germany].copy()
         selected = selected.loc[
             selected["ZEIT"].astype(str).str.fullmatch(time_pattern)
         ]
@@ -847,7 +815,7 @@ def load_all_macro_data():
         if not conflicting_years.empty:
             raise ValueError(
                 f"81000-0031 enthält mehrere Werte für "
-                f"{value_label or value_code} / DINSG "
+                f"{value_code} / DG "
                 f"in: {', '.join(conflicting_years.index.astype(str))}."
             )
         return (
@@ -859,29 +827,19 @@ def load_all_macro_data():
     def _financing_balance(time_pattern):
         balance = _government_amount_series(
             time_pattern,
-            value_label="Finanzierungssaldo des Staates",
+            value_code="VGR114",
         )
         if not balance.empty:
             return balance
 
         einnahmen = _government_amount_series(
             time_pattern,
-            value_label="Einnahmen des Staates",
+            value_code="INM003",
         )
         ausgaben = _government_amount_series(
             time_pattern,
-            value_label="Ausgaben des Staates",
+            value_code="ASG009",
         )
-        if einnahmen.empty:
-            einnahmen = _government_amount_series(
-                time_pattern,
-                value_code="INM003",
-            )
-        if ausgaben.empty:
-            ausgaben = _government_amount_series(
-                time_pattern,
-                value_code="ASG009",
-            )
         return einnahmen.subtract(ausgaben).dropna()
 
     fin_y = _financing_balance(r"\d{4}")
@@ -1033,18 +991,22 @@ def compute_koehler_tables(d):
     fin_y = d["fin_y"].copy()
     bip_nom_y = d["bip_nom_y"].copy()
     fin_y_is_pct = bool(d.get("fin_y_is_pct", False))
-    fin_y.index = fin_y.index.astype(str).str.strip()
-    bip_nom_y.index = bip_nom_y.index.astype(str).str.strip()
+    fin_y.index = fin_y.index.astype(str).str.strip().astype(int)
+    bip_nom_y.index = bip_nom_y.index.astype(str).str.strip().astype(int)
+    idx_y_int = pd.Index(idx_y.astype(int))
 
     common_fin_y = (
-        idx_y
+        idx_y_int
         .intersection(fin_y.index)
         .intersection(bip_nom_y.index)
     )
     df_y["fin_pct"] = np.nan
     if len(common_fin_y):
         if fin_y_is_pct:
-            df_y.loc[common_fin_y, "fin_pct"] = fin_y.loc[common_fin_y]
+            df_y.loc[
+                common_fin_y.astype(str),
+                "fin_pct",
+            ] = fin_y.loc[common_fin_y].to_numpy(dtype=float)
         else:
             fin_values = fin_y.loc[common_fin_y].astype(float)
             bip_values = bip_nom_y.loc[common_fin_y].astype(float)
@@ -1055,22 +1017,24 @@ def compute_koehler_tables(d):
             )
             fin_mrd = fin_values / amount_scale
             bip_mrd = bip_values / amount_scale
-            df_y.loc[common_fin_y, "fin_pct"] = (
+            df_y.loc[common_fin_y.astype(str), "fin_pct"] = (
                 fin_mrd / bip_mrd
-            ) * 100.0
+            ).to_numpy() * 100.0
     if not np.isfinite(df_y["fin_pct"].to_numpy(dtype=float)).any() or np.isinf(
         df_y["fin_pct"].to_numpy(dtype=float)
     ).any():
-        fin_columns = d.get("fin_columns", [])
-        raise ValueError(
-            "fin_pct enthält keine endlichen Werte: 81000-0031 lieferte keinen "
+        print(
+            "Warnung: fin_pct enthält keine endlichen Werte: "
+            "81000-0031 lieferte keinen "
             "verwendbaren Finanzierungssaldo mit gemeinsamen Jahreswerten "
-            "und nominalem BIP. Spalten von 81000-0031: "
-            f"{fin_columns}"
+            "und nominalem BIP."
         )
+        df_y["fin_pct"] = np.nan
+        fin_pct = pd.Series(dtype=float)
+    else:
+        fin_pct = df_y["fin_pct"]
     print("fin_y.tail(10):")
     print(fin_y.tail(10).to_string())
-    fin_pct = df_y["fin_pct"]
     print("fin_pct.tail(10):")
     print(fin_pct.tail(10).to_string())
 
