@@ -755,6 +755,16 @@ def load_all_macro_data():
     df_fin = _destatis_ffcsv("81000-0031", "1991")
     print("81000-0031: rohe Spaltennamen:")
     print(df_fin.columns.tolist())
+    for column in (
+        "value_variable_code",
+        "value_variable_label",
+        "1_variable_attribute_label",
+    ):
+        print(f"81000-0031: eindeutige Werte in {column}:")
+        if column in df_fin.columns:
+            print(df_fin[column].dropna().unique().tolist())
+        else:
+            print(f"<Spalte fehlt>; vorhandene Spalten: {df_fin.columns.tolist()}")
     print("81000-0031: erste 10 rohe Zeilen:")
     print(df_fin.head(10).to_string(index=False))
 
@@ -778,12 +788,20 @@ def load_all_macro_data():
         if value_label is not None:
             if "value_variable_label" not in frame.columns:
                 return pd.Series(dtype=float)
-            is_series = (
+            labels = (
                 frame["value_variable_label"]
+                .fillna("")
                 .astype(str)
                 .str.strip()
-                .eq(value_label)
+                .str.casefold()
             )
+            wanted_label = value_label.casefold()
+            is_series = labels.eq(wanted_label)
+            if not is_series.any():
+                is_series = labels.str.contains(
+                    wanted_label,
+                    regex=False,
+                )
         elif value_code is not None and "value_variable_code" in frame.columns:
             is_series = (
                 frame["value_variable_code"]
@@ -848,12 +866,22 @@ def load_all_macro_data():
 
         einnahmen = _government_amount_series(
             time_pattern,
-            value_code="INM003",
+            value_label="Einnahmen des Staates",
         )
         ausgaben = _government_amount_series(
             time_pattern,
-            value_code="ASG009",
+            value_label="Ausgaben des Staates",
         )
+        if einnahmen.empty:
+            einnahmen = _government_amount_series(
+                time_pattern,
+                value_code="INM003",
+            )
+        if ausgaben.empty:
+            ausgaben = _government_amount_series(
+                time_pattern,
+                value_code="ASG009",
+            )
         return einnahmen.subtract(ausgaben).dropna()
 
     fin_y = _financing_balance(r"\d{4}")
@@ -885,6 +913,7 @@ def load_all_macro_data():
         "fin_q": fin_q,
         "fin_y_is_pct": fin_y_is_pct,
         "fin_q_is_pct": fin_q_is_pct,
+        "fin_columns": df_fin.columns.tolist(),
     }
 
 
@@ -975,7 +1004,7 @@ def compute_koehler_tables(d):
     # g_pot entfernt.
     df_y["g_pot"] = df_y["g_pot_raw"].copy()
     for pos in range(1, len(df_y)):
-        raw_growth = float(df_y["g_pot"].iloc[pos])
+        raw_growth = float(df_y["g_pot_raw"].iloc[pos])
         if not np.isfinite(raw_growth):
             continue
         previous = df_y["g_pot"].iloc[max(0, pos - 5):pos]
@@ -984,11 +1013,18 @@ def compute_koehler_tables(d):
             continue
         baseline = float(previous.median())
         if abs(raw_growth - baseline) >= 3.0:
-            df_y["g_pot"].iat[pos] = baseline
             previous_pot = float(df_y["pot"].iloc[pos - 1])
-            if np.isfinite(previous_pot):
-                df_y["pot"].iat[pos] = previous_pot * (1.0 + baseline / 100.0)
+            df_y.loc[df_y.index[pos], "g_pot"] = baseline
+            df_y.loc[df_y.index[pos], "pot"] = (
+                previous_pot * (1.0 + baseline / 100.0)
+            )
+            print(
+                "[DIAG] g_pot-Ausreißer bereinigt: "
+                f"{df_y.index[pos]} {raw_growth:.4f} % -> "
+                f"{baseline:.4f} % (Median der bis zu fünf Vorjahre)."
+            )
 
+    df_y["ausl"] = (df_y["bip_real"] / df_y["pot"]) * 100.0
     df_y["diff"] = df_y["g_bip"] - df_y["g_pot"]
     df_y["g_alo"] = (
         df_y["alo"] / df_y["alo"].shift(1) - 1.0
@@ -1010,15 +1046,28 @@ def compute_koehler_tables(d):
         if fin_y_is_pct:
             df_y.loc[common_fin_y, "fin_pct"] = fin_y.loc[common_fin_y]
         else:
-            fin_mrd = fin_y.loc[common_fin_y].astype(float)
+            fin_values = fin_y.loc[common_fin_y].astype(float)
             bip_values = bip_nom_y.loc[common_fin_y].astype(float)
-            bip_values = bip_values.where(
-                bip_values.abs() <= 100_000.0,
-                bip_values / 1000.0,
+            amount_scale = (
+                1000.0
+                if bip_values.abs().median() > 100_000.0
+                else 1.0
             )
+            fin_mrd = fin_values / amount_scale
+            bip_mrd = bip_values / amount_scale
             df_y.loc[common_fin_y, "fin_pct"] = (
-                fin_mrd / bip_values
+                fin_mrd / bip_mrd
             ) * 100.0
+    if not np.isfinite(df_y["fin_pct"].to_numpy(dtype=float)).any() or np.isinf(
+        df_y["fin_pct"].to_numpy(dtype=float)
+    ).any():
+        fin_columns = d.get("fin_columns", [])
+        raise ValueError(
+            "fin_pct enthält keine endlichen Werte: 81000-0031 lieferte keinen "
+            "verwendbaren Finanzierungssaldo mit gemeinsamen Jahreswerten "
+            "und nominalem BIP. Spalten von 81000-0031: "
+            f"{fin_columns}"
+        )
     print("fin_y.tail(10):")
     print(fin_y.tail(10).to_string())
     fin_pct = df_y["fin_pct"]
@@ -1077,14 +1126,17 @@ def compute_koehler_tables(d):
         if fin_q_is_pct:
             df_q.loc[common_fin_q, "fin_pct"] = fin_q.loc[common_fin_q]
         else:
-            fin_mrd = fin_q.loc[common_fin_q].astype(float)
+            fin_values = fin_q.loc[common_fin_q].astype(float)
             bip_values = bip_nom_q.loc[common_fin_q].astype(float)
-            bip_values = bip_values.where(
-                bip_values.abs() <= 100_000.0,
-                bip_values / 1000.0,
+            amount_scale = (
+                1000.0
+                if bip_values.abs().median() > 100_000.0
+                else 1.0
             )
+            fin_mrd = fin_values / amount_scale
+            bip_mrd = bip_values / amount_scale
             df_q.loc[common_fin_q, "fin_pct"] = (
-                fin_mrd / bip_values
+                fin_mrd / bip_mrd
             ) * 100.0
 
     return (
@@ -1144,6 +1196,14 @@ def build_hybrid_series(df_y, df_q, start_year="1991", add_gap=False):
         if completed_years
         else None
     )
+    displayed_annual_years = (
+        [
+            year for year in annual_years
+            if year <= last_completed_year
+        ]
+        if last_completed_year is not None
+        else annual_years
+    )
     if last_completed_year is None:
         remaining_quarters = quarter_keys
     else:
@@ -1157,7 +1217,7 @@ def build_hybrid_series(df_y, df_q, start_year="1991", add_gap=False):
     keys = []
     is_q = []
 
-    for year in completed_years:
+    for year in displayed_annual_years:
         labels.append(year)
         keys.append(("Y", year))
         is_q.append(False)
@@ -2341,15 +2401,22 @@ def main():
 
     d = load_all_macro_data()
     df_y, df_q = compute_koehler_tables(d)
-    df_y_recent = df_y.loc[
-        (df_y.index >= "2018") & (df_y.index <= "2025"),
+    df_y_1991_2025 = df_y.loc[
+        (df_y.index >= "1991") & (df_y.index <= "2025"),
         ["bip_real", "et", "alo", "prod", "pot", "g_pot"],
     ]
     print(
         'df_y[["bip_real", "et", "alo", "prod", "pot", "g_pot"]] '
-        "2018–2025:"
+        "1991–2025:"
     )
-    print(df_y_recent.to_string())
+    print(df_y_1991_2025.to_string())
+    print("g_pot roh und bereinigt 2020–2025 (%):")
+    print(
+        df_y.loc[
+            (df_y.index >= "2020") & (df_y.index <= "2025"),
+            ["g_pot_raw", "g_pot"],
+        ].to_string()
+    )
 
     (
         lbl_long,
