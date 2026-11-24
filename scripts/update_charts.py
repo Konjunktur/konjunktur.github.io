@@ -12,12 +12,12 @@ BBK_BASE = "https://api.statistiken." + "bundesbank.de/rest/data"
 
 TEXTS = {
     "de": {
-        "p1_t": "Bruttoinlandsprodukt: Entstehung", "p1_s": "Veränderung zum Vorjahr in % (preisbereinigt, Ursprungswerte)",
-        "p1_l": ("Reales BIP", "Produzierendes Gewerbe ohne Baugewerbe", "Baugewerbe", "Handel, Verkehr, Gastgewerbe"),
+        "p1_t": "Bruttoinlandsprodukt: Entstehung", "p1_s": "Veränderung zum Vorjahr in % (preisbereinigt, Originalwerte)",
+        "p1_l": ("Reales BIP", "Produzierendes Gewerbe (ohne Baugewerbe)", "Baugewerbe", "Handel, Verkehr, Gastgewerbe"),
         "p1_h": ("Reales BIP", "Prod. Gew. o. Bau", "Baugewerbe", "Handel/Verkehr/Gastg."),
-        "p2_t": "Bruttoinlandsprodukt: Verwendung", "p2_s": "Veränderung zum Vorjahr in % (Ursprungswerte)",
-        "p2_l": ("Nominales BIP", "Privater Konsum", "Konsumausgaben der priv. Haushalte", "Ausrüstungsinvestitionen", "Bauinvestitionen", "Exporte", "Importe"),
-        "p2_h": ("Nom. BIP", "Priv. Konsum", "Konsum priv. HH", "Ausrüstungen", "Bauten", "Exporte", "Importe"),
+        "p2_t": "Bruttoinlandsprodukt: Verwendung", "p2_s": "Veränderung zum Vorjahr in % (Originalwerte)",
+        "p2_l": ("Nominales BIP", "Konsumausgaben des Staates", "Konsumausgaben der privaten Haushalte", "Ausrüstungsinvestitionen", "Bauinvestitionen", "Exporte", "Importe"),
+        "p2_h": ("Nom. BIP", "Konsum Staat", "Konsum priv. Haushalte", "Ausrüstungen", "Bauten", "Exporte", "Importe"),
         "p3_t": "Auftragseingänge", "p3_s": "Volumenindex, Veränderung zum Vorjahr in % (Ursprungswerte)",
         "p3_l": ("Auftragseingang Industrie", "Auftragseingang Bauwirtschaft"),
         "p4_t": "Produktion & Einzelhandelsumsätze", "p4_s": "Real, Veränderung zum Vorjahr in % (Ursprungswerte)",
@@ -27,18 +27,19 @@ TEXTS = {
         "p6_l": ("Arbeitslosenquote", "Vollbeschäftigung (3%)", "Inflation (HVPI)", "EZB-Inflationsziel (2%)"),
         "unit_lb": "Mrd. €",
         "src_all": "Quellen: Statistisches Bundesamt (u. a. BA-Daten), Deutsche Bundesbank | Stand: ",
-        "src_destatis": "Quelle: Statistisches Bundesamt | Stand: ",
+        "src_destatis": "Quelle: Statistisches Bundesamt | Stand: ", "src_bip": "Quelle: Statistisches Bundesamt, Stand: ",
+        "rec_svr": "Rezession/Schwäche (SVR/BBK)", "rec_bip": "Reales BIP < 0 % gg. Vj.",
         "src_ba_destatis": "Quelle: Statistisches Bundesamt (BA-Daten) | Stand: ",
         "src_bbk": "Quelle: Deutsche Bundesbank | Stand: ",
         "date_fmt": "%d.%m.%Y", "comma": True, "sfx": ""
     },
     "en": {
-        "p1_t": "Gross Domestic Product: Production", "p1_s": "Change on previous year in % (price-adjusted, unadjusted data)",
+        "p1_t": "Gross Domestic Product: Production", "p1_s": "Change on previous year in % (price-adjusted, original values)",
         "p1_l": ("Real GDP", "Industry excluding construction", "Construction", "Trade, transport, accommodation and food services"),
         "p1_h": ("Real GDP", "Industry excl. constr.", "Construction", "Trade/transp./hosp."),
-        "p2_t": "Gross Domestic Product: Expenditure", "p2_s": "Change on previous year in % (unadjusted data)",
-        "p2_l": ("Nominal GDP", "Private consumption", "Household final consumption expenditure", "Machinery and equipment investment", "Construction investment", "Exports", "Imports"),
-        "p2_h": ("Nom. GDP", "Priv. cons.", "Household cons.", "Machinery/equip.", "Construction", "Exports", "Imports"),
+        "p2_t": "Gross Domestic Product: Expenditure", "p2_s": "Change on previous year in % (original values)",
+        "p2_l": ("Nominal GDP", "Government final consumption expenditure", "Household final consumption expenditure", "Machinery and equipment investment", "Construction investment", "Exports", "Imports"),
+        "p2_h": ("Nom. GDP", "Government consumption", "Household consumption", "Machinery/equip.", "Construction", "Exports", "Imports"),
         "p3_t": "New Orders", "p3_s": "Volume index, change on previous year in % (unadjusted data)",
         "p3_l": ("New orders: Manufacturing", "New orders: Construction"),
         "p4_t": "Production & Retail Sales", "p4_s": "Real, change on previous year in % (unadjusted data)",
@@ -48,7 +49,8 @@ TEXTS = {
         "p6_l": ("Unemployment rate", "Full employment (3%)", "Inflation (HICP)", "ECB inflation target (2%)"),
         "unit_lb": "bn €",
         "src_all": "Sources: Federal Statistical Office (incl. FEA data), Deutsche Bundesbank | As of: ",
-        "src_destatis": "Source: Federal Statistical Office | As of: ",
+        "src_destatis": "Source: Federal Statistical Office | As of: ", "src_bip": "Source: Federal Statistical Office, as of: ",
+        "rec_svr": "Recession/Slowdown (GCEE/BBK)", "rec_bip": "Real GDP < 0% YoY",
         "src_ba_destatis": "Source: Federal Statistical Office (FEA data) | As of: ",
         "src_bbk": "Source: Deutsche Bundesbank | As of: ",
         "date_fmt": "%Y-%m-%d", "comma": False, "sfx": "_en"
@@ -135,6 +137,130 @@ def extract_by_codes(df, req_codes, target_times, is_rate=False):
         out.append(((vc / vp - 1.0) * 100.0) if (not np.isnan(vc) and not np.isnan(vp) and vp != 0) else np.nan)
     return out
 
+def filter_rows_by_labels(df, labels):
+    label_cols = [c for c in df.columns if "label" in c.lower()]
+    if not label_cols:
+        return df.iloc[0:0]
+    row_labels = df[label_cols].fillna("").astype(str).agg(" | ".join, axis=1).str.casefold()
+    mask = pd.Series(True, index=df.index)
+    for label in labels:
+        mask &= row_labels.str.contains(re.escape(label.casefold()), regex=True)
+    return df[mask].copy()
+
+def extract_by_labels(dfs, target_times, labels):
+    values = {}
+    for df in dfs:
+        sub = filter_original_values(filter_rows_by_labels(df, labels))
+        if sub.empty:
+            continue
+        sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
+        sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first")
+        values.update(dict(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"])))
+    return [values.get(t, np.nan) for t in target_times]
+
+def valid_times_by_labels(dfs, pattern, labels=()):
+    found = set()
+    for df in dfs:
+        sub = filter_rows_by_labels(df, labels) if labels else df
+        if sub.empty:
+            continue
+        if "-Q" in pattern:
+            sub = sub[sub["_CODES"].apply(lambda codes: "WERTORG" in codes)]
+        found.update(z for z in sub["ZEIT"].astype(str).str.strip().unique() if re.match(pattern, z))
+    return sorted(found)
+
+def filter_original_values(df):
+    if df.empty:
+        return df
+    quarters = df["ZEIT"].astype(str).str.contains(r"-Q[1-4]$", regex=True)
+    if quarters.any():
+        return df[df["_CODES"].apply(lambda codes: "WERTORG" in codes)].copy()
+    label_cols = [c for c in df.columns if "label" in c.lower()]
+    if label_cols:
+        labels = df[label_cols].fillna("").astype(str).agg(" | ".join, axis=1).str.casefold()
+        original_labels = labels.str.contains(r"originalwerte|ursprungswerte", regex=True)
+        if original_labels.any():
+            return df[original_labels].copy()
+    original_codes = df["_CODES"].apply(lambda codes: "WERTORG" in codes)
+    return df[original_codes].copy() if original_codes.any() else df
+
+def get_series_by_codes(df_y, df_q, codes_y, codes_q, years, quarters, label_filter):
+    df_y_filtered = filter_original_values(filter_rows_by_labels(df_y, [label_filter]))
+    df_q_filtered = filter_original_values(filter_rows_by_labels(df_q, [label_filter]))
+    vy = extract_by_codes(df_y_filtered, codes_y, years)
+    vq = extract_by_codes(df_q_filtered, codes_q, quarters)
+    return np.array(vy + [np.nan] + vq, dtype=float)
+
+def format_check_value(value):
+    return "n. v." if pd.isna(value) else f"{float(value):.2f}%"
+
+def print_and_assert_bip_checks(data):
+    series = {
+        "Reales BIP": "bip_r",
+        "Produzierendes Gewerbe o. Bau": "pg",
+        "Baugewerbe": "bau",
+        "Handel/Verkehr/Gastgewerbe": "hvg",
+        "Nominales BIP": "bip_n",
+        "Private Haushalte": "kph",
+        "Staat": "kp",
+        "Ausrüstungsinvestitionen": "aus",
+        "Bauinvestitionen": "binv",
+        "Exporte": "exp",
+        "Importe": "imp",
+    }
+    positions = {period: i for i, period in enumerate(data["periods"])}
+    for year in ("2025", "2026-Q2"):
+        if year not in positions:
+            raise AssertionError(f"Dashboard-Zahlencheck: {year} fehlt in der Datenreihe.")
+        idx = positions[year]
+        print(f"Dashboard {year}:")
+        for label, key in series.items():
+            print(f"  {label}: {format_check_value(data[key][idx])}")
+    references = {
+        "bip_r": 1.00, "pg": 1.09, "bau": -1.59, "hvg": 0.66,
+        "bip_n": 3.80, "kph": 0.10, "kp": 2.96, "aus": 1.14,
+        "binv": -1.48, "exp": 3.75, "imp": 2.55,
+    }
+    q2_index = positions["2026-Q2"]
+    for key, expected in references.items():
+        actual = data[key][q2_index]
+        assert not pd.isna(actual) and abs(float(actual) - expected) <= 0.05, (
+            f"{key} Q2 2026: erwartet {expected:.2f}%, erhalten {format_check_value(actual)}"
+        )
+
+def period_overlaps(period, start, end):
+    if "-Q" not in period:
+        return f"{period}-01" <= end and f"{period}-12" >= start
+    year, quarter = period.split("-Q")
+    month = (int(quarter) - 1) * 3 + 1
+    q_start, q_end = f"{year}-{month:02d}", f"{year}-{month + 2:02d}"
+    return q_start <= end and q_end >= start
+
+def add_dashboard_shading(fig, data, texts):
+    time_points = [(period, i) for i, period in enumerate(data["periods"]) if period]
+
+    def add_merged_rectangles(indices, color):
+        if not indices:
+            return
+        runs, run = [], [indices[0]]
+        for idx in indices[1:]:
+            if idx == run[-1] + 1:
+                run.append(idx)
+            else:
+                runs.append(run)
+                run = [idx]
+        runs.append(run)
+        for span in runs:
+            fig.add_vrect(x0=span[0] - 0.5, x1=span[-1] + 0.5, fillcolor=color, layer="below", line_width=0)
+
+    for start, end in (("2008-04", "2009-06"), ("2012-10", "2013-03"), ("2020-02", "2020-04"), ("2022-10", "2025-12")):
+        indices = [idx for period, idx in time_points if period_overlaps(period, start, end)]
+        add_merged_rectangles(indices, "rgba(203, 213, 225, 0.45)")
+    negative_indices = [idx for idx, value in enumerate(data["bip_r"]) if not np.isnan(value) and value < 0]
+    add_merged_rectangles(negative_indices, "rgba(147, 197, 253, 0.40)")
+    fig.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(203, 213, 225, 0.85)"), name=texts["rec_svr"], showlegend=True, hoverinfo="skip"))
+    fig.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(147, 197, 253, 0.75)"), name=texts["rec_bip"], showlegend=True, hoverinfo="skip"))
+
 def fmt_num(val, use_comma):
     if val is None or (isinstance(val, float) and np.isnan(val)): return ""
     s = f"{float(val):.1f}"
@@ -217,8 +343,9 @@ def mark_ends(ax, series_items, use_comma, y_span):
         ax.plot(lx, orig_y, marker="o", markersize=4.5, color=col, zorder=5)
         ax.text(lx + 0.85, text_y, fmt_num(orig_y, use_comma), fontsize=8, fontweight="bold", color=col, va="center", ha="right", zorder=6)
 
-def draw_bars_with_labels(ax, xi, vals, label, use_comma, y_span=18.0):
-    bars = ax.bar(xi, vals, width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=label, zorder=2)
+def draw_bars_with_labels(ax, xi, vals, label, use_comma, y_span=18.0, light_fill=False):
+    facecolor = "#F8FAFC" if light_fill else "#DBEAFE"
+    bars = ax.bar(xi, vals, width=0.52, facecolor=facecolor, edgecolor="#1E3A8A", lw=1.25, label=label, zorder=2)
     off_b = y_span * 0.018
     for b in bars:
         h = b.get_height()
@@ -229,19 +356,22 @@ def draw_p1(ax, t, d):
     xi, xl_bip = d["xi"], d["xl_bip"]
     ylo, yhi, yt, _ = sync_ylim_like_plotly(np.concatenate([d["bip_r"], d["pg"], d["bau"], d["hvg"]]))
     style_panel(ax, t["p1_t"], t["p1_s"], ylo, yhi, yt, t["comma"])
-    l1_0, l1_1, l1_2, l1_3 = t["p1_l"]; draw_bars_with_labels(ax, xi, d["bip_r"], l1_0, t["comma"], yhi - ylo)
+    l1_0, l1_1, l1_2, l1_3 = t["p1_l"]; draw_bars_with_labels(ax, xi, d["bip_r"], l1_0, t["comma"], yhi - ylo, light_fill=True)
     for key, col, mk, ms, lbl in (("pg", "#D97706", "o", 2.5, l1_1), ("bau", "#64748B", "s", 2.5, l1_2), ("hvg", "#059669", "^", 2.8, l1_3)):
         ax.plot(xi, d[key], color=col, lw=1.9, marker=mk, ms=ms, label=lbl, zorder=3)
-    ax.set_xticks(xi); ax.set_xticklabels(xl_bip); set_legend(ax, 2)
+    ax.set_xticks(xi); ax.set_xticklabels(xl_bip); set_legend_below(ax, 2)
 
 def draw_p2(ax, t, d):
     xi, xl_bip = d["xi"], d["xl_bip"]
     ylo, yhi, yt, _ = sync_ylim_like_plotly(np.concatenate([d["bip_n"], d["kp"], d["kph"], d["aus"], d["binv"], d["exp"], d["imp"]]))
     style_panel(ax, t["p2_t"], t["p2_s"], ylo, yhi, yt, t["comma"], title_y=1.52, sub_y=1.43)
-    l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]; draw_bars_with_labels(ax, xi, d["bip_n"], l2_0, t["comma"], yhi - ylo)
+    l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]; draw_bars_with_labels(ax, xi, d["bip_n"], l2_0, t["comma"], yhi - ylo, light_fill=True)
     for vals, col, lbl, lstyle in ((d["kp"], "#D97706", l2_1, "-"), (d["kph"], "#059669", l2_2, "--"), (d["aus"], "#7C3AED", l2_3, "-"), (d["binv"], "#0284C7", l2_4, "-"), (d["exp"], "#DC2626", l2_5, "-"), (d["imp"], "#64748B", l2_6, "-")):
         ax.plot(xi, vals, color=col, lw=1.7, ls=lstyle, label=lbl, zorder=3)
-    ax.set_xticks(xi); ax.set_xticklabels(xl_bip); set_legend(ax, 2)
+    ax.set_xticks(xi); ax.set_xticklabels(xl_bip); set_legend_below(ax, 4)
+
+def set_legend_below(ax, ncol):
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.24), ncol=ncol, frameon=False, fontsize=6.9)
 
 def draw_p3(ax, t, d):
     s_ai, s_ab = d["s_ai"], d["s_ab"]; xm = np.arange(len(s_ai))
@@ -281,7 +411,7 @@ def draw_p6(ax, t, d):
     ax.set_xticks(xm); ax.set_xticklabels(list(s_al.index)); set_legend(ax, 2)
 
 def save_single(draw_fn, t, data, fname, src_key, top_adj=0.68):
-    fig, ax = plt.subplots(figsize=(7.4, 4.9), dpi=300, facecolor="white"); plt.subplots_adjust(left=0.09, right=0.93, top=top_adj, bottom=0.24); draw_fn(ax, t, data)
+    fig, ax = plt.subplots(figsize=(7.4, 4.9), dpi=300, facecolor="white"); plt.subplots_adjust(left=0.09, right=0.93, top=top_adj, bottom=(0.31 if fname.startswith(("01_bip", "02_bip")) else 0.24)); draw_fn(ax, t, data)
     for txt in list(ax.texts):
         if txt.get_text() == "T.H.": txt.remove()
     fig.text(0.09, 0.02, f"{t[src_key]}{datetime.now().strftime(t['date_fmt'])}", fontsize=7.5, color="#64748B")
@@ -295,22 +425,33 @@ def build_for_lang(lang, data):
     draw_p1(ax1, t, data); draw_p2(ax2, t, data); draw_p3(ax3, t, data); draw_p4(ax4, t, data); draw_p5(ax5, t, data); draw_p6(ax6, t, data)
     fig.text(0.06, 0.015, f"{t['src_all']}{datetime.now().strftime(t['date_fmt'])}", fontsize=8, color="#64748B")
     plt.savefig(f"static/dashboard/dashboard{t['sfx']}.png", dpi=300); plt.close()
-    for fn, nm, sk, tp in ((draw_p1, "01_bip_entstehung", "src_destatis", 0.68), (draw_p2, "02_bip_verwendung", "src_destatis", 0.60), (draw_p3, "03_auftragseingaenge", "src_destatis", 0.68), (draw_p4, "04_produktion_einzelhandel", "src_destatis", 0.68), (draw_p5, "05_leistungsbilanz", "src_bbk", 0.68), (draw_p6, "06_arbeitslosigkeit_inflation", "src_ba_destatis", 0.68)):
+    for fn, nm, sk, tp in ((draw_p1, "01_bip_entstehung", "src_bip", 0.68), (draw_p2, "02_bip_verwendung", "src_bip", 0.60), (draw_p3, "03_auftragseingaenge", "src_destatis", 0.68), (draw_p4, "04_produktion_einzelhandel", "src_destatis", 0.68), (draw_p5, "05_leistungsbilanz", "src_bbk", 0.68), (draw_p6, "06_arbeitslosigkeit_inflation", "src_ba_destatis", 0.68)):
         save_single(fn, t, data, nm, sk, tp)
     now_str_p, fmt_arr = datetime.now().strftime(t["date_fmt"]), lambda seq: [fmt_num(v, use_c) for v in seq]
 
-    def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p, top_m=132, height_p=470):
+    def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p, top_m=132, height_p=470, mobile_layout=False):
+        title_text = title_p.replace(": ", ":<br>") if mobile_layout else title_p
+        subtitle_text = sub_p.replace(" in % (", " in %<br>(") if mobile_layout else sub_p
+        legend_settings = (
+            dict(orientation="h", x=0.5, y=-0.15, xanchor="center", yanchor="top", bgcolor="rgba(255,255,255,0)", font=dict(size=8.5, color="#1E293B"), entrywidth=100, entrywidthmode="pixels")
+            if mobile_layout else
+            dict(orientation="v", x=0.0, y=1.01, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.5, color="#1E293B"))
+        )
+        source_y = -0.47 if mobile_layout else -0.30
         fig_p.update_layout(
-            title=dict(text=f"<b>{title_p}</b><br><span style='font-size:11.5px;color:#475569;'>{sub_p}</span>", x=0.03, y=0.955, yanchor="top", font=dict(size=16, color="#0F172A", family="DejaVu Sans, sans-serif")),
+            title=dict(text=f"<b>{title_text}</b><br><span style='font-size:11.5px;color:#475569;'>{subtitle_text}</span>", x=0.03, y=0.98, yanchor="top", font=dict(size=16, color="#0F172A", family="DejaVu Sans, sans-serif")),
             plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
             hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
-            legend=dict(orientation="v", x=0.0, y=1.01, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.5, color="#1E293B")),
-            margin=dict(l=46, r=16, t=top_m, b=95), height=height_p,
-            annotations=[dict(text=f"{t[src_key]}{now_str_p}", x=0.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"), dict(text="T.H.", x=1.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")]
+            legend=legend_settings,
+            margin=dict(l=46, r=16, t=(105 if mobile_layout else top_m), b=(142 if mobile_layout else 95)), height=height_p,
+            annotations=[dict(text=f"{t[src_key]}{now_str_p}", x=0.0, y=source_y, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"), dict(text="T.H.", x=1.0, y=source_y, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")]
         )
         if use_c:
             fig_p.update_layout(separators=",.")
-        fig_p.update_xaxes(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.5, color="#475569"))
+        if mobile_layout:
+            fig_p.update_xaxes(type="linear", range=[-0.5, len(data["xi"]) - 0.5], tickmode="array", tickvals=list(data["xi"]), ticktext=xq_p, fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.5, color="#475569"))
+        else:
+            fig_p.update_xaxes(type="category", fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.5, color="#475569"))
         fig_p.update_yaxes(fixedrange=True, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, tickfont=dict(size=10.5, color="#475569"))
         out_path = f"static/dashboard/{fname_p}{t['sfx']}.html"
         fig_p.write_html(out_path, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
@@ -319,18 +460,20 @@ def build_for_lang(lang, data):
 
     xq_p = [" " if x == "" else str(x) for x in data["xl_bip"]]
     fp1 = go.Figure(); l1_0, l1_1, l1_2, l1_3 = t["p1_l"]; h1_0, h1_1, h1_2, h1_3 = t["p1_h"]; y1_0 = [None if np.isnan(v) else round(float(v), 1) for v in data["bip_r"]]
-    fp1.add_trace(go.Bar(x=xq_p, y=y1_0, customdata=fmt_arr(y1_0), name=l1_0, marker_color="#1B3A6B", hovertemplate=f"{h1_0}: <b>%{{customdata}} %</b><extra></extra>"))
+    fp1.add_trace(go.Bar(x=list(data["xi"]), y=y1_0, customdata=fmt_arr(y1_0), text=fmt_arr(y1_0), texttemplate="%{text}%", textposition="outside", cliponaxis=False, name=l1_0, marker=dict(color="#F8FAFC", line=dict(color="#1E3A8A", width=1.4)), hovertemplate=f"{h1_0}: <b>%{{customdata}} %</b><extra></extra>"))
     for lbl_s, hov_s, key_s, col_s in ((l1_1, h1_1, "pg", "#D97706"), (l1_2, h1_2, "bau", "#64748B"), (l1_3, h1_3, "hvg", "#059669")):
         ys = [None if np.isnan(v) else round(float(v), 1) for v in data[key_s]]
-        fp1.add_trace(go.Scatter(x=xq_p, y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.1), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
-    save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_destatis", "01_bip_entstehung", 142, 480)
+        fp1.add_trace(go.Scatter(x=list(data["xi"]), y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.1), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
+    add_dashboard_shading(fp1, data, t)
+    save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_bip", "01_bip_entstehung", 142, 480, mobile_layout=True)
 
     fp2 = go.Figure(); l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]; h2_0, h2_1, h2_2, h2_3, h2_4, h2_5, h2_6 = t["p2_h"]; y2_0 = [None if np.isnan(v) else round(float(v), 1) for v in data["bip_n"]]
-    fp2.add_trace(go.Bar(x=xq_p, y=y2_0, customdata=fmt_arr(y2_0), name=l2_0, marker_color="#1B3A6B", hovertemplate=f"{h2_0}: <b>%{{customdata}} %</b><extra></extra>"))
+    fp2.add_trace(go.Bar(x=list(data["xi"]), y=y2_0, customdata=fmt_arr(y2_0), text=fmt_arr(y2_0), texttemplate="%{text}%", textposition="outside", cliponaxis=False, name=l2_0, marker=dict(color="#F8FAFC", line=dict(color="#1E3A8A", width=1.4)), hovertemplate=f"{h2_0}: <b>%{{customdata}} %</b><extra></extra>"))
     for lbl_s, hov_s, key_s, col_s, d_style in ((l2_1, h2_1, "kp", "#D97706", "solid"), (l2_2, h2_2, "kph", "#059669", "dash"), (l2_3, h2_3, "aus", "#7C3AED", "solid"), (l2_4, h2_4, "binv", "#0284C7", "solid"), (l2_5, h2_5, "exp", "#DC2626", "solid"), (l2_6, h2_6, "imp", "#64748B", "solid")):
         ys = [None if np.isnan(v) else round(float(v), 1) for v in data[key_s]]
-        fp2.add_trace(go.Scatter(x=xq_p, y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0, dash=d_style), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
-    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_destatis", "02_bip_verwendung", 197, 535)
+        fp2.add_trace(go.Scatter(x=list(data["xi"]), y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0, dash=d_style), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
+    add_dashboard_shading(fp2, data, t)
+    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_bip", "02_bip_verwendung", 197, 535, mobile_layout=True)
 
     fp3 = go.Figure(); l3_0, l3_1 = t["p3_l"]; s_ai, s_ab = data["s_ai"], data["s_ab"]; y3_0, y3_1 = [None if np.isnan(v) else round(float(v), 1) for v in s_ai.values], [None if np.isnan(v) else round(float(v), 1) for v in s_ab.values]
     fp3.add_trace(go.Scatter(x=list(s_ai.index), y=y3_0, customdata=fmt_arr(y3_0), name=l3_0, mode="lines+markers", marker=dict(size=5), line=dict(color="#1B3A6B", width=2.3), hovertemplate=f"{l3_0}: <b>%{{customdata}} %</b><extra></extra>"))
@@ -368,31 +511,37 @@ def valid_times(df, req_codes, pattern):
     return sorted([z for z in sub["ZEIT"].astype(str).str.strip().unique() if re.match(pattern, z)])
 
 def main():
-    df_y1, df_q1 = get_destatis("81000-0001", "2020"), get_destatis("81000-0002", "2020")
-    df_y1_br, df_q1_br = get_destatis("81000-0013", "2020"), get_destatis("81000-0014", "2020")
-    df_y2, df_q2 = get_destatis("81000-0019", "2020"), get_destatis("81000-0020", "2020")
+    df_y1, df_q1 = get_destatis("81000-0001", "2018"), get_destatis("81000-0002", "2018")
+    df_y1_br, df_q1_br = get_destatis("81000-0013", "2018"), get_destatis("81000-0014", "2018")
+    df_y2, df_q2 = get_destatis("81000-0019", "2018"), get_destatis("81000-0020", "2018")
+    year_tables, quarter_tables = [df_y1, df_y1_br, df_y2], [df_q1, df_q1_br, df_q2]
+    available_years = valid_times_by_labels(year_tables, r"^\d{4}$")
+    available_quarters = valid_times_by_labels(quarter_tables, r"^\d{4}-Q[1-4]$")
+    if not available_years or not available_quarters:
+        raise RuntimeError("Destatis lieferte keine Jahres- bzw. Quartalswerte für die BIP-Grafiken.")
+    last_year = min(int(available_years[-1]), datetime.now().year - 1)
+    yrs = tuple(str(year) for year in range(2019, last_year + 1))
+    qtrs = tuple(available_quarters[-5:])
+    xl_bip = yrs + ("",) + tuple(f"Q{q[-1]} {q[2:4]}" for q in qtrs)
+    xi = np.arange(len(xl_bip))
 
-    yrs = tuple(sorted(set(valid_times(df_y1, ["DG", "VGR014", "VGRPKM"], r"^\d{4}$") + valid_times(df_y2, ["DG", "VGR014", "VGRJPM"], r"^\d{4}$")))[-5:])
-    qtrs = tuple(sorted(set(valid_times(df_q1, ["DG", "WERTORG", "VGR014", "VGRPKM"], r"^\d{4}-Q[1-4]$") + valid_times(df_q2, ["DG", "WERTORG", "VGR014", "VGRJPM"], r"^\d{4}-Q[1-4]$")))[-14:])
-    xl_bip, xi = yrs + ("",) + tuple(f"Q{q[-1]} {q[2:4]}" for q in qtrs), np.arange(len(yrs) + 1 + len(qtrs))
+    def get_bip_series(df_y, df_q, codes_y, codes_q):
+        return get_series_by_codes(df_y, df_q, codes_y, codes_q, yrs, qtrs, "preisbereinigt, Kettenindex")
 
-    def get_bip_series(df_y, df_q, codes_y, codes_q, is_rate=False):
-        vy = extract_by_codes(df_y, codes_y, yrs, is_rate=is_rate)
-        vq = extract_by_codes(df_q, codes_q, qtrs, is_rate=is_rate)
-        return np.array(vy + [np.nan] + vq, dtype=float)
-
-    bip_r = get_bip_series(df_y1, df_q1, ["DG", "VGR014", "VGRPKM"], ["DG", "WERTORG", "VGR014", "VGRPKM"], is_rate=False)
-    pg = get_bip_series(df_y1_br, df_q1_br, ["DG", "BWS001", "VGRPKM", "WZ08-B-18"], ["DG", "WERTORG", "BWS001", "VGRPKM", "WZ08-B-18"])
-    bau = get_bip_series(df_y1_br, df_q1_br, ["DG", "BWS001", "VGRPKM", "WZ08-F"], ["DG", "WERTORG", "BWS001", "VGRPKM", "WZ08-F"])
-    hvg = get_bip_series(df_y1_br, df_q1_br, ["DG", "BWS001", "VGRPKM", "WZ08-G-01"], ["DG", "WERTORG", "BWS001", "VGRPKM", "WZ08-G-01"])
-
-    bip_n = get_bip_series(df_y2, df_q2, ["DG", "VGR014", "VGRJPM"], ["DG", "WERTORG", "VGR014", "VGRJPM"])
-    kp = get_bip_series(df_y2, df_q2, ["DG", "VGR035", "VGRPKM"], ["DG", "WERTORG", "VGR035", "VGRPKM"])
-    kph = get_bip_series(df_y2, df_q2, ["DG", "VGR026", "VGRPKM"], ["DG", "WERTORG", "VGR026", "VGRPKM"])
-    aus = get_bip_series(df_y2, df_q2, ["DG", "VGR008", "VGRPKM"], ["DG", "WERTORG", "VGR008", "VGRPKM"])
-    binv = get_bip_series(df_y2, df_q2, ["DG", "VGR009", "VGRPKM"], ["DG", "WERTORG", "VGR009", "VGRPKM"])
-    exp = get_bip_series(df_y2, df_q2, ["DG", "EXP001", "VGRPKM"], ["DG", "WERTORG", "EXP001", "VGRPKM"])
-    imp = get_bip_series(df_y2, df_q2, ["DG", "IMP001", "VGRPKM"], ["DG", "WERTORG", "IMP001", "VGRPKM"])
+    rate_label = "nachr.: Bruttoinlandsprodukt (Veränderung in %)"
+    bip_r_labels = [rate_label, "preisbereinigt"]
+    bip_n_labels = [rate_label, "jeweiligen Preisen"]
+    bip_r = np.array(extract_by_labels([df_y1_br, df_y1], yrs, bip_r_labels) + [np.nan] + extract_by_labels([df_q1_br, df_q1], qtrs, bip_r_labels), dtype=float)
+    bip_n = np.array(extract_by_labels([df_y2], yrs, bip_n_labels) + [np.nan] + extract_by_labels([df_q2], qtrs, bip_n_labels), dtype=float)
+    pg = get_bip_series(df_y1_br, df_q1_br, ["DG", "BWS001", "WZ08-B-18"], ["DG", "WERTORG", "BWS001", "WZ08-B-18"])
+    bau = get_bip_series(df_y1_br, df_q1_br, ["DG", "BWS001", "WZ08-F"], ["DG", "WERTORG", "BWS001", "WZ08-F"])
+    hvg = get_bip_series(df_y1_br, df_q1_br, ["DG", "BWS001", "WZ08-G-01"], ["DG", "WERTORG", "BWS001", "WZ08-G-01"])
+    kp = get_bip_series(df_y2, df_q2, ["DG", "VGR035"], ["DG", "WERTORG", "VGR035"])
+    kph = get_bip_series(df_y2, df_q2, ["DG", "VGR026"], ["DG", "WERTORG", "VGR026"])
+    aus = get_bip_series(df_y2, df_q2, ["DG", "VGR008"], ["DG", "WERTORG", "VGR008"])
+    binv = get_bip_series(df_y2, df_q2, ["DG", "VGR009"], ["DG", "WERTORG", "VGR009"])
+    exp = get_bip_series(df_y2, df_q2, ["DG", "EXP001"], ["DG", "WERTORG", "EXP001"])
+    imp = get_bip_series(df_y2, df_q2, ["DG", "IMP001"], ["DG", "WERTORG", "IMP001"])
 
     df_ind_ae = get_destatis("42151-0004", "2023")
     df_bau_ae = pd.DataFrame()
@@ -436,7 +585,8 @@ def main():
     s_al = pd.Series(extract_by_codes(df_al, ["ERW112"], m_al_hv, is_rate=True), index=m_al_hv)
     s_hv = pd.Series(extract_by_codes(df_hv, ["DG", "VRM002"], m_al_hv, is_rate=True), index=m_al_hv)
 
-    data = {"xi": xi, "xl_bip": xl_bip, "bip_r": bip_r, "pg": pg, "bau": bau, "hvg": hvg, "bip_n": bip_n, "kp": kp, "kph": kph, "aus": aus, "binv": binv, "exp": exp, "imp": imp, "s_ai": s_ai, "s_ab": s_ab, "s_pi": s_pi, "s_pb": s_pb, "s_eh": s_eh, "s_lb": s_lb, "s_al": s_al, "s_hv": s_hv}
+    data = {"xi": xi, "xl_bip": xl_bip, "periods": yrs + ("",) + qtrs, "bip_r": bip_r, "pg": pg, "bau": bau, "hvg": hvg, "bip_n": bip_n, "kp": kp, "kph": kph, "aus": aus, "binv": binv, "exp": exp, "imp": imp, "s_ai": s_ai, "s_ab": s_ab, "s_pi": s_pi, "s_pb": s_pb, "s_eh": s_eh, "s_lb": s_lb, "s_al": s_al, "s_hv": s_hv}
+    print_and_assert_bip_checks(data)
     build_for_lang("de", data); build_for_lang("en", data)
 
 if __name__ == "__main__":

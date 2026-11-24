@@ -12,16 +12,12 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 <iframe src="/dashboard/01_bip_entstehung.html" style="width:100%; height:485px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
 - [In Vollbild anzeigen](/dashboard/01_bip_entstehung.png)
-- *Erläuterung* - Veränderung des preisbereinigten Bruttoinlandsprodukts sowie ausgewählter Entstehungskomponenten gegenüber dem Vorjahr in Prozent (Ursprungswerte).
-- *Quelle* - Statistisches Bundesamt.
 
 ## Bruttoinlandsprodukt: Verwendung
 
 <iframe src="/dashboard/02_bip_verwendung.html" style="width:100%; height:540px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
 - [In Vollbild anzeigen](/dashboard/02_bip_verwendung.png)
-- *Erläuterung* - Veränderung des nominalen BIP sowie preisbereinigter Verwendungskomponenten gegenüber dem Vorjahr in Prozent (Ursprungswerte).
-- *Quelle* - Statistisches Bundesamt.
 
 ## Auftragseingänge
 

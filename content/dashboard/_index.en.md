@@ -11,17 +11,13 @@ This dashboard displays current business cycle indicators for Germany. All chart
 
 <iframe src="/dashboard/01_bip_entstehung_en.html" style="width:100%; height:485px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
-- [Open in full screen](/dashboard/01_bip_entstehung_en.png)
-- *Explanation* - Year-on-year change in price-adjusted Gross Domestic Product and selected production components in percent (unadjusted data).
-- *Source* - Federal Statistical Office.
+- [View full screen](/dashboard/01_bip_entstehung_en.png)
 
 ## Gross Domestic Product: Expenditure
 
 <iframe src="/dashboard/02_bip_verwendung_en.html" style="width:100%; height:540px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
-- [Open in full screen](/dashboard/02_bip_verwendung_en.png)
-- *Explanation* - Year-on-year change in nominal GDP and price-adjusted expenditure components in percent (unadjusted data).
-- *Source* - Federal Statistical Office.
+- [View full screen](/dashboard/02_bip_verwendung_en.png)
 
 ## New Orders
 
