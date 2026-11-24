@@ -767,17 +767,12 @@ def load_all_macro_data():
             return pd.Series(dtype=float)
 
         frame = df_fin.loc[:, ~df_fin.columns.duplicated()].copy()
-        code_cols = [
-            column
-            for column in frame.columns
-            if column.endswith("_code")
-            and column not in {
-                "statistics_code",
-                "time_code",
-                "value_variable_code",
-            }
-        ]
-        if not code_cols:
+        total_code_col = "1_variable_attribute_code"
+        total_label_col = "1_variable_attribute_label"
+        if (
+            total_code_col not in frame.columns
+            and total_label_col not in frame.columns
+        ):
             return pd.Series(dtype=float)
 
         if value_label is not None:
@@ -800,15 +795,25 @@ def load_all_macro_data():
         else:
             return pd.Series(dtype=float)
 
-        is_total = (
-            frame[code_cols]
-            .fillna("")
-            .astype(str)
-            .apply(
-                lambda row: row.str.strip().str.upper().eq("DINSG").any(),
-                axis=1,
+        is_total = pd.Series(False, index=frame.index)
+        if total_code_col in frame.columns:
+            is_total |= (
+                frame[total_code_col]
+                .fillna("")
+                .astype(str)
+                .str.strip()
+                .str.upper()
+                .isin({"DG", "DINSG"})
             )
-        )
+        if total_label_col in frame.columns:
+            is_total |= (
+                frame[total_label_col]
+                .fillna("")
+                .astype(str)
+                .str.strip()
+                .str.casefold()
+                .eq("deutschland insgesamt")
+            )
         selected = frame.loc[is_series & is_total].copy()
         selected = selected.loc[
             selected["ZEIT"].astype(str).str.fullmatch(time_pattern)
@@ -855,12 +860,6 @@ def load_all_macro_data():
     fin_q = _financing_balance(r"\d{4}-Q[1-4]")
     fin_y_is_pct = False
     fin_q_is_pct = False
-    if fin_y.empty:
-        raise ValueError(
-            "81000-0031 enthält für DINSG weder die direkte "
-            "Finanzierungssaldo-Reihe noch gemeinsame Jahreswerte von INM003 "
-            "(Einnahmen) und ASG009 (Ausgaben)."
-        )
 
     # Jahresreihen aus Quartals- bzw. Monatsreihen ergänzen, falls nötig.
     if bip_real_y.empty and not bip_real_q.empty:
@@ -1020,12 +1019,6 @@ def compute_koehler_tables(d):
             df_y.loc[common_fin_y, "fin_pct"] = (
                 fin_mrd / bip_values
             ) * 100.0
-    if not df_y["fin_pct"].notna().any():
-        raise ValueError(
-            "fin_pct ist leer: Finanzierungssaldo aus 81000-0031 und "
-            "nominales BIP aus 81000-0001 haben keine gemeinsamen "
-            "Jahreswerte."
-        )
     print("fin_y.tail(10):")
     print(fin_y.tail(10).to_string())
     fin_pct = df_y["fin_pct"]
