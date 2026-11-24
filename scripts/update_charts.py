@@ -167,38 +167,32 @@ def print_bip_value_variables(tables):
             print(f"  {table}: {code.strip()} | {label.strip()}")
 
 def extract_bip_yoy_rate(dfs, target_times):
-    direct_values, fallback_values = {}, {}
+    values = {}
     for df in dfs:
         if not {"ZEIT", "WERT"}.issubset(df.columns):
             continue
-        sub = filter_original_values(filter_rows_by_exact_label(df, "Bruttoinlandsprodukt"))
+        sub = filter_original_values(filter_rows_by_exact_label(df, "Bruttoinlandsprodukt")).copy()
         if sub.empty:
             continue
 
         if "value_variable_code" in sub.columns:
-            direct = sub[
-                sub["value_variable_code"].fillna("").astype(str).str.strip().eq("BIP005")
-            ].copy()
+            sub = sub[sub["value_variable_code"].fillna("").astype(str).str.strip().eq("VGR014")]
+        elif "_CODES" in sub.columns:
+            sub = sub[sub["_CODES"].apply(lambda codes: "VGR014" in codes)]
         else:
-            direct = sub.iloc[0:0]
-        direct["V"] = pd.to_numeric(direct["WERT"].astype(str).str.replace(",", "."), errors="coerce")
-        direct = direct.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first")
-        direct_values.update(dict(zip(direct["ZEIT"].astype(str).str.strip(), direct["V"])))
-
-        if "_CODES" not in sub.columns:
             continue
-        fallback = sub[sub["_CODES"].apply(lambda codes: "VGR014" in codes)].copy()
-        unit_cols = [c for c in sub.columns if "unit" in c.lower() and "label" in c.lower()]
-        if unit_cols:
-            has_percent_unit = fallback[unit_cols].fillna("").astype(str).apply(
-                lambda column: column.str.strip().eq("%")
-            ).any(axis=1)
-            fallback = fallback[has_percent_unit]
-        fallback["V"] = pd.to_numeric(fallback["WERT"].astype(str).str.replace(",", "."), errors="coerce")
-        fallback = fallback.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first")
-        fallback_values.update(dict(zip(fallback["ZEIT"].astype(str).str.strip(), fallback["V"])))
+        sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
+        sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first")
+        values.update(dict(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"])))
 
-    return [direct_values.get(t, fallback_values.get(t, np.nan)) for t in target_times]
+    rates = []
+    for period in target_times:
+        year, suffix = period[:4], period[4:]
+        previous_period = f"{int(year) - 1}{suffix}"
+        current, previous = values.get(period, np.nan), values.get(previous_period, np.nan)
+        rate = (current / previous - 1) * 100 if not np.isnan(current) and not np.isnan(previous) and previous != 0 else np.nan
+        rates.append(round(rate, 1) if not np.isnan(rate) else np.nan)
+    return rates
 
 def valid_bip_times(dfs, pattern):
     found = set()
@@ -511,7 +505,7 @@ def build_for_lang(lang, data):
         title_text = title_p.replace(": ", ":<br>") if mobile_layout else title_p
         subtitle_text = sub_p.replace(" in % (", " in %<br>(") if mobile_layout else sub_p
         legend_settings = (
-            dict(orientation="h", x=0, y=1.02, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=8, color="#1E293B"), entrywidth=0.5, entrywidthmode="fraction")
+            dict(orientation="h", x=0, y=1.02, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=8, color="#1E293B"))
             if mobile_layout else
             dict(orientation="v", x=0.0, y=1.01, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.5, color="#1E293B"))
         )
@@ -626,7 +620,7 @@ def main():
     pg = get_bip_series(df_y1_br, df_q1_br, ["DG", "BWS001", "WZ08-B-18"], ["DG", "WERTORG", "BWS001", "WZ08-B-18"])
     bau = get_bip_series(df_y1_br, df_q1_br, ["DG", "BWS001", "WZ08-F"], ["DG", "WERTORG", "BWS001", "WZ08-F"])
     hvg = get_bip_series(df_y1_br, df_q1_br, ["DG", "BWS001", "WZ08-G-01"], ["DG", "WERTORG", "BWS001", "WZ08-G-01"])
-    kp = get_series_by_codes(df_y2, df_q2, ["DG", "VGR035"], ["DG", "WERTORG", "VGR035"], yrs, qtrs, "preisbereinigt, Kettenindex", "Konsumausgaben des Staates")
+    kp = get_series_by_codes(df_y2, df_q2, ["DG", "VGR015"], ["DG", "WERTORG", "VGR015"], yrs, qtrs, "preisbereinigt, Kettenindex", "Konsumausgaben des Staates")
     kph = get_bip_series(df_y2, df_q2, ["DG", "VGR026"], ["DG", "WERTORG", "VGR026"])
     aus = get_bip_series(df_y2, df_q2, ["DG", "VGR008"], ["DG", "WERTORG", "VGR008"])
     binv = get_bip_series(df_y2, df_q2, ["DG", "VGR009"], ["DG", "WERTORG", "VGR009"])
