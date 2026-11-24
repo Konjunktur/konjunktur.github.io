@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: update-main-charts
+  cancel-in-progress: false
+
 jobs:
   update-charts:
     runs-on: ubuntu-latest
@@ -36,6 +40,6 @@ jobs:
           git add static/produktionspotenzial/
           if ! git diff --staged --quiet; then
             git commit -m "Update Produktionspotenzial charts"
-            git pull --rebase -X theirs origin main
+            git pull --rebase -X ours origin main
             git push
           fi

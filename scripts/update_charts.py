@@ -194,6 +194,44 @@ def extract_bip_yoy_rate(dfs, target_times):
         values.update(dict(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"])))
     return [values.get(t, np.nan) for t in target_times]
 
+def extract_bip_yoy_from_levels(dfs, target_times, measure):
+    values = {}
+    for df in dfs:
+        if not {"value_variable_label", "ZEIT", "WERT"}.issubset(df.columns):
+            continue
+        sub = filter_original_values(filter_rows_by_exact_label(df, "Bruttoinlandsprodukt"))
+        variable_label = sub["value_variable_label"].fillna("").astype(str).str.casefold()
+        if measure == "real":
+            matches = variable_label.str.contains("preisbereinigt", regex=False) & variable_label.str.contains("kettenindex", regex=False)
+        else:
+            matches = variable_label.str.contains("jeweiligen preisen", regex=False)
+        sub = sub[matches].copy()
+        sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
+        sub = sub.dropna(subset=["V"]).drop_duplicates(subset=["ZEIT"], keep="first")
+        values.update(dict(zip(sub["ZEIT"].astype(str).str.strip(), sub["V"])))
+
+    rates = []
+    for period in target_times:
+        year, quarter = period.split("-Q") if "-Q" in period else (period, "")
+        previous = f"{int(year) - 1}-Q{quarter}" if quarter else str(int(year) - 1)
+        current_value, previous_value = values.get(period, np.nan), values.get(previous, np.nan)
+        if np.isfinite(current_value) and np.isfinite(previous_value) and previous_value != 0:
+            rates.append(round((current_value / previous_value - 1.0) * 100.0, 1))
+        else:
+            rates.append(np.nan)
+    return rates
+
+def valid_bip_times(dfs, pattern):
+    found = set()
+    for df in dfs:
+        if not {"ZEIT", "WERT"}.issubset(df.columns):
+            continue
+        sub = filter_original_values(filter_rows_by_exact_label(df, "Bruttoinlandsprodukt")).copy()
+        sub["V"] = pd.to_numeric(sub["WERT"].astype(str).str.replace(",", "."), errors="coerce")
+        sub = sub.dropna(subset=["V"])
+        found.update(z for z in sub["ZEIT"].astype(str).str.strip().unique() if re.match(pattern, z))
+    return sorted(found)
+
 def valid_times_by_labels(dfs, pattern, labels=()):
     found = set()
     for df in dfs:
@@ -293,15 +331,32 @@ def add_dashboard_shading(fig, data, texts):
                 run = [idx]
         runs.append(run)
         for span in runs:
-            fig.add_vrect(x0=span[0] - 0.5, x1=span[-1] + 0.5, fillcolor=color, layer="below", line_width=0)
+            fig.add_vrect(x0=span[0] - 0.5, x1=span[-1] + 0.5, fillcolor=color, layer="between", line_width=0)
 
+    svr_indices = set()
     for start, end in (("2008-04", "2009-06"), ("2012-10", "2013-03"), ("2020-02", "2020-04"), ("2022-10", "2025-12")):
         indices = [idx for period, idx in time_points if period_overlaps(period, start, end)]
+        svr_indices.update(indices)
         add_merged_rectangles(indices, "rgba(203, 213, 225, 0.45)")
     negative_indices = [idx for idx, value in enumerate(data["bip_r"]) if not np.isnan(value) and value < 0]
-    add_merged_rectangles(negative_indices, "rgba(147, 197, 253, 0.40)")
+    for overlaps, color in ((False, "rgba(147, 197, 253, 0.40)"), (True, "rgba(96, 165, 250, 0.62)")):
+        add_merged_rectangles([idx for idx in negative_indices if (idx in svr_indices) == overlaps], color)
     fig.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(203, 213, 225, 0.85)"), name=texts["rec_svr"], showlegend=True, hoverinfo="skip"))
     fig.add_trace(go.Scatter(x=[None], y=[None], mode="markers", marker=dict(size=10, symbol="square", color="rgba(147, 197, 253, 0.75)"), name=texts["rec_bip"], showlegend=True, hoverinfo="skip"))
+
+def add_matplotlib_bip_shading(ax, data):
+    periods = [(period, i) for i, period in enumerate(data["periods"]) if period]
+    svr_indices = set()
+    for start, end in (("2008-04", "2009-06"), ("2012-10", "2013-03"), ("2020-02", "2020-04"), ("2022-10", "2025-12")):
+        indices = [idx for period, idx in periods if period_overlaps(period, start, end)]
+        svr_indices.update(indices)
+        for idx in indices:
+            ax.axvspan(idx - 0.5, idx + 0.5, facecolor="#CBD5E1", alpha=0.45, linewidth=0, zorder=1.2)
+    negative_indices = [idx for idx, value in enumerate(data["bip_r"]) if not np.isnan(value) and value < 0]
+    for idx in negative_indices:
+        color, alpha = ("#60A5FA", 0.62) if idx in svr_indices else ("#93C5FD", 0.40)
+        ax.axvspan(idx - 0.5, idx + 0.5, facecolor=color, alpha=alpha, linewidth=0, zorder=1.3)
+    ax.axhline(0, color="#64748B", linewidth=1.1, zorder=1.8)
 
 def fmt_num(val, use_comma):
     if val is None or (isinstance(val, float) and np.isnan(val)): return ""
@@ -386,7 +441,7 @@ def mark_ends(ax, series_items, use_comma, y_span):
         ax.text(lx + 0.85, text_y, fmt_num(orig_y, use_comma), fontsize=8, fontweight="bold", color=col, va="center", ha="right", zorder=6)
 
 def draw_bars_with_labels(ax, xi, vals, label, use_comma, y_span=18.0, light_fill=False):
-    facecolor = "#F8FAFC" if light_fill else "#DBEAFE"
+    facecolor = "#EFF6FF" if light_fill else "#DBEAFE"
     bars = ax.bar(xi, vals, width=0.52, facecolor=facecolor, edgecolor="#1E3A8A", lw=1.25, label=label, zorder=2)
     off_b = y_span * 0.018
     for b in bars:
@@ -398,6 +453,7 @@ def draw_p1(ax, t, d):
     xi, xl_bip = d["xi"], d["xl_bip"]
     ylo, yhi, yt, _ = sync_ylim_like_plotly(np.concatenate([d["bip_r"], d["pg"], d["bau"], d["hvg"]]))
     style_panel(ax, t["p1_t"], t["p1_s"], ylo, yhi, yt, t["comma"])
+    add_matplotlib_bip_shading(ax, d)
     l1_0, l1_1, l1_2, l1_3 = t["p1_l"]; draw_bars_with_labels(ax, xi, d["bip_r"], l1_0, t["comma"], yhi - ylo, light_fill=True)
     for key, col, mk, ms, lbl in (("pg", "#D97706", "o", 2.5, l1_1), ("bau", "#64748B", "s", 2.5, l1_2), ("hvg", "#059669", "^", 2.8, l1_3)):
         ax.plot(xi, d[key], color=col, lw=1.9, marker=mk, ms=ms, label=lbl, zorder=3)
@@ -407,6 +463,7 @@ def draw_p2(ax, t, d):
     xi, xl_bip = d["xi"], d["xl_bip"]
     ylo, yhi, yt, _ = sync_ylim_like_plotly(np.concatenate([d["bip_n"], d["kp"], d["kph"], d["aus"], d["binv"], d["exp"], d["imp"]]))
     style_panel(ax, t["p2_t"], t["p2_s"], ylo, yhi, yt, t["comma"], title_y=1.52, sub_y=1.43)
+    add_matplotlib_bip_shading(ax, d)
     l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]; draw_bars_with_labels(ax, xi, d["bip_n"], l2_0, t["comma"], yhi - ylo, light_fill=True)
     for vals, col, lbl, lstyle in ((d["kp"], "#D97706", l2_1, "-"), (d["kph"], "#059669", l2_2, "--"), (d["aus"], "#7C3AED", l2_3, "-"), (d["binv"], "#0284C7", l2_4, "-"), (d["exp"], "#DC2626", l2_5, "-"), (d["imp"], "#64748B", l2_6, "-")):
         ax.plot(xi, vals, color=col, lw=1.7, ls=lstyle, label=lbl, zorder=3)
@@ -475,7 +532,7 @@ def build_for_lang(lang, data):
         title_text = title_p.replace(": ", ":<br>") if mobile_layout else title_p
         subtitle_text = sub_p.replace(" in % (", " in %<br>(") if mobile_layout else sub_p
         legend_settings = (
-            dict(orientation="h", x=0.5, y=-0.15, xanchor="center", yanchor="top", bgcolor="rgba(255,255,255,0)", font=dict(size=8.5, color="#1E293B"), entrywidth=100, entrywidthmode="pixels")
+            dict(orientation="h", x=0, y=1.02, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=8, color="#1E293B"), entrywidth=0.5, entrywidthmode="fraction")
             if mobile_layout else
             dict(orientation="v", x=0.0, y=1.01, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.5, color="#1E293B"))
         )
@@ -485,7 +542,7 @@ def build_for_lang(lang, data):
             plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
             hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
             legend=legend_settings,
-            margin=dict(l=46, r=16, t=(105 if mobile_layout else top_m), b=(142 if mobile_layout else 95)), height=height_p,
+            margin=dict(l=46, r=16, t=(190 if mobile_layout else top_m), b=(142 if mobile_layout else 95)), height=height_p,
             annotations=[dict(text=f"{t[src_key]}{now_str_p}", x=0.0, y=source_y, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"), dict(text="T.H.", x=1.0, y=source_y, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")]
         )
         if use_c:
@@ -505,20 +562,20 @@ def build_for_lang(lang, data):
 
     xq_p = [" " if x == "" else str(x) for x in data["xl_bip"]]
     fp1 = go.Figure(); l1_0, l1_1, l1_2, l1_3 = t["p1_l"]; h1_0, h1_1, h1_2, h1_3 = t["p1_h"]; y1_0 = [None if np.isnan(v) else round(float(v), 1) for v in data["bip_r"]]
-    fp1.add_trace(go.Bar(x=list(data["xi"]), y=y1_0, customdata=fmt_arr(y1_0), text=fmt_arr(y1_0), texttemplate="%{text}%", textposition="outside", cliponaxis=False, name=l1_0, marker=dict(color="#F8FAFC", line=dict(color="#1E3A8A", width=1.4)), hovertemplate=f"{h1_0}: <b>%{{customdata}} %</b><extra></extra>"))
+    fp1.add_trace(go.Bar(x=list(data["xi"]), y=y1_0, customdata=fmt_arr(y1_0), text=fmt_arr(y1_0), texttemplate="%{text}%", textposition="outside", cliponaxis=False, name=l1_0, marker=dict(color="#EFF6FF", line=dict(color="#1E3A8A", width=1.4)), hovertemplate=f"{h1_0}: <b>%{{customdata}} %</b><extra></extra>"))
     for lbl_s, hov_s, key_s, col_s in ((l1_1, h1_1, "pg", "#D97706"), (l1_2, h1_2, "bau", "#64748B"), (l1_3, h1_3, "hvg", "#059669")):
         ys = [None if np.isnan(v) else round(float(v), 1) for v in data[key_s]]
         fp1.add_trace(go.Scatter(x=list(data["xi"]), y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.1), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
     add_dashboard_shading(fp1, data, t)
-    save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_bip", "01_bip_entstehung", 142, 480, mobile_layout=True, save_png=True)
+    save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_bip", "01_bip_entstehung", 142, 565, mobile_layout=True, save_png=True)
 
     fp2 = go.Figure(); l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]; h2_0, h2_1, h2_2, h2_3, h2_4, h2_5, h2_6 = t["p2_h"]; y2_0 = [None if np.isnan(v) else round(float(v), 1) for v in data["bip_n"]]
-    fp2.add_trace(go.Bar(x=list(data["xi"]), y=y2_0, customdata=fmt_arr(y2_0), text=fmt_arr(y2_0), texttemplate="%{text}%", textposition="outside", cliponaxis=False, name=l2_0, marker=dict(color="#F8FAFC", line=dict(color="#1E3A8A", width=1.4)), hovertemplate=f"{h2_0}: <b>%{{customdata}} %</b><extra></extra>"))
+    fp2.add_trace(go.Bar(x=list(data["xi"]), y=y2_0, customdata=fmt_arr(y2_0), text=fmt_arr(y2_0), texttemplate="%{text}%", textposition="outside", cliponaxis=False, name=l2_0, marker=dict(color="#EFF6FF", line=dict(color="#1E3A8A", width=1.4)), hovertemplate=f"{h2_0}: <b>%{{customdata}} %</b><extra></extra>"))
     for lbl_s, hov_s, key_s, col_s, d_style in ((l2_1, h2_1, "kp", "#D97706", "solid"), (l2_2, h2_2, "kph", "#059669", "dash"), (l2_3, h2_3, "aus", "#7C3AED", "solid"), (l2_4, h2_4, "binv", "#0284C7", "solid"), (l2_5, h2_5, "exp", "#DC2626", "solid"), (l2_6, h2_6, "imp", "#64748B", "solid")):
         ys = [None if np.isnan(v) else round(float(v), 1) for v in data[key_s]]
         fp2.add_trace(go.Scatter(x=list(data["xi"]), y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0, dash=d_style), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
     add_dashboard_shading(fp2, data, t)
-    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_bip", "02_bip_verwendung", 197, 535, mobile_layout=True, save_png=True)
+    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_bip", "02_bip_verwendung", 197, 620, mobile_layout=True, save_png=True)
 
     fp3 = go.Figure(); l3_0, l3_1 = t["p3_l"]; s_ai, s_ab = data["s_ai"], data["s_ab"]; y3_0, y3_1 = [None if np.isnan(v) else round(float(v), 1) for v in s_ai.values], [None if np.isnan(v) else round(float(v), 1) for v in s_ab.values]
     fp3.add_trace(go.Scatter(x=list(s_ai.index), y=y3_0, customdata=fmt_arr(y3_0), name=l3_0, mode="lines+markers", marker=dict(size=5), line=dict(color="#1B3A6B", width=2.3), hovertemplate=f"{l3_0}: <b>%{{customdata}} %</b><extra></extra>"))
@@ -565,21 +622,36 @@ def main():
         ("81000-0019", df_y2), ("81000-0020", df_q2),
     ])
     year_tables, quarter_tables = [df_y1, df_y1_br, df_y2], [df_q1, df_q1_br, df_q2]
-    available_years = valid_times_by_labels(year_tables, r"^\d{4}$")
-    available_quarters = valid_times_by_labels(quarter_tables, r"^\d{4}-Q[1-4]$")
+    available_years = valid_bip_times(year_tables, r"^\d{4}$")
+    available_quarters = valid_bip_times(quarter_tables, r"^\d{4}-Q[1-4]$")
     if not available_years or not available_quarters:
         raise RuntimeError("Destatis lieferte keine Jahres- bzw. Quartalswerte für die BIP-Grafiken.")
     last_year = min(int(available_years[-1]), datetime.now().year - 1)
     yrs = tuple(str(year) for year in range(2019, last_year + 1))
-    qtrs = tuple(available_quarters[-5:])
+    qtrs = tuple(pd.Series(available_quarters, dtype=str).dropna().tail(5))
     xl_bip = yrs + ("",) + tuple(f"Q{q[-1]} {q[2:4]}" for q in qtrs)
     xi = np.arange(len(xl_bip))
 
     def get_bip_series(df_y, df_q, codes_y, codes_q):
         return get_series_by_codes(df_y, df_q, codes_y, codes_q, yrs, qtrs, "preisbereinigt, Kettenindex")
 
-    bip_r = np.array(extract_bip_yoy_rate([df_y1], yrs) + [np.nan] + extract_bip_yoy_rate([df_q1], qtrs), dtype=float)
-    bip_n = np.array(extract_bip_yoy_rate([df_y2], yrs) + [np.nan] + extract_bip_yoy_rate([df_q2], qtrs), dtype=float)
+    bip_r_y = extract_bip_yoy_rate([df_y1], yrs)
+    bip_r_q = extract_bip_yoy_rate([df_q1], qtrs)
+    bip_n_y = extract_bip_yoy_rate([df_y2], yrs)
+    bip_n_q = extract_bip_yoy_rate([df_q2], qtrs)
+    for direct, fallback in ((bip_r_y, extract_bip_yoy_from_levels([df_y1], yrs, "real")),
+                             (bip_r_q, extract_bip_yoy_from_levels([df_q1], qtrs, "real")),
+                             (bip_n_y, extract_bip_yoy_from_levels([df_y2], yrs, "nominal")),
+                             (bip_n_q, extract_bip_yoy_from_levels([df_q2], qtrs, "nominal"))):
+        for idx, value in enumerate(direct):
+            if pd.isna(value):
+                direct[idx] = fallback[idx]
+    bip_r = np.array(bip_r_y + [np.nan] + bip_r_q, dtype=float)
+    bip_n = np.array(bip_n_y + [np.nan] + bip_n_q, dtype=float)
+    annual_indices = [i for i, period in enumerate(yrs) if "2019" <= period <= "2025"]
+    quarter_start = len(yrs) + 1
+    assert len(annual_indices) == 7 and not np.isnan(bip_r[annual_indices]).any() and not np.isnan(bip_n[annual_indices]).any()
+    assert len(qtrs) == 5 and not np.isnan(bip_r[quarter_start:]).any() and not np.isnan(bip_n[quarter_start:]).any()
     pg = get_bip_series(df_y1_br, df_q1_br, ["DG", "BWS001", "WZ08-B-18"], ["DG", "WERTORG", "BWS001", "WZ08-B-18"])
     bau = get_bip_series(df_y1_br, df_q1_br, ["DG", "BWS001", "WZ08-F"], ["DG", "WERTORG", "BWS001", "WZ08-F"])
     hvg = get_bip_series(df_y1_br, df_q1_br, ["DG", "BWS001", "WZ08-G-01"], ["DG", "WERTORG", "BWS001", "WZ08-G-01"])
