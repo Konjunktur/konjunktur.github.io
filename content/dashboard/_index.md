@@ -13,7 +13,7 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 <!-- TABLE_BIP_ENTSTEHUNG_START -->
 <div style="overflow-x:auto;">
-<table style="width:100%;border-collapse:collapse;font-size:0.9rem;white-space:nowrap;">
+<table id="01_bip_entstehung-table" style="width:100%;border-collapse:collapse;font-size:0.9rem;white-space:nowrap;">
 <thead><tr>
 <th style="border-bottom:1px solid #E2E8F0;padding:0.4rem 0.55rem;text-align:left;">Indikator</th>
 <th style="border-bottom:1px solid #E2E8F0;padding:0.4rem 0.55rem;text-align:right;">2019</th>
@@ -90,6 +90,8 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 <!-- TABLE_BIP_ENTSTEHUNG_END -->
 
 - [In Vollbild anzeigen](/dashboard/01_bip_entstehung.png)
+- <a href="#01_bip_entstehung-table" data-table-modal="01_bip_entstehung-table">Tabelle im Vollbild</a>
+- [Daten als Excel-Tabelle herunterladen (.csv)](/dashboard/01_bip_entstehung.csv)
 
 ## Bruttoinlandsprodukt: Verwendung
 
@@ -97,7 +99,7 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 <!-- TABLE_BIP_VERWENDUNG_START -->
 <div style="overflow-x:auto;">
-<table style="width:100%;border-collapse:collapse;font-size:0.9rem;white-space:nowrap;">
+<table id="02_bip_verwendung-table" style="width:100%;border-collapse:collapse;font-size:0.9rem;white-space:nowrap;">
 <thead><tr>
 <th style="border-bottom:1px solid #E2E8F0;padding:0.4rem 0.55rem;text-align:left;">Indikator</th>
 <th style="border-bottom:1px solid #E2E8F0;padding:0.4rem 0.55rem;text-align:right;">2019</th>
@@ -216,6 +218,11 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 <!-- TABLE_BIP_VERWENDUNG_END -->
 
 - [In Vollbild anzeigen](/dashboard/02_bip_verwendung.png)
+- <a href="#02_bip_verwendung-table" data-table-modal="02_bip_verwendung-table">Tabelle im Vollbild</a>
+- [Daten als Excel-Tabelle herunterladen (.csv)](/dashboard/02_bip_verwendung.csv)
+
+<link rel="stylesheet" href="/dashboard/table-modal.css">
+<script src="/dashboard/table-modal.js" defer></script>
 
 ## Auftragseingänge
 

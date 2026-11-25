@@ -1,0 +1,61 @@
+.dashboard-table-modal {
+  box-sizing: border-box;
+  width: min(1200px, calc(100vw - 2rem));
+  height: calc(100vh - 2rem);
+  max-width: none;
+  max-height: none;
+  padding: 1rem;
+  border: 1px solid #CBD5E1;
+  border-radius: 0.5rem;
+  color: #0F172A;
+  background: #fff;
+}
+
+.dashboard-table-modal::backdrop {
+  background: rgb(15 23 42 / 65%);
+}
+
+.dashboard-table-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.dashboard-table-modal__title {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.dashboard-table-modal__close {
+  flex: 0 0 auto;
+  border: 0;
+  padding: 0.15rem 0.5rem;
+  color: #334155;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.dashboard-table-modal__content {
+  height: calc(100% - 3.25rem);
+  overflow: auto;
+}
+
+.dashboard-table-modal__content table {
+  width: 100%;
+  table-layout: fixed;
+  white-space: normal !important;
+}
+
+.dashboard-table-modal__content th,
+.dashboard-table-modal__content td {
+  overflow-wrap: anywhere;
+}
+
+.dashboard-table-modal__content th:first-child {
+  width: 30%;
+}

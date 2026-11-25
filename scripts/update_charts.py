@@ -368,13 +368,13 @@ def format_table_value(value, use_comma):
     return f"{number}%"
 
 
-def build_table_html(indicator_header, period_labels, rows, use_comma):
+def build_table_html(indicator_header, period_labels, rows, use_comma, table_id):
     cell_style = "border-bottom:1px solid #E2E8F0;padding:0.4rem 0.55rem;text-align:right;"
     quarter_style = "border-left:2px solid #CBD5E1;background:#F8FAFC;"
     left_style = cell_style.replace("text-align:right;", "text-align:left;")
     html_rows = [
         "<div style=\"overflow-x:auto;\">",
-        "<table style=\"width:100%;border-collapse:collapse;font-size:0.9rem;white-space:nowrap;\">",
+        f"<table id=\"{html.escape(table_id, quote=True)}\" style=\"width:100%;border-collapse:collapse;font-size:0.9rem;white-space:nowrap;\">",
         "<thead><tr>",
         f"<th style=\"{left_style}\">{html.escape(indicator_header)}</th>",
     ]
@@ -411,14 +411,26 @@ def update_dashboard_tables(lang, data):
             list(zip(t["p2_l"], [data[key] for key in ("bip_n_table", "kp_table", "kph_table", "aus_table", "binv_table", "exp_table", "imp_table")])),
         ),
     )
+    table_files = {
+        "BIP_ENTSTEHUNG": "01_bip_entstehung",
+        "BIP_VERWENDUNG": "02_bip_verwendung",
+    }
     for name, indicator_header, rows in table_specs:
         start_marker, end_marker = f"<!-- TABLE_{name}_START -->", f"<!-- TABLE_{name}_END -->"
         pattern = re.compile(re.escape(start_marker) + r".*?" + re.escape(end_marker), re.DOTALL)
         if len(pattern.findall(content)) != 1:
             raise RuntimeError(f"Erwartete genau einen Tabellenmarker-Block {name} in {md_path}")
-        table = build_table_html(indicator_header, period_labels, rows, TEXTS[lang]["comma"])
+        file_stem = f"{table_files[name]}{TEXTS[lang]['sfx']}"
+        table = build_table_html(indicator_header, period_labels, rows, TEXTS[lang]["comma"], f"{file_stem}-table")
         replacement = f"{start_marker}\n{table}\n{end_marker}"
         content = pattern.sub(lambda _: replacement, content, count=1)
+
+        with open(os.path.join("static", "dashboard", f"{file_stem}.csv"), "w", encoding="utf-8-sig", newline="") as csv_file:
+            writer = csv.writer(csv_file, delimiter=";")
+            writer.writerow([indicator_header, *period_labels])
+            for label, values in rows:
+                writer.writerow([label, *(format_table_value(value, TEXTS[lang]["comma"]) for value in values)])
+
     with open(md_path, "w", encoding="utf-8") as file:
         file.write(content)
 
@@ -530,12 +542,12 @@ def build_for_lang(lang, data, bip_only=False):
     update_dashboard_tables(lang, data)
     now_str_p, fmt_arr = datetime.now().strftime(t["date_fmt"]), lambda seq: [fmt_num(v, use_c) for v in seq]
 
-    def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p, top_m=132, height_p=470, x_tick_labels=None, show_y_grid=True, title_y=0.955, legend_orientation="v"):
+    def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p, top_m=132, height_p=470, x_tick_labels=None, show_y_grid=True, title_y=0.955, legend_orientation="v", legend_y=1.01):
         fig_p.update_layout(
             title=dict(text=f"<b>{title_p}</b><br><span style='font-size:11.5px;color:#475569;'>{sub_p}</span>", x=0.03, y=title_y, yanchor="top", font=dict(size=16, color="#0F172A", family="DejaVu Sans, sans-serif")),
             plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
             hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
-            legend=dict(orientation=legend_orientation, x=0.0, y=1.01, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.5, color="#1E293B")),
+            legend=dict(orientation=legend_orientation, x=0.0, y=legend_y, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.5, color="#1E293B")),
             margin=dict(l=46, r=16, t=top_m, b=95), height=height_p,
             annotations=list(fig_p.layout.annotations or []) + [dict(text=f"{t[src_key]}{now_str_p}", x=0.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"), dict(text="T.H.", x=1.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")]
         )
@@ -561,7 +573,7 @@ def build_for_lang(lang, data, bip_only=False):
     y1_values = np.concatenate([data[key] for key in ("bip_r", "pg", "bau", "hvg")])
     y1_lo, y1_hi, _, _ = sync_ylim_like_plotly(y1_values)
     add_bar_value_annotations(fp1, data["xi"], data["bip_r"], [data[key] for key in ("pg", "bau", "hvg")], y1_hi - y1_lo, use_c)
-    save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_destatis", "01_bip_entstehung", 195, 480, xq_p, False, title_y=0.97, legend_orientation="h")
+    save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_destatis", "01_bip_entstehung", 135, 480, xq_p, False, title_y=0.95, legend_orientation="h", legend_y=1.02)
 
     fp2 = go.Figure(); l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]; h2_0, h2_1, h2_2, h2_3, h2_4, h2_5, h2_6 = t["p2_h"]; y2_0 = [None if np.isnan(v) else round(float(v), 1) for v in data["bip_n"]]
     fp2.add_trace(go.Bar(x=list(data["xi"]), y=y2_0, customdata=fmt_arr(y2_0), name=l2_0, marker=dict(color="#DBEAFE", line=dict(color="#1E3A8A", width=1.1)), hovertemplate=f"{h2_0}: <b>%{{customdata}} %</b><extra></extra>"))
@@ -572,7 +584,7 @@ def build_for_lang(lang, data, bip_only=False):
     y2_values = np.concatenate([data[key] for key in ("bip_n", "kp", "kph", "aus", "binv", "exp", "imp")])
     y2_lo, y2_hi, _, _ = sync_ylim_like_plotly(y2_values)
     add_bar_value_annotations(fp2, data["xi"], data["bip_n"], [data[key] for key in ("kp", "kph", "aus", "binv", "exp", "imp")], y2_hi - y2_lo, use_c)
-    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_destatis", "02_bip_verwendung", 225, 535, xq_p, False, title_y=0.97, legend_orientation="h")
+    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_destatis", "02_bip_verwendung", 155, 535, xq_p, False, title_y=0.95, legend_orientation="h", legend_y=1.02)
 
     if bip_only:
         return

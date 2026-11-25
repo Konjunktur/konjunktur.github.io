@@ -13,7 +13,7 @@ This dashboard displays current business cycle indicators for Germany. All chart
 
 <!-- TABLE_BIP_ENTSTEHUNG_START -->
 <div style="overflow-x:auto;">
-<table style="width:100%;border-collapse:collapse;font-size:0.9rem;white-space:nowrap;">
+<table id="01_bip_entstehung_en-table" style="width:100%;border-collapse:collapse;font-size:0.9rem;white-space:nowrap;">
 <thead><tr>
 <th style="border-bottom:1px solid #E2E8F0;padding:0.4rem 0.55rem;text-align:left;">Indicator</th>
 <th style="border-bottom:1px solid #E2E8F0;padding:0.4rem 0.55rem;text-align:right;">2019</th>
@@ -90,6 +90,8 @@ This dashboard displays current business cycle indicators for Germany. All chart
 <!-- TABLE_BIP_ENTSTEHUNG_END -->
 
 - [View full screen](/dashboard/01_bip_entstehung_en.png)
+- <a href="#01_bip_entstehung_en-table" data-table-modal="01_bip_entstehung_en-table">View table fullscreen</a>
+- [Download data for Excel (.csv)](/dashboard/01_bip_entstehung_en.csv)
 
 ## Gross Domestic Product: Expenditure
 
@@ -97,7 +99,7 @@ This dashboard displays current business cycle indicators for Germany. All chart
 
 <!-- TABLE_BIP_VERWENDUNG_START -->
 <div style="overflow-x:auto;">
-<table style="width:100%;border-collapse:collapse;font-size:0.9rem;white-space:nowrap;">
+<table id="02_bip_verwendung_en-table" style="width:100%;border-collapse:collapse;font-size:0.9rem;white-space:nowrap;">
 <thead><tr>
 <th style="border-bottom:1px solid #E2E8F0;padding:0.4rem 0.55rem;text-align:left;">Indicator</th>
 <th style="border-bottom:1px solid #E2E8F0;padding:0.4rem 0.55rem;text-align:right;">2019</th>
@@ -216,6 +218,11 @@ This dashboard displays current business cycle indicators for Germany. All chart
 <!-- TABLE_BIP_VERWENDUNG_END -->
 
 - [View full screen](/dashboard/02_bip_verwendung_en.png)
+- <a href="#02_bip_verwendung_en-table" data-table-modal="02_bip_verwendung_en-table">View table fullscreen</a>
+- [Download data for Excel (.csv)](/dashboard/02_bip_verwendung_en.csv)
+
+<link rel="stylesheet" href="/dashboard/table-modal.css">
+<script src="/dashboard/table-modal.js" defer></script>
 
 ## New Orders
 
