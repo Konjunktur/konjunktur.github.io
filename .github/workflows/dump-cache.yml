@@ -17,7 +17,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install pandas requests
+        run: pip install pandas requests matplotlib plotly
 
       - name: Export Destatis CSVs
         env:
