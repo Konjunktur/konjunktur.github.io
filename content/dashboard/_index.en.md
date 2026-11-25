@@ -9,7 +9,21 @@ This dashboard displays current business cycle indicators for Germany. All chart
 
 ## Gross Domestic Product: Production
 
+<!-- BIP_ENTSTEHUNG_CHART_START -->
+<div class="dashboard-chart-menu" data-dashboard-menu="01_bip_entstehung_en">
+<button class="dashboard-chart-menu__toggle" type="button" aria-label="Chart actions" aria-expanded="false" aria-controls="01_bip_entstehung_en-menu">≡</button>
+<div class="dashboard-chart-menu__dropdown" id="01_bip_entstehung_en-menu" hidden>
+<button type="button" data-chart-modal="/dashboard/01_bip_entstehung_en.html">View chart fullscreen</button>
+<button type="button" data-table-modal="01_bip_entstehung_en-table">View table fullscreen</button>
+<hr>
+<a href="/dashboard/01_bip_entstehung_en.png" download>Download PNG image</a>
+<a href="/dashboard/01_bip_entstehung_en.csv" download>Download CSV file</a>
+<hr>
+<button type="button" data-chart-print="/dashboard/01_bip_entstehung_en.html">Print chart</button>
+</div>
 <iframe src="/dashboard/01_bip_entstehung_en.html" style="width:100%; height:485px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
+</div>
+<!-- BIP_ENTSTEHUNG_CHART_END -->
 
 <!-- TABLE_BIP_ENTSTEHUNG_START -->
 <div style="overflow-x:auto;">
@@ -89,13 +103,23 @@ This dashboard displays current business cycle indicators for Germany. All chart
 </div>
 <!-- TABLE_BIP_ENTSTEHUNG_END -->
 
-- [View full screen](/dashboard/01_bip_entstehung_en.png)
-- <a href="#01_bip_entstehung_en-table" data-table-modal="01_bip_entstehung_en-table">View table fullscreen</a>
-- [Download data for Excel (.csv)](/dashboard/01_bip_entstehung_en.csv)
-
 ## Gross Domestic Product: Expenditure
 
+<!-- BIP_VERWENDUNG_CHART_START -->
+<div class="dashboard-chart-menu" data-dashboard-menu="02_bip_verwendung_en">
+<button class="dashboard-chart-menu__toggle" type="button" aria-label="Chart actions" aria-expanded="false" aria-controls="02_bip_verwendung_en-menu">≡</button>
+<div class="dashboard-chart-menu__dropdown" id="02_bip_verwendung_en-menu" hidden>
+<button type="button" data-chart-modal="/dashboard/02_bip_verwendung_en.html">View chart fullscreen</button>
+<button type="button" data-table-modal="02_bip_verwendung_en-table">View table fullscreen</button>
+<hr>
+<a href="/dashboard/02_bip_verwendung_en.png" download>Download PNG image</a>
+<a href="/dashboard/02_bip_verwendung_en.csv" download>Download CSV file</a>
+<hr>
+<button type="button" data-chart-print="/dashboard/02_bip_verwendung_en.html">Print chart</button>
+</div>
 <iframe src="/dashboard/02_bip_verwendung_en.html" style="width:100%; height:540px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
+</div>
+<!-- BIP_VERWENDUNG_CHART_END -->
 
 <!-- TABLE_BIP_VERWENDUNG_START -->
 <div style="overflow-x:auto;">
@@ -216,10 +240,6 @@ This dashboard displays current business cycle indicators for Germany. All chart
 </tbody></table>
 </div>
 <!-- TABLE_BIP_VERWENDUNG_END -->
-
-- [View full screen](/dashboard/02_bip_verwendung_en.png)
-- <a href="#02_bip_verwendung_en-table" data-table-modal="02_bip_verwendung_en-table">View table fullscreen</a>
-- [Download data for Excel (.csv)](/dashboard/02_bip_verwendung_en.csv)
 
 <link rel="stylesheet" href="/dashboard/table-modal.css">
 <script src="/dashboard/table-modal.js" defer></script>

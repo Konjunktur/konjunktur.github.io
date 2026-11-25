@@ -9,7 +9,21 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 ## Bruttoinlandsprodukt: Entstehung
 
+<!-- BIP_ENTSTEHUNG_CHART_START -->
+<div class="dashboard-chart-menu" data-dashboard-menu="01_bip_entstehung">
+<button class="dashboard-chart-menu__toggle" type="button" aria-label="Grafikaktionen" aria-expanded="false" aria-controls="01_bip_entstehung-menu">≡</button>
+<div class="dashboard-chart-menu__dropdown" id="01_bip_entstehung-menu" hidden>
+<button type="button" data-chart-modal="/dashboard/01_bip_entstehung.html">Grafik im Vollbild</button>
+<button type="button" data-table-modal="01_bip_entstehung-table">Tabelle im Vollbild</button>
+<hr>
+<a href="/dashboard/01_bip_entstehung.png" download>PNG-Grafik herunterladen</a>
+<a href="/dashboard/01_bip_entstehung.csv" download>CSV-Datei herunterladen</a>
+<hr>
+<button type="button" data-chart-print="/dashboard/01_bip_entstehung.html">Grafik drucken</button>
+</div>
 <iframe src="/dashboard/01_bip_entstehung.html" style="width:100%; height:485px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
+</div>
+<!-- BIP_ENTSTEHUNG_CHART_END -->
 
 <!-- TABLE_BIP_ENTSTEHUNG_START -->
 <div style="overflow-x:auto;">
@@ -89,13 +103,23 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 </div>
 <!-- TABLE_BIP_ENTSTEHUNG_END -->
 
-- [In Vollbild anzeigen](/dashboard/01_bip_entstehung.png)
-- <a href="#01_bip_entstehung-table" data-table-modal="01_bip_entstehung-table">Tabelle im Vollbild</a>
-- [Daten als Excel-Tabelle herunterladen (.csv)](/dashboard/01_bip_entstehung.csv)
-
 ## Bruttoinlandsprodukt: Verwendung
 
+<!-- BIP_VERWENDUNG_CHART_START -->
+<div class="dashboard-chart-menu" data-dashboard-menu="02_bip_verwendung">
+<button class="dashboard-chart-menu__toggle" type="button" aria-label="Grafikaktionen" aria-expanded="false" aria-controls="02_bip_verwendung-menu">≡</button>
+<div class="dashboard-chart-menu__dropdown" id="02_bip_verwendung-menu" hidden>
+<button type="button" data-chart-modal="/dashboard/02_bip_verwendung.html">Grafik im Vollbild</button>
+<button type="button" data-table-modal="02_bip_verwendung-table">Tabelle im Vollbild</button>
+<hr>
+<a href="/dashboard/02_bip_verwendung.png" download>PNG-Grafik herunterladen</a>
+<a href="/dashboard/02_bip_verwendung.csv" download>CSV-Datei herunterladen</a>
+<hr>
+<button type="button" data-chart-print="/dashboard/02_bip_verwendung.html">Grafik drucken</button>
+</div>
 <iframe src="/dashboard/02_bip_verwendung.html" style="width:100%; height:540px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
+</div>
+<!-- BIP_VERWENDUNG_CHART_END -->
 
 <!-- TABLE_BIP_VERWENDUNG_START -->
 <div style="overflow-x:auto;">
@@ -216,10 +240,6 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 </tbody></table>
 </div>
 <!-- TABLE_BIP_VERWENDUNG_END -->
-
-- [In Vollbild anzeigen](/dashboard/02_bip_verwendung.png)
-- <a href="#02_bip_verwendung-table" data-table-modal="02_bip_verwendung-table">Tabelle im Vollbild</a>
-- [Daten als Excel-Tabelle herunterladen (.csv)](/dashboard/02_bip_verwendung.csv)
 
 <link rel="stylesheet" href="/dashboard/table-modal.css">
 <script src="/dashboard/table-modal.js" defer></script>

@@ -392,6 +392,38 @@ def build_table_html(indicator_header, period_labels, rows, use_comma, table_id)
     return "\n".join(html_rows)
 
 
+def build_chart_menu(lang, chart_key, height):
+    is_english = lang == "en"
+    suffix = TEXTS[lang]["sfx"]
+    stem = f"{chart_key}{suffix}"
+    labels = {
+        "chart": "View chart fullscreen" if is_english else "Grafik im Vollbild",
+        "table": "View table fullscreen" if is_english else "Tabelle im Vollbild",
+        "png": "Download PNG image" if is_english else "PNG-Grafik herunterladen",
+        "csv": "Download CSV file" if is_english else "CSV-Datei herunterladen",
+        "print": "Print chart" if is_english else "Grafik drucken",
+        "menu": "Chart actions" if is_english else "Grafikaktionen",
+    }
+    chart_url = f"/dashboard/{stem}.html"
+    table_id = f"{stem}-table"
+    menu_id = f"{stem}-menu"
+    return "\n".join((
+        f'<div class="dashboard-chart-menu" data-dashboard-menu="{html.escape(stem, quote=True)}">',
+        f'<button class="dashboard-chart-menu__toggle" type="button" aria-label="{labels["menu"]}" aria-expanded="false" aria-controls="{menu_id}">≡</button>',
+        f'<div class="dashboard-chart-menu__dropdown" id="{menu_id}" hidden>',
+        f'<button type="button" data-chart-modal="{chart_url}">{labels["chart"]}</button>',
+        f'<button type="button" data-table-modal="{table_id}">{labels["table"]}</button>',
+        "<hr>",
+        f'<a href="/dashboard/{stem}.png" download>{labels["png"]}</a>',
+        f'<a href="/dashboard/{stem}.csv" download>{labels["csv"]}</a>',
+        "<hr>",
+        f'<button type="button" data-chart-print="{chart_url}">{labels["print"]}</button>',
+        "</div>",
+        f'<iframe src="{chart_url}" style="width:100%; height:{height}px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>',
+        "</div>",
+    ))
+
+
 def update_dashboard_tables(lang, data):
     is_english = lang == "en"
     md_path = os.path.join("content", "dashboard", "_index.en.md" if is_english else "_index.md")
@@ -415,6 +447,18 @@ def update_dashboard_tables(lang, data):
         "BIP_ENTSTEHUNG": "01_bip_entstehung",
         "BIP_VERWENDUNG": "02_bip_verwendung",
     }
+    chart_specs = (
+        ("BIP_ENTSTEHUNG", "01_bip_entstehung", 485),
+        ("BIP_VERWENDUNG", "02_bip_verwendung", 540),
+    )
+    for name, chart_key, height in chart_specs:
+        start_marker, end_marker = f"<!-- {name}_CHART_START -->", f"<!-- {name}_CHART_END -->"
+        pattern = re.compile(re.escape(start_marker) + r".*?" + re.escape(end_marker), re.DOTALL)
+        if len(pattern.findall(content)) != 1:
+            raise RuntimeError(f"Erwartete genau einen Grafik-Menü-Block {name} in {md_path}")
+        replacement = f"{start_marker}\n{build_chart_menu(lang, chart_key, height)}\n{end_marker}"
+        content = pattern.sub(lambda _: replacement, content, count=1)
+
     for name, indicator_header, rows in table_specs:
         start_marker, end_marker = f"<!-- TABLE_{name}_START -->", f"<!-- TABLE_{name}_END -->"
         pattern = re.compile(re.escape(start_marker) + r".*?" + re.escape(end_marker), re.DOTALL)
