@@ -1,0 +1,38 @@
+name: Dump Destatis Cache
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  dump-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pandas requests
+
+      - name: Export Destatis CSVs
+        env:
+          DESTATIS_USER: ${{ secrets.DESTATIS_USER }}
+          DESTATIS_PASS: ${{ secrets.DESTATIS_PASS }}
+          GENESIS_USER: ${{ secrets.GENESIS_USER }}
+          GENESIS_PASS: ${{ secrets.GENESIS_PASS }}
+          GENESIS_TOKEN: ${{ secrets.GENESIS_TOKEN }}
+        run: python scripts/dump_destatis_cache.py
+
+      - name: Commit cached CSVs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@://github.com"
+          git add data/cache/*.csv
+          git diff --cached --quiet || git commit -m "Update Destatis CSV cache"
+          git pull --rebase -X ours origin main
+          git push
