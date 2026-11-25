@@ -154,6 +154,36 @@ def fmt_num(val, use_comma):
     s = f"{float(val):.1f}"
     return s.replace(".", ",") if use_comma else s
 
+
+def add_bar_value_annotations(fig, xi, bars, line_series, y_span, use_comma):
+    offset = y_span * 0.018
+    for index, value in enumerate(bars):
+        value = float(value)
+        if not np.isfinite(value):
+            continue
+        line_values = [
+            float(series[index]) for series in line_series
+            if np.isfinite(series[index])
+        ]
+        top, bottom = max(value, 0.0), min(value, 0.0)
+        above = min((line_value - top for line_value in line_values if line_value > top), default=0.0)
+        below = min((bottom - line_value for line_value in line_values if line_value < bottom), default=0.0)
+        place_above = above >= below
+        fig.add_annotation(
+            x=float(xi[index]),
+            y=top + offset if place_above else bottom - offset,
+            xref="x",
+            yref="y",
+            text=fmt_num(value, use_comma),
+            showarrow=False,
+            xanchor="center",
+            yanchor="bottom" if place_above else "top",
+            bgcolor="rgba(255,255,255,0.85)",
+            borderpad=1.2,
+            font={"size": 10, "color": "#1E3A8A"},
+        )
+
+
 def fmt_clean(val, use_comma, dec=1):
     if val is None or (isinstance(val, float) and np.isnan(val)): return ""
     v = round(float(val), dec)
@@ -500,14 +530,14 @@ def build_for_lang(lang, data, bip_only=False):
     update_dashboard_tables(lang, data)
     now_str_p, fmt_arr = datetime.now().strftime(t["date_fmt"]), lambda seq: [fmt_num(v, use_c) for v in seq]
 
-    def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p, top_m=132, height_p=470, x_tick_labels=None, show_y_grid=True):
+    def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p, top_m=132, height_p=470, x_tick_labels=None, show_y_grid=True, title_y=0.955, legend_orientation="v"):
         fig_p.update_layout(
-            title=dict(text=f"<b>{title_p}</b><br><span style='font-size:11.5px;color:#475569;'>{sub_p}</span>", x=0.03, y=0.955, yanchor="top", font=dict(size=16, color="#0F172A", family="DejaVu Sans, sans-serif")),
+            title=dict(text=f"<b>{title_p}</b><br><span style='font-size:11.5px;color:#475569;'>{sub_p}</span>", x=0.03, y=title_y, yanchor="top", font=dict(size=16, color="#0F172A", family="DejaVu Sans, sans-serif")),
             plot_bgcolor="#F8FAFC", paper_bgcolor="white", hovermode="x unified", dragmode=False,
             hoverlabel=dict(bgcolor="white", bordercolor="#CBD5E1", font=dict(size=10.5, color="#0F172A"), namelength=0),
-            legend=dict(orientation="v", x=0.0, y=1.01, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.5, color="#1E293B")),
+            legend=dict(orientation=legend_orientation, x=0.0, y=1.01, xanchor="left", yanchor="bottom", bgcolor="rgba(255,255,255,0)", font=dict(size=10.5, color="#1E293B")),
             margin=dict(l=46, r=16, t=top_m, b=95), height=height_p,
-            annotations=[dict(text=f"{t[src_key]}{now_str_p}", x=0.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"), dict(text="T.H.", x=1.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")]
+            annotations=list(fig_p.layout.annotations or []) + [dict(text=f"{t[src_key]}{now_str_p}", x=0.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10, color="#64748B"), xanchor="left"), dict(text="T.H.", x=1.0, y=-0.30, xref="paper", yref="paper", showarrow=False, font=dict(size=10.5, color="#94A3B8"), xanchor="right")]
         )
         if use_c:
             fig_p.update_layout(separators=",.")
@@ -523,20 +553,26 @@ def build_for_lang(lang, data, bip_only=False):
 
     xq_p = [" " if x == "" else str(x) for x in data["xl_bip"]]
     fp1 = go.Figure(); l1_0, l1_1, l1_2, l1_3 = t["p1_l"]; h1_0, h1_1, h1_2, h1_3 = t["p1_h"]; y1_0 = [None if np.isnan(v) else round(float(v), 1) for v in data["bip_r"]]
-    fp1.add_trace(go.Bar(x=list(data["xi"]), y=y1_0, customdata=fmt_arr(y1_0), name=l1_0, marker_color="#1B3A6B", hovertemplate=f"{h1_0}: <b>%{{customdata}} %</b><extra></extra>"))
+    fp1.add_trace(go.Bar(x=list(data["xi"]), y=y1_0, customdata=fmt_arr(y1_0), name=l1_0, marker=dict(color="#DBEAFE", line=dict(color="#1E3A8A", width=1.1)), hovertemplate=f"{h1_0}: <b>%{{customdata}} %</b><extra></extra>"))
     for lbl_s, hov_s, key_s, col_s in ((l1_1, h1_1, "pg", "#D97706"), (l1_2, h1_2, "bau", "#64748B"), (l1_3, h1_3, "hvg", "#059669")):
         ys = [None if np.isnan(v) else round(float(v), 1) for v in data[key_s]]
         fp1.add_trace(go.Scatter(x=list(data["xi"]), y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.1), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
     add_recession_shading_plotly(fp1, data, t)
-    save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_destatis", "01_bip_entstehung", 142, 480, xq_p, False)
+    y1_values = np.concatenate([data[key] for key in ("bip_r", "pg", "bau", "hvg")])
+    y1_lo, y1_hi, _, _ = sync_ylim_like_plotly(y1_values)
+    add_bar_value_annotations(fp1, data["xi"], data["bip_r"], [data[key] for key in ("pg", "bau", "hvg")], y1_hi - y1_lo, use_c)
+    save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_destatis", "01_bip_entstehung", 195, 480, xq_p, False, title_y=0.97, legend_orientation="h")
 
     fp2 = go.Figure(); l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]; h2_0, h2_1, h2_2, h2_3, h2_4, h2_5, h2_6 = t["p2_h"]; y2_0 = [None if np.isnan(v) else round(float(v), 1) for v in data["bip_n"]]
-    fp2.add_trace(go.Bar(x=list(data["xi"]), y=y2_0, customdata=fmt_arr(y2_0), name=l2_0, marker_color="#1B3A6B", hovertemplate=f"{h2_0}: <b>%{{customdata}} %</b><extra></extra>"))
+    fp2.add_trace(go.Bar(x=list(data["xi"]), y=y2_0, customdata=fmt_arr(y2_0), name=l2_0, marker=dict(color="#DBEAFE", line=dict(color="#1E3A8A", width=1.1)), hovertemplate=f"{h2_0}: <b>%{{customdata}} %</b><extra></extra>"))
     for lbl_s, hov_s, key_s, col_s, d_style in ((l2_1, h2_1, "kp", "#059669", "solid"), (l2_2, h2_2, "kph", "#D97706", "dash"), (l2_3, h2_3, "aus", "#7C3AED", "solid"), (l2_4, h2_4, "binv", "#0284C7", "solid"), (l2_5, h2_5, "exp", "#DC2626", "solid"), (l2_6, h2_6, "imp", "#64748B", "solid")):
         ys = [None if np.isnan(v) else round(float(v), 1) for v in data[key_s]]
         fp2.add_trace(go.Scatter(x=list(data["xi"]), y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0, dash=d_style), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
     add_recession_shading_plotly(fp2, data, t)
-    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_destatis", "02_bip_verwendung", 197, 535, xq_p, False)
+    y2_values = np.concatenate([data[key] for key in ("bip_n", "kp", "kph", "aus", "binv", "exp", "imp")])
+    y2_lo, y2_hi, _, _ = sync_ylim_like_plotly(y2_values)
+    add_bar_value_annotations(fp2, data["xi"], data["bip_n"], [data[key] for key in ("kp", "kph", "aus", "binv", "exp", "imp")], y2_hi - y2_lo, use_c)
+    save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_destatis", "02_bip_verwendung", 225, 535, xq_p, False, title_y=0.97, legend_orientation="h")
 
     if bip_only:
         return
