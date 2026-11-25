@@ -7,8 +7,10 @@ from update_charts import get_destatis
 TABLES = [
     "81000-0001",  # BIP Entstehung (Quartale)
     "81000-0002",  # BIP Entstehung (Jahre)
-    "81000-0019",  # BIP Verwendung (Quartale)
-    "81000-0020",  # BIP Verwendung (Jahre)
+    "81000-0013",  # Bruttowertschöpfung nach Wirtschaftsbereichen (Jahre)
+    "81000-0014",  # Bruttowertschöpfung nach Wirtschaftsbereichen (Quartale)
+    "81000-0019",  # BIP Verwendung (Jahre)
+    "81000-0020",  # BIP Verwendung (Quartale)
 ]
 
 os.makedirs("data/cache", exist_ok=True)
