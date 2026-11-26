@@ -15,7 +15,7 @@ TEXTS = {
         "p1_t": "Bruttoinlandsprodukt: Entstehung", "p1_s": "Veränderung zum Vorjahr in % (preisbereinigt, Ursprungswerte)",
         "p1_l": ("Reales BIP", "Produzierendes Gewerbe (ohne Baugewerbe)", "Baugewerbe", "Handel, Verkehr, Gastgewerbe"),
         "p1_h": ("Reales BIP", "Prod. Gew. o. Bau", "Baugewerbe", "Handel/Verkehr/Gastg."),
-        "p2_t": "Bruttoinlandsprodukt: Verwendung", "p2_s": "Veränderung zum Vorjahr in % (Ursprungswerte)",
+        "p2_t": "Bruttoinlandsprodukt: Verwendung", "p2_s": "Veränderung zum Vorjahr in % (Komponenten preisbereinigt, nominales BIP in jeweiligen Preisen, Ursprungswerte)",
         "p2_l": ("Nominales BIP", "Konsumausgaben der privaten Haushalte", "Konsumausgaben des Staates", "Ausrüstungsinvestitionen", "Bauinvestitionen", "Exporte", "Importe"),
         "p2_h": ("Nom. BIP", "Konsum priv. HH", "Konsum Staat", "Ausrüstungen", "Bauten", "Exporte", "Importe"),
         "p3_t": "Auftragseingänge", "p3_s": "Volumenindex, Veränderung zum Vorjahr in % (Ursprungswerte)",
@@ -36,7 +36,7 @@ TEXTS = {
         "p1_t": "Gross Domestic Product: Production", "p1_s": "Change on previous year in % (price-adjusted, unadjusted data)",
         "p1_l": ("Real GDP", "Industry excluding construction", "Construction", "Trade, transport, accommodation and food services"),
         "p1_h": ("Real GDP", "Industry excl. constr.", "Construction", "Trade/transp./hosp."),
-        "p2_t": "Gross Domestic Product: Expenditure", "p2_s": "Change on previous year in % (unadjusted data)",
+        "p2_t": "Gross Domestic Product: Expenditure", "p2_s": "Change on previous year in % (components price-adjusted, nominal GDP at current prices, unadjusted data)",
         "p2_l": ("Nominal GDP", "Household final consumption expenditure", "Government final consumption expenditure", "Machinery and equipment investment", "Construction investment", "Exports", "Imports"),
         "p2_h": ("Nom. GDP", "Household consumption", "Government consumption", "Machinery/equip.", "Construction", "Exports", "Imports"),
         "p3_t": "New Orders", "p3_s": "Volume index, change on previous year in % (unadjusted data)",
@@ -163,12 +163,15 @@ def add_bar_value_annotations(fig, xi, bars, line_series, y_span, use_comma):
             if np.isfinite(series[index])
         ]
         top, bottom = max(value, 0.0), min(value, 0.0)
-        above = min((line_value - top for line_value in line_values if line_value > top), default=0.0)
-        below = min((bottom - line_value for line_value in line_values if line_value < bottom), default=0.0)
-        place_above = above >= below
+        if value > 0:
+            place_above = not any(value - 0.5 <= line_value <= value + 2.5 for line_value in line_values)
+        else:
+            above = min((line_value - top for line_value in line_values if line_value > top), default=0.0)
+            below = min((bottom - line_value for line_value in line_values if line_value < bottom), default=0.0)
+            place_above = above >= below
         fig.add_annotation(
             x=float(xi[index]),
-            y=top + offset if place_above else bottom - offset,
+            y=value if value > 0 and place_above else top + offset if place_above else bottom - offset,
             xref="x",
             yref="y",
             text=fmt_num(value, use_comma),
@@ -333,12 +336,15 @@ def draw_bars_with_auto_labels(ax, xi, vals, line_series, label, use_comma, ylo,
             continue
         line_values = [float(series[index]) for series in line_series if np.isfinite(series[index])]
         top, bottom = max(value, 0.0), min(value, 0.0)
-        above = min((v - top for v in line_values if v > top), default=0.0)
-        below = min((bottom - v for v in line_values if v < bottom), default=0.0)
-        place_above = above >= below
+        if value > 0:
+            place_above = not any(value - 0.5 <= line_value <= value + 2.5 for line_value in line_values)
+        else:
+            above = min((v - top for v in line_values if v > top), default=0.0)
+            below = min((bottom - v for v in line_values if v < bottom), default=0.0)
+            place_above = above >= below
         ax.text(
             bar.get_x() + bar.get_width() / 2,
-            top + offset if place_above else bottom - offset,
+            value if value > 0 and place_above else top + offset if place_above else bottom - offset,
             fmt_num(value, use_comma),
             ha="center", va="bottom" if place_above else "top",
             fontsize=6.2, color="#1E3A8A", fontweight="bold",
@@ -436,7 +442,7 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
     table = table_ax.table(
         cellText=cell_text,
         colLabels=[indicator_header, *period_labels],
-        colWidths=[0.47] + [0.53 / len(period_labels)] * len(period_labels),
+        colWidths=[0.32] + [0.68 / len(period_labels)] * len(period_labels),
         cellLoc="center",
         colLoc="center",
         bbox=(0, 0, 1, 1),
@@ -444,7 +450,7 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
     table.auto_set_font_size(False)
     table.set_fontsize(6.5)
     for (row, column), cell in table.get_celld().items():
-        cell.set_edgecolor("#CBD5E1")
+        cell.set_edgecolor("#E2E8F0")
         cell.set_linewidth(0.35)
         if column == 0:
             cell.get_text().set_fontsize(6.8)
@@ -460,7 +466,7 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
         else:
             cell.set_facecolor("white")
             cell.set_text_props(color="#334155")
-    separator_x = 0.47 + 0.53 * 7 / len(period_labels)
+    separator_x = 0.32 + 0.68 * 7 / len(period_labels)
     table_ax.plot(
         (separator_x, separator_x), (0, 1),
         color="#94A3B8", linewidth=0.7,
@@ -487,6 +493,16 @@ def save_single(draw_fn, t, data, fname, src_key, top_adj=0.68, table_rows=None)
 
 def build_for_lang(lang, data, bip_only=False):
     t, use_c = TEXTS[lang], TEXTS[lang]["comma"]; plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
+    if lang == "en":
+        def english_period_label(label):
+            match = re.fullmatch(r"Q([1-4]) (\d{2})", label)
+            return f"20{match.group(2)} Q{match.group(1)}" if match else label
+
+        data = {
+            **data,
+            "xl_bip": tuple(english_period_label(label) for label in data["xl_bip"]),
+            "bip_table_labels": tuple(english_period_label(label) for label in data["bip_table_labels"]),
+        }
     if not bip_only:
         fig, axes = plt.subplots(3, 2, figsize=(12.6, 18.4), dpi=300, facecolor="white"); plt.subplots_adjust(left=0.06, right=0.95, top=0.88, bottom=0.06, hspace=0.68, wspace=0.20)
         ax1, ax2, ax3, ax4, ax5, ax6 = axes.flatten()
@@ -497,8 +513,18 @@ def build_for_lang(lang, data, bip_only=False):
     if not bip_only:
         singles += ((draw_p3, "03_auftragseingaenge", "src_destatis", 0.68), (draw_p4, "04_produktion_einzelhandel", "src_destatis", 0.68), (draw_p5, "05_leistungsbilanz", "src_bbk", 0.68), (draw_p6, "06_arbeitslosigkeit_inflation", "src_ba_destatis", 0.68))
     png_table_rows = {
-        "01_bip_entstehung": list(zip(t["p1_l"], [data[key] for key in ("bip_r_table", "pg_table", "bau_table", "hvg_table")])),
-        "02_bip_verwendung": list(zip(t["p2_l"], [data[key] for key in ("bip_n_table", "kp_table", "kph_table", "aus_table", "binv_table", "exp_table", "imp_table")])),
+        "01_bip_entstehung": list(zip(
+            ("Reales BIP", "Produzierendes Gewerbe (o. Bau)", "Baugewerbe", "Handel, Verkehr, Gastgewerbe")
+            if lang == "de" else
+            ("Real GDP", "Industry excluding construction", "Construction", "Trade, transport, hospitality"),
+            [data[key] for key in ("bip_r_table", "pg_table", "bau_table", "hvg_table")],
+        )),
+        "02_bip_verwendung": list(zip(
+            ("Nominales BIP", "Konsum privater Haushalte", "Konsum des Staates", "Ausrüstungsinvestitionen", "Bauinvestitionen", "Exporte", "Importe")
+            if lang == "de" else
+            ("Nominal GDP", "Household consumption", "Government consumption", "Machinery/equipment investment", "Construction investment", "Exports", "Imports"),
+            [data[key] for key in ("bip_n_table", "kp_table", "kph_table", "aus_table", "binv_table", "exp_table", "imp_table")],
+        )),
     }
     for fn, nm, sk, tp in singles:
         save_single(fn, t, data, nm, sk, tp, png_table_rows.get(nm))
