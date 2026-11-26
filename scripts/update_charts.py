@@ -416,13 +416,14 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
     table_height = 230 / 300 if row_count == 5 else 310 / 300
     footer_height = 60 / 300
     chart_gap_reduction = 215
+    table_gap = 30 / 300
     original_height = fig.get_figheight()
-    new_height = original_height + table_height
+    new_height = original_height + table_height + table_gap
     axes = list(fig.axes)
     fig.set_size_inches(fig.get_figwidth(), new_height)
     for ax in axes:
         x, y, width, height = ax.get_position().bounds
-        y = (y * original_height + table_height) / new_height
+        y = (y * original_height + table_height + table_gap) / new_height
         height = height * original_height / new_height
         gap = chart_gap_reduction / (300 * new_height)
         ax.set_position((x, y - gap, width, height + gap))
@@ -439,17 +440,26 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
         [label, *(format_table_value(value, use_comma) for value in values)]
         for label, values in rows
     ]
+    header_period_labels = [
+        re.sub(r"^(20\d{2}) (Q[1-4])$", r"\1\n\2", label)
+        if not use_comma else label
+        for label in period_labels
+    ]
     table = table_ax.table(
         cellText=cell_text,
-        colLabels=[indicator_header, *period_labels],
-        colWidths=[0.32] + [0.68 / len(period_labels)] * len(period_labels),
+        colLabels=[indicator_header, *header_period_labels],
+        colWidths=[0.30] + [0.70 / len(period_labels)] * len(period_labels),
         cellLoc="center",
         colLoc="center",
         bbox=(0, 0, 1, 1),
     )
     table.auto_set_font_size(False)
     table.set_fontsize(6.5)
+    base_row_height = table[0, 0].get_height()
+    header_row_height = base_row_height * 1.4
+    body_row_height = (base_row_height * row_count - header_row_height) / (row_count - 1)
     for (row, column), cell in table.get_celld().items():
+        cell.set_height(header_row_height if row == 0 else body_row_height)
         cell.set_edgecolor("#E2E8F0")
         cell.set_linewidth(0.35)
         if column == 0:
@@ -457,6 +467,7 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
         if row == 0:
             cell.set_facecolor("#E2E8F0")
             cell.set_text_props(weight="bold", color="#0F172A", ha="left" if column == 0 else "center")
+            cell.get_text().set_fontsize(6.0)
         elif row == 1:
             cell.set_facecolor("#F8FAFC" if column == 0 else "white")
             cell.set_text_props(weight="bold", color="#1E293B" if column == 0 else "#334155", ha="left" if column == 0 else "center")
@@ -466,7 +477,7 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
         else:
             cell.set_facecolor("white")
             cell.set_text_props(color="#334155")
-    separator_x = 0.32 + 0.68 * 7 / len(period_labels)
+    separator_x = 0.30 + 0.70 * 7 / len(period_labels)
     table_ax.plot(
         (separator_x, separator_x), (0, 1),
         color="#94A3B8", linewidth=0.7,
