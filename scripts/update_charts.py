@@ -406,7 +406,8 @@ def draw_p6(ax, t, d):
 
 def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
     row_count = len(rows) + 1
-    table_height = 140 / 300 if row_count == 5 else 210 / 300
+    table_height = 230 / 300 if row_count == 5 else 310 / 300
+    footer_height = 50 / 300
     original_height = fig.get_figheight()
     new_height = original_height + table_height
     axes = list(fig.axes)
@@ -415,7 +416,13 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
         x, y, width, height = ax.get_position().bounds
         ax.set_position((x, (y * original_height + table_height) / new_height, width, height * original_height / new_height))
 
-    table_ax = fig.add_axes((0.09, 0, 0.84, table_height / new_height))
+    plot_x, _, plot_width, _ = axes[0].get_position().bounds
+    table_ax = fig.add_axes((
+        plot_x,
+        footer_height / new_height,
+        plot_width,
+        (table_height - footer_height) / new_height,
+    ))
     table_ax.axis("off")
     cell_text = [
         [label, *(format_table_value(value, use_comma) for value in values)]
@@ -424,44 +431,51 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
     table = table_ax.table(
         cellText=cell_text,
         colLabels=[indicator_header, *period_labels],
-        colWidths=[0.4] + [0.6 / len(period_labels)] * len(period_labels),
-        cellLoc="right",
-        colLoc="right",
+        colWidths=[0.47] + [0.53 / len(period_labels)] * len(period_labels),
+        cellLoc="center",
+        colLoc="center",
         bbox=(0, 0, 1, 1),
     )
     table.auto_set_font_size(False)
-    table.set_fontsize(5.2)
+    table.set_fontsize(6.5)
     for (row, column), cell in table.get_celld().items():
         cell.set_edgecolor("#CBD5E1")
         cell.set_linewidth(0.35)
+        if column == 0:
+            cell.get_text().set_fontsize(6.8)
         if row == 0:
             cell.set_facecolor("#E2E8F0")
-            cell.set_text_props(weight="bold", color="#0F172A", ha="left" if column == 0 else "right")
+            cell.set_text_props(weight="bold", color="#0F172A", ha="left" if column == 0 else "center")
+        elif row == 1:
+            cell.set_facecolor("#F8FAFC" if column == 0 else "white")
+            cell.set_text_props(weight="bold", color="#1E293B" if column == 0 else "#334155", ha="left" if column == 0 else "center")
         elif column == 0:
             cell.set_facecolor("#F8FAFC")
             cell.set_text_props(weight="bold", color="#1E293B", ha="left")
         else:
             cell.set_facecolor("white")
             cell.set_text_props(color="#334155")
-        if column == 8:
-            cell.set_linewidth(0.8)
-    return table_height
+    separator_x = 0.47 + 0.53 * 7 / len(period_labels)
+    table_ax.plot(
+        (separator_x, separator_x), (0, 1),
+        color="#94A3B8", linewidth=0.7,
+        transform=table_ax.transAxes, zorder=5,
+    )
 
 
 def save_single(draw_fn, t, data, fname, src_key, top_adj=0.68, table_rows=None):
     fig, ax = plt.subplots(figsize=(7.4, 4.9), dpi=300, facecolor="white"); plt.subplots_adjust(left=0.09, right=0.93, top=top_adj, bottom=0.24); draw_fn(ax, t, data)
     for txt in list(ax.texts):
         if txt.get_text() == "T.H.": txt.remove()
-    table_height = 0
     if table_rows is not None:
-        table_height = add_png_data_table(
+        add_png_data_table(
             fig,
             data["bip_table_labels"],
             table_rows,
             "Indicator" if t["sfx"] else "Indikator",
             t["comma"],
         )
-    footer_y = (table_height + 0.14) / fig.get_figheight()
+    footer_y = 0.004
     fig.text(0.09, footer_y, f"{t[src_key]}{datetime.now().strftime(t['date_fmt'])}", fontsize=7.5, color="#64748B")
     fig.text(0.93, footer_y, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
     plt.savefig(f"static/dashboard/{fname}{t['sfx']}.png", dpi=300); plt.close()
