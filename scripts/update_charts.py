@@ -152,8 +152,7 @@ def fmt_num(val, use_comma):
     return s.replace(".", ",") if use_comma else s
 
 
-def add_bar_value_annotations(fig, xi, bars, line_series, y_span, use_comma):
-    offset = y_span * 0.018
+def add_bar_value_annotations(fig, xi, bars, line_series, collision_threshold, use_comma):
     for index, value in enumerate(bars):
         value = float(value)
         if not np.isfinite(value):
@@ -163,15 +162,16 @@ def add_bar_value_annotations(fig, xi, bars, line_series, y_span, use_comma):
             if np.isfinite(series[index])
         ]
         top, bottom = max(value, 0.0), min(value, 0.0)
-        if value > 0:
-            place_above = not any(value - 0.5 <= line_value <= value + 2.5 for line_value in line_values)
-        else:
-            above = min((line_value - top for line_value in line_values if line_value > top), default=0.0)
-            below = min((bottom - line_value for line_value in line_values if line_value < bottom), default=0.0)
-            place_above = above >= below
+        line_in_text_strip = any(
+            top <= line_value <= top + collision_threshold
+            for line_value in line_values
+        )
+        above = min((line_value - top for line_value in line_values if line_value > top), default=0.0)
+        below = min((bottom - line_value for line_value in line_values if line_value < bottom), default=0.0)
+        place_above = not line_in_text_strip or below <= above
         fig.add_annotation(
             x=float(xi[index]),
-            y=value if value > 0 and place_above else top + offset if place_above else bottom - offset,
+            y=top if place_above else bottom,
             xref="x",
             yref="y",
             text=fmt_num(value, use_comma),
@@ -438,7 +438,7 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
     ))
     table_ax.axis("off")
     cell_text = [
-        [label, *(format_table_value(value, use_comma) for value in values)]
+        [label[:32], *(format_table_value(value, use_comma) for value in values)]
         for label, values in rows
     ]
     header_period_labels = list(period_labels)
@@ -534,7 +534,7 @@ def build_for_lang(lang, data, bip_only=False):
         "02_bip_verwendung": list(zip(
             ("Nominales BIP", "Konsum privater Haushalte", "Konsum des Staates", "Ausrüstungsinvestitionen", "Bauinvestitionen", "Exporte", "Importe")
             if lang == "de" else
-            ("Nominal GDP", "Household consumption", "Government consumption", "Machinery/equipment investment", "Construction investment", "Exports", "Imports"),
+            ("Nominal GDP", "Household consumption", "Government consumption", "Machinery & equipment", "Construction investment", "Exports", "Imports"),
             [data[key] for key in ("bip_n_table", "kp_table", "kph_table", "aus_table", "binv_table", "exp_table", "imp_table")],
         )),
     }
@@ -572,7 +572,7 @@ def build_for_lang(lang, data, bip_only=False):
         fp1.add_trace(go.Scatter(x=list(data["xi"]), y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.1), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
     y1_values = np.concatenate([data[key] for key in ("bip_r", "pg", "bau", "hvg")])
     y1_lo, y1_hi, _, _ = sync_ylim_like_plotly(y1_values)
-    add_bar_value_annotations(fp1, data["xi"], data["bip_r"], [data[key] for key in ("pg", "bau", "hvg")], y1_hi - y1_lo, use_c)
+    add_bar_value_annotations(fp1, data["xi"], data["bip_r"], [data[key] for key in ("pg", "bau", "hvg")], 1.8, use_c)
     save_dash_plotly(fp1, t["p1_t"], t["p1_s"], "src_destatis", "01_bip_entstehung", 135, 480, xq_p, False, title_y=0.95, legend_orientation="h", legend_y=1.02)
 
     fp2 = go.Figure(); l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]; h2_0, h2_1, h2_2, h2_3, h2_4, h2_5, h2_6 = t["p2_h"]; y2_0 = [None if np.isnan(v) else round(float(v), 1) for v in data["bip_n"]]
@@ -582,7 +582,7 @@ def build_for_lang(lang, data, bip_only=False):
         fp2.add_trace(go.Scatter(x=list(data["xi"]), y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0, dash=d_style), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
     y2_values = np.concatenate([data[key] for key in ("bip_n", "kp", "kph", "aus", "binv", "exp", "imp")])
     y2_lo, y2_hi, _, _ = sync_ylim_like_plotly(y2_values)
-    add_bar_value_annotations(fp2, data["xi"], data["bip_n"], [data[key] for key in ("kp", "kph", "aus", "binv", "exp", "imp")], y2_hi - y2_lo, use_c)
+    add_bar_value_annotations(fp2, data["xi"], data["bip_n"], [data[key] for key in ("kp", "kph", "aus", "binv", "exp", "imp")], 3.2, use_c)
     save_dash_plotly(fp2, t["p2_t"], t["p2_s"], "src_destatis", "02_bip_verwendung", 155, 535, xq_p, False, title_y=0.95, legend_orientation="h", legend_y=1.02)
 
     if bip_only:
