@@ -11,6 +11,10 @@ TABLES = [
     "81000-0014",  # Bruttowertschöpfung nach Wirtschaftsbereichen (Quartale)
     "81000-0019",  # BIP Verwendung (Jahre)
     "81000-0020",  # BIP Verwendung (Quartale)
+    "42151-0004",
+    "44111-0009",
+    "45212-0005",
+    "48311-0001",
 ]
 
 os.makedirs("data/cache", exist_ok=True)
