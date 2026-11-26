@@ -407,14 +407,18 @@ def draw_p6(ax, t, d):
 def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
     row_count = len(rows) + 1
     table_height = 230 / 300 if row_count == 5 else 310 / 300
-    footer_height = 50 / 300
+    footer_height = 68 / 300
+    chart_gap_reduction = 60
     original_height = fig.get_figheight()
     new_height = original_height + table_height
     axes = list(fig.axes)
     fig.set_size_inches(fig.get_figwidth(), new_height)
     for ax in axes:
         x, y, width, height = ax.get_position().bounds
-        ax.set_position((x, (y * original_height + table_height) / new_height, width, height * original_height / new_height))
+        y = (y * original_height + table_height) / new_height
+        height = height * original_height / new_height
+        gap = chart_gap_reduction / (300 * new_height)
+        ax.set_position((x, y - gap, width, height + gap))
 
     plot_x, _, plot_width, _ = axes[0].get_position().bounds
     table_ax = fig.add_axes((
