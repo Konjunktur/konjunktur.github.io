@@ -562,7 +562,29 @@ def build_for_lang(lang, data, bip_only=False):
             fig_p.update_xaxes(type="linear", tickmode="array", tickvals=list(range(len(x_tick_labels))), ticktext=x_tick_labels, fixedrange=True, tickangle=-45, showgrid=False, linecolor="#94A3B8", tickfont=dict(size=10.5, color="#475569"))
         fig_p.update_yaxes(fixedrange=True, showgrid=show_y_grid, gridcolor="#E2E8F0", zeroline=True, zerolinecolor="#64748B", zerolinewidth=1.2, tickfont=dict(size=10.5, color="#475569"))
         out_path = f"static/dashboard/{fname_p}{t['sfx']}.html"
-        fig_p.write_html(out_path, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True})
+        post_script = """(function(gd) {
+            const desktopLayout = {
+                "legend.y": gd.layout.legend.y,
+                "legend.yanchor": gd.layout.legend.yanchor,
+                "margin.t": gd.layout.margin.t,
+                "margin.b": gd.layout.margin.b
+            };
+            let mobileMode = null;
+            const updateLegendPosition = () => {
+                const isMobile = window.innerWidth < 680;
+                if (isMobile === mobileMode) return;
+                mobileMode = isMobile;
+                Plotly.relayout(gd, isMobile ? {
+                    "legend.y": -0.32,
+                    "legend.yanchor": "top",
+                    "margin.t": 110,
+                    "margin.b": 210
+                } : desktopLayout);
+            };
+            window.addEventListener("resize", updateLegendPosition);
+            updateLegendPosition();
+        })(document.getElementById("{plot_id}"));"""
+        fig_p.write_html(out_path, include_plotlyjs="cdn", config={"displayModeBar": False, "responsive": True}, post_script=post_script)
         with open(out_path, "r", encoding="utf-8") as fh: html_s = fh.read().replace("<body>", '<body style="margin:0;padding:0;overflow:hidden;">')
         with open(out_path, "w", encoding="utf-8") as fh: fh.write(html_s)
 
