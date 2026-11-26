@@ -296,24 +296,6 @@ def update_dashboard_content(lang, data):
     md_path = os.path.join("content", "dashboard", "_index.en.md" if is_english else "_index.md")
     with open(md_path, "r", encoding="utf-8") as file:
         content = file.read()
-    period_labels = data["bip_table_labels"]
-    t = TEXTS[lang]
-    table_specs = (
-        (
-            "BIP_ENTSTEHUNG",
-            "Indicator" if is_english else "Indikator",
-            list(zip(t["p1_l"], [data[key] for key in ("bip_r_table", "pg_table", "bau_table", "hvg_table")])),
-        ),
-        (
-            "BIP_VERWENDUNG",
-            "Indicator" if is_english else "Indikator",
-            list(zip(t["p2_l"], [data[key] for key in ("bip_n_table", "kp_table", "kph_table", "aus_table", "binv_table", "exp_table", "imp_table")])),
-        ),
-    )
-    table_files = {
-        "BIP_ENTSTEHUNG": "01_bip_entstehung",
-        "BIP_VERWENDUNG": "02_bip_verwendung",
-    }
     chart_specs = (
         ("BIP_ENTSTEHUNG", "01_bip_entstehung", 485),
         ("BIP_VERWENDUNG", "02_bip_verwendung", 540),
@@ -326,7 +308,7 @@ def update_dashboard_content(lang, data):
         replacement = f"{start_marker}\n{build_chart_embed(lang, chart_key, height)}\n{end_marker}"
         content = pattern.sub(lambda _: replacement, content, count=1)
 
-    for name, _, rows in table_specs:
+    for name in ("BIP_ENTSTEHUNG", "BIP_VERWENDUNG"):
         start_marker, end_marker = f"<!-- TABLE_{name}_START -->", f"<!-- TABLE_{name}_END -->"
         pattern = re.compile(re.escape(start_marker) + r".*?" + re.escape(end_marker), re.DOTALL)
         matches = pattern.findall(content)
@@ -334,13 +316,6 @@ def update_dashboard_content(lang, data):
             raise RuntimeError(f"Unerwartet mehrere Tabellenmarker-Blöcke {name} in {md_path}")
         if matches:
             content = pattern.sub("", content, count=1)
-        indicator_header = "Indicator" if is_english else "Indikator"
-        file_stem = f"{table_files[name]}{TEXTS[lang]['sfx']}"
-        with open(os.path.join("static", "dashboard", f"{file_stem}.csv"), "w", encoding="utf-8-sig", newline="") as csv_file:
-            writer = csv.writer(csv_file, delimiter=";")
-            writer.writerow([indicator_header, *period_labels])
-            for label, values in rows:
-                writer.writerow([label, *(format_table_value(value, TEXTS[lang]["comma"]) for value in values)])
 
     content = content.replace('<link rel="stylesheet" href="/dashboard/table-modal.css">\n', "")
     content = content.replace('<script src="/dashboard/table-modal.js" defer></script>\n', "")
