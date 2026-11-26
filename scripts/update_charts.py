@@ -327,24 +327,24 @@ def update_dashboard_content(lang, data):
         file.write(content)
 
 
-def draw_bars_with_auto_labels(ax, xi, vals, line_series, label, use_comma, ylo, yhi):
+def draw_bars_with_auto_labels(ax, xi, vals, line_series, label, use_comma, collision_threshold):
     bars = ax.bar(xi, vals, width=0.52, facecolor="#DBEAFE", edgecolor="#1E3A8A", lw=1.1, label=label, zorder=2)
-    offset = (yhi - ylo) * 0.018
     for index, bar in enumerate(bars):
         value = float(vals[index])
-        if np.isnan(value):
+        if not np.isfinite(value):
             continue
         line_values = [float(series[index]) for series in line_series if np.isfinite(series[index])]
         top, bottom = max(value, 0.0), min(value, 0.0)
-        if value > 0:
-            place_above = not any(value - 0.5 <= line_value <= value + 2.5 for line_value in line_values)
-        else:
-            above = min((v - top for v in line_values if v > top), default=0.0)
-            below = min((bottom - v for v in line_values if v < bottom), default=0.0)
-            place_above = above >= below
+        line_in_text_strip = any(
+            top <= line_value <= top + collision_threshold
+            for line_value in line_values
+        )
+        above = min((line_value - top for line_value in line_values if line_value > top), default=0.0)
+        below = min((bottom - line_value for line_value in line_values if line_value < bottom), default=0.0)
+        place_above = not line_in_text_strip or below <= above
         ax.text(
             bar.get_x() + bar.get_width() / 2,
-            value if value > 0 and place_above else top + offset if place_above else bottom - offset,
+            top if place_above else bottom,
             fmt_num(value, use_comma),
             ha="center", va="bottom" if place_above else "top",
             fontsize=6.2, color="#1E3A8A", fontweight="bold",
@@ -358,7 +358,7 @@ def draw_p1(ax, t, d):
     ylo, yhi, yt, _ = sync_ylim_like_plotly(np.concatenate([d["bip_r"], d["pg"], d["bau"], d["hvg"]]))
     style_panel(ax, t["p1_t"], t["p1_s"], ylo, yhi, yt, t["comma"])
     l1_0, l1_1, l1_2, l1_3 = t["p1_l"]
-    draw_bars_with_auto_labels(ax, xi, d["bip_r"], [d["pg"], d["bau"], d["hvg"]], l1_0, t["comma"], ylo, yhi)
+    draw_bars_with_auto_labels(ax, xi, d["bip_r"], [d["pg"], d["bau"], d["hvg"]], l1_0, t["comma"], 1.8)
     for key, col, mk, ms, lbl in (("pg", "#D97706", "o", 2.5, l1_1), ("bau", "#64748B", "s", 2.5, l1_2), ("hvg", "#059669", "^", 2.8, l1_3)):
         ax.plot(xi, d[key], color=col, lw=1.9, marker=mk, ms=ms, label=lbl, zorder=3)
     ax.set_xticks(xi); ax.set_xticklabels(xl_bip); ax.yaxis.grid(False); set_legend(ax, 2)
@@ -368,7 +368,7 @@ def draw_p2(ax, t, d):
     ylo, yhi, yt, _ = sync_ylim_like_plotly(np.concatenate([d["bip_n"], d["kp"], d["kph"], d["aus"], d["binv"], d["exp"], d["imp"]]))
     style_panel(ax, t["p2_t"], t["p2_s"], ylo, yhi, yt, t["comma"], title_y=1.52, sub_y=1.43)
     l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]
-    draw_bars_with_auto_labels(ax, xi, d["bip_n"], [d[k] for k in ("kp", "kph", "aus", "binv", "exp", "imp")], l2_0, t["comma"], ylo, yhi)
+    draw_bars_with_auto_labels(ax, xi, d["bip_n"], [d[k] for k in ("kp", "kph", "aus", "binv", "exp", "imp")], l2_0, t["comma"], 3.2)
     for vals, col, lbl, lstyle in ((d["kp"], "#059669", l2_1, "-"), (d["kph"], "#D97706", l2_2, "--"), (d["aus"], "#7C3AED", l2_3, "-"), (d["binv"], "#0284C7", l2_4, "-"), (d["exp"], "#DC2626", l2_5, "-"), (d["imp"], "#64748B", l2_6, "-")):
         ax.plot(xi, vals, color=col, lw=1.7, ls=lstyle, label=lbl, zorder=3)
     ax.set_xticks(xi); ax.set_xticklabels(xl_bip); ax.yaxis.grid(False)
