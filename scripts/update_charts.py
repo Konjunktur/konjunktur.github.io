@@ -1,8 +1,7 @@
-import os, io, re, csv, json, time, zipfile, requests, html, argparse
+import os, io, re, csv, json, time, zipfile, requests, argparse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 from datetime import datetime
 import plotly.graph_objects as go
 
@@ -19,7 +18,6 @@ TEXTS = {
         "p2_t": "Bruttoinlandsprodukt: Verwendung", "p2_s": "Veränderung zum Vorjahr in % (Ursprungswerte)",
         "p2_l": ("Nominales BIP", "Konsumausgaben der privaten Haushalte", "Konsumausgaben des Staates", "Ausrüstungsinvestitionen", "Bauinvestitionen", "Exporte", "Importe"),
         "p2_h": ("Nom. BIP", "Konsum priv. HH", "Konsum Staat", "Ausrüstungen", "Bauten", "Exporte", "Importe"),
-        "rec_svr": "Rezession/Schwäche (SVR/BBK)", "rec_bip": "Reales BIP < 0 % gg. Vj.",
         "p3_t": "Auftragseingänge", "p3_s": "Volumenindex, Veränderung zum Vorjahr in % (Ursprungswerte)",
         "p3_l": ("Auftragseingang Industrie", "Auftragseingang Bauwirtschaft"),
         "p4_t": "Produktion & Einzelhandelsumsätze", "p4_s": "Real, Veränderung zum Vorjahr in % (Ursprungswerte)",
@@ -41,7 +39,6 @@ TEXTS = {
         "p2_t": "Gross Domestic Product: Expenditure", "p2_s": "Change on previous year in % (unadjusted data)",
         "p2_l": ("Nominal GDP", "Household final consumption expenditure", "Government final consumption expenditure", "Machinery and equipment investment", "Construction investment", "Exports", "Imports"),
         "p2_h": ("Nom. GDP", "Household consumption", "Government consumption", "Machinery/equip.", "Construction", "Exports", "Imports"),
-        "rec_svr": "Recession/Slowdown (GCEE/BBK)", "rec_bip": "Real GDP < 0% YoY",
         "p3_t": "New Orders", "p3_s": "Volume index, change on previous year in % (unadjusted data)",
         "p3_l": ("New orders: Manufacturing", "New orders: Construction"),
         "p4_t": "Production & Retail Sales", "p4_s": "Real, change on previous year in % (unadjusted data)",
@@ -273,92 +270,6 @@ def draw_bars_with_labels(ax, xi, vals, label, use_comma, y_span=18.0):
             ax.text(b.get_x() + b.get_width() / 2, h + (off_b if h >= 0 else -off_b), fmt_num(h, use_comma), ha="center", va=("bottom" if h >= 0 else "top"), fontsize=6.2, color="#1E3A8A", fontweight="bold", zorder=4)
 
 
-DE_RECESSIONS = [
-    ("2008-04", "2009-06"),
-    ("2012-10", "2013-03"),
-    ("2020-02", "2020-04"),
-    ("2022-10", "2025-12"),
-]
-
-
-def _period_months(period):
-    if not period:
-        return None
-    if "-Q" not in period:
-        return f"{period}-01", f"{period}-12"
-    year, quarter = period.split("-Q")
-    starts = {"1": "01", "2": "04", "3": "07", "4": "10"}
-    ends = {"1": "03", "2": "06", "3": "09", "4": "12"}
-    return f"{year}-{starts[quarter]}", f"{year}-{ends[quarter]}"
-
-
-def _recession_indices(periods, intervals):
-    bounds = [_period_months(period) for period in periods]
-    return [
-        i for i, period in enumerate(bounds)
-        if period and any(period[0] <= end and period[1] >= start for start, end in intervals)
-    ]
-
-
-def add_recession_shading_mpl(ax, data, t):
-    def add_spans(indices, color, alpha, zorder):
-        if not indices:
-            return
-        start = previous = indices[0]
-        for index in indices[1:] + [None]:
-            if index is None or index != previous + 1:
-                ax.axvspan(start - 0.5, previous + 0.5, color=color, alpha=alpha, zorder=zorder)
-                if index is None:
-                    break
-                start = index
-            previous = index
-
-    periods = data["bip_periods"]
-    svr_indices = _recession_indices(periods, DE_RECESSIONS)
-    bip_indices = [i for i, period in enumerate(periods) if period in data["bip_negative_periods"]]
-    add_spans(svr_indices, "#E2E8F0", 0.85, 0)
-    add_spans(bip_indices, "#93C5FD", 0.45, 0.5)
-    handles = []
-    if svr_indices:
-        handles.append(mpatches.Patch(color="#E2E8F0", label=t["rec_svr"]))
-    if bip_indices:
-        handles.append(mpatches.Patch(color="#93C5FD", alpha=0.55, label=t["rec_bip"]))
-    return handles
-
-
-def add_recession_shading_plotly(fig_p, data, t):
-    periods = data["bip_periods"]
-    for indices, fillcolor in (
-        (_recession_indices(periods, DE_RECESSIONS), "rgba(203,213,225,0.45)"),
-        ([i for i, period in enumerate(periods) if period in data["bip_negative_periods"]], "rgba(147,197,253,0.40)"),
-    ):
-        if not indices:
-            continue
-        start = previous = indices[0]
-        for index in indices[1:] + [None]:
-            if index is None or index != previous + 1:
-                fig_p.add_vrect(
-                    x0=start - 0.5, x1=previous + 0.5,
-                    fillcolor=fillcolor, layer="below", line_width=0,
-                )
-                if index is None:
-                    break
-                start = index
-            previous = index
-    if _recession_indices(periods, DE_RECESSIONS):
-        fig_p.add_trace(go.Scatter(
-            x=[None], y=[None], mode="markers",
-            marker=dict(size=10, symbol="square", color="rgba(203,213,225,0.85)"),
-            name=t["rec_svr"], showlegend=True, hoverinfo="skip",
-        ))
-    if any(period in data["bip_negative_periods"] for period in periods):
-        fig_p.add_trace(go.Scatter(
-            x=[None], y=[None], mode="markers",
-            marker=dict(size=10, symbol="square", color="rgba(147,197,253,0.75)"),
-            name=t["rec_bip"], showlegend=True, hoverinfo="skip",
-        ))
-
-
 def format_table_value(value, use_comma):
     if value is None or not np.isfinite(value):
         return "–"
@@ -368,63 +279,19 @@ def format_table_value(value, use_comma):
     return f"{number}%"
 
 
-def build_table_html(indicator_header, period_labels, rows, use_comma, table_id):
-    cell_style = "border-bottom:1px solid #E2E8F0;padding:0.4rem 0.55rem;text-align:right;"
-    quarter_style = "border-left:2px solid #CBD5E1;background:#F8FAFC;"
-    left_style = cell_style.replace("text-align:right;", "text-align:left;")
-    html_rows = [
-        "<div style=\"overflow-x:auto;\">",
-        f"<table id=\"{html.escape(table_id, quote=True)}\" style=\"width:100%;border-collapse:collapse;font-size:0.9rem;white-space:nowrap;\">",
-        "<thead><tr>",
-        f"<th style=\"{left_style}\">{html.escape(indicator_header)}</th>",
-    ]
-    for index, period in enumerate(period_labels):
-        style = cell_style + (quarter_style if index == 7 else "")
-        html_rows.append(f"<th style=\"{style}\">{html.escape(period)}</th>")
-    html_rows.append("</tr></thead><tbody>")
-    for label, values in rows:
-        html_rows.append(f"<tr><th scope=\"row\" style=\"{left_style}\">{html.escape(label)}</th>")
-        for index, value in enumerate(values):
-            style = cell_style + (quarter_style if index == 7 else "")
-            html_rows.append(f"<td style=\"{style}\">{format_table_value(value, use_comma)}</td>")
-        html_rows.append("</tr>")
-    html_rows.extend(("</tbody></table>", "</div>"))
-    return "\n".join(html_rows)
-
-
-def build_chart_menu(lang, chart_key, height):
+def build_chart_embed(lang, chart_key, height):
     is_english = lang == "en"
     suffix = TEXTS[lang]["sfx"]
     stem = f"{chart_key}{suffix}"
-    labels = {
-        "chart": "View chart fullscreen" if is_english else "Grafik im Vollbild",
-        "table": "View table fullscreen" if is_english else "Tabelle im Vollbild",
-        "png": "Download PNG image" if is_english else "PNG-Grafik herunterladen",
-        "csv": "Download CSV file" if is_english else "CSV-Datei herunterladen",
-        "print": "Print chart" if is_english else "Grafik drucken",
-        "menu": "Chart actions" if is_english else "Grafikaktionen",
-    }
     chart_url = f"/dashboard/{stem}.html"
-    table_id = f"{stem}-table"
-    menu_id = f"{stem}-menu"
+    fullscreen_label = "View fullscreen" if is_english else "In Vollbild anzeigen"
     return "\n".join((
-        f'<div class="dashboard-chart-menu" data-dashboard-menu="{html.escape(stem, quote=True)}">',
-        f'<button class="dashboard-chart-menu__toggle" type="button" aria-label="{labels["menu"]}" aria-expanded="false" aria-controls="{menu_id}">≡</button>',
-        f'<div class="dashboard-chart-menu__dropdown" id="{menu_id}" hidden>',
-        f'<button type="button" data-chart-modal="{chart_url}">{labels["chart"]}</button>',
-        f'<button type="button" data-table-modal="{table_id}">{labels["table"]}</button>',
-        "<hr>",
-        f'<a href="/dashboard/{stem}.png" download>{labels["png"]}</a>',
-        f'<a href="/dashboard/{stem}.csv" download>{labels["csv"]}</a>',
-        "<hr>",
-        f'<button type="button" data-chart-print="{chart_url}">{labels["print"]}</button>',
-        "</div>",
         f'<iframe src="{chart_url}" style="width:100%; height:{height}px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>',
-        "</div>",
+        f"- [{fullscreen_label}](/dashboard/{stem}.png)",
     ))
 
 
-def update_dashboard_tables(lang, data):
+def update_dashboard_content(lang, data):
     is_english = lang == "en"
     md_path = os.path.join("content", "dashboard", "_index.en.md" if is_english else "_index.md")
     with open(md_path, "r", encoding="utf-8") as file:
@@ -455,26 +322,28 @@ def update_dashboard_tables(lang, data):
         start_marker, end_marker = f"<!-- {name}_CHART_START -->", f"<!-- {name}_CHART_END -->"
         pattern = re.compile(re.escape(start_marker) + r".*?" + re.escape(end_marker), re.DOTALL)
         if len(pattern.findall(content)) != 1:
-            raise RuntimeError(f"Erwartete genau einen Grafik-Menü-Block {name} in {md_path}")
-        replacement = f"{start_marker}\n{build_chart_menu(lang, chart_key, height)}\n{end_marker}"
+            raise RuntimeError(f"Erwartete genau einen Grafik-Block {name} in {md_path}")
+        replacement = f"{start_marker}\n{build_chart_embed(lang, chart_key, height)}\n{end_marker}"
         content = pattern.sub(lambda _: replacement, content, count=1)
 
-    for name, indicator_header, rows in table_specs:
+    for name, _, rows in table_specs:
         start_marker, end_marker = f"<!-- TABLE_{name}_START -->", f"<!-- TABLE_{name}_END -->"
         pattern = re.compile(re.escape(start_marker) + r".*?" + re.escape(end_marker), re.DOTALL)
-        if len(pattern.findall(content)) != 1:
-            raise RuntimeError(f"Erwartete genau einen Tabellenmarker-Block {name} in {md_path}")
+        matches = pattern.findall(content)
+        if len(matches) > 1:
+            raise RuntimeError(f"Unerwartet mehrere Tabellenmarker-Blöcke {name} in {md_path}")
+        if matches:
+            content = pattern.sub("", content, count=1)
+        indicator_header = "Indicator" if is_english else "Indikator"
         file_stem = f"{table_files[name]}{TEXTS[lang]['sfx']}"
-        table = build_table_html(indicator_header, period_labels, rows, TEXTS[lang]["comma"], f"{file_stem}-table")
-        replacement = f"{start_marker}\n{table}\n{end_marker}"
-        content = pattern.sub(lambda _: replacement, content, count=1)
-
         with open(os.path.join("static", "dashboard", f"{file_stem}.csv"), "w", encoding="utf-8-sig", newline="") as csv_file:
             writer = csv.writer(csv_file, delimiter=";")
             writer.writerow([indicator_header, *period_labels])
             for label, values in rows:
                 writer.writerow([label, *(format_table_value(value, TEXTS[lang]["comma"]) for value in values)])
 
+    content = content.replace('<link rel="stylesheet" href="/dashboard/table-modal.css">\n', "")
+    content = content.replace('<script src="/dashboard/table-modal.js" defer></script>\n', "")
     with open(md_path, "w", encoding="utf-8") as file:
         file.write(content)
 
@@ -506,24 +375,22 @@ def draw_p1(ax, t, d):
     xi, xl_bip = d["xi"], d["xl_bip"]
     ylo, yhi, yt, _ = sync_ylim_like_plotly(np.concatenate([d["bip_r"], d["pg"], d["bau"], d["hvg"]]))
     style_panel(ax, t["p1_t"], t["p1_s"], ylo, yhi, yt, t["comma"])
-    shading_handles = add_recession_shading_mpl(ax, d, t)
     l1_0, l1_1, l1_2, l1_3 = t["p1_l"]
     draw_bars_with_auto_labels(ax, xi, d["bip_r"], [d["pg"], d["bau"], d["hvg"]], l1_0, t["comma"], ylo, yhi)
     for key, col, mk, ms, lbl in (("pg", "#D97706", "o", 2.5, l1_1), ("bau", "#64748B", "s", 2.5, l1_2), ("hvg", "#059669", "^", 2.8, l1_3)):
         ax.plot(xi, d[key], color=col, lw=1.9, marker=mk, ms=ms, label=lbl, zorder=3)
-    ax.set_xticks(xi); ax.set_xticklabels(xl_bip); ax.yaxis.grid(False); set_legend(ax, 2, shading_handles)
+    ax.set_xticks(xi); ax.set_xticklabels(xl_bip); ax.yaxis.grid(False); set_legend(ax, 2)
 
 def draw_p2(ax, t, d):
     xi, xl_bip = d["xi"], d["xl_bip"]
     ylo, yhi, yt, _ = sync_ylim_like_plotly(np.concatenate([d["bip_n"], d["kp"], d["kph"], d["aus"], d["binv"], d["exp"], d["imp"]]))
     style_panel(ax, t["p2_t"], t["p2_s"], ylo, yhi, yt, t["comma"], title_y=1.52, sub_y=1.43)
-    shading_handles = add_recession_shading_mpl(ax, d, t)
     l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]
     draw_bars_with_auto_labels(ax, xi, d["bip_n"], [d[k] for k in ("kp", "kph", "aus", "binv", "exp", "imp")], l2_0, t["comma"], ylo, yhi)
     for vals, col, lbl, lstyle in ((d["kp"], "#059669", l2_1, "-"), (d["kph"], "#D97706", l2_2, "--"), (d["aus"], "#7C3AED", l2_3, "-"), (d["binv"], "#0284C7", l2_4, "-"), (d["exp"], "#DC2626", l2_5, "-"), (d["imp"], "#64748B", l2_6, "-")):
         ax.plot(xi, vals, color=col, lw=1.7, ls=lstyle, label=lbl, zorder=3)
     ax.set_xticks(xi); ax.set_xticklabels(xl_bip); ax.yaxis.grid(False)
-    set_legend(ax, 3 if ax.figure.get_figwidth() < 10 else 2, shading_handles)
+    set_legend(ax, 3 if ax.figure.get_figwidth() < 10 else 2)
 
 def draw_p3(ax, t, d):
     s_ai, s_ab = d["s_ai"], d["s_ab"]; xm = np.arange(len(s_ai))
@@ -562,12 +429,66 @@ def draw_p6(ax, t, d):
     mark_ends(ax, [(xm, s_al.values, "#1B3A6B"), (xm, s_hv.values, "#D97706")], t["comma"], yhi - ylo)
     ax.set_xticks(xm); ax.set_xticklabels(list(s_al.index)); set_legend(ax, 2)
 
-def save_single(draw_fn, t, data, fname, src_key, top_adj=0.68):
+def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
+    row_count = len(rows) + 1
+    table_height = 140 / 300 if row_count == 5 else 210 / 300
+    original_height = fig.get_figheight()
+    new_height = original_height + table_height
+    axes = list(fig.axes)
+    fig.set_size_inches(fig.get_figwidth(), new_height)
+    for ax in axes:
+        x, y, width, height = ax.get_position().bounds
+        ax.set_position((x, (y * original_height + table_height) / new_height, width, height * original_height / new_height))
+
+    table_ax = fig.add_axes((0.09, 0, 0.84, table_height / new_height))
+    table_ax.axis("off")
+    cell_text = [
+        [label, *(format_table_value(value, use_comma) for value in values)]
+        for label, values in rows
+    ]
+    table = table_ax.table(
+        cellText=cell_text,
+        colLabels=[indicator_header, *period_labels],
+        colWidths=[0.4] + [0.6 / len(period_labels)] * len(period_labels),
+        cellLoc="right",
+        colLoc="right",
+        bbox=(0, 0, 1, 1),
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(5.2)
+    for (row, column), cell in table.get_celld().items():
+        cell.set_edgecolor("#CBD5E1")
+        cell.set_linewidth(0.35)
+        if row == 0:
+            cell.set_facecolor("#E2E8F0")
+            cell.set_text_props(weight="bold", color="#0F172A", ha="left" if column == 0 else "right")
+        elif column == 0:
+            cell.set_facecolor("#F8FAFC")
+            cell.set_text_props(weight="bold", color="#1E293B", ha="left")
+        else:
+            cell.set_facecolor("white")
+            cell.set_text_props(color="#334155")
+        if column == 8:
+            cell.set_linewidth(0.8)
+    return table_height
+
+
+def save_single(draw_fn, t, data, fname, src_key, top_adj=0.68, table_rows=None):
     fig, ax = plt.subplots(figsize=(7.4, 4.9), dpi=300, facecolor="white"); plt.subplots_adjust(left=0.09, right=0.93, top=top_adj, bottom=0.24); draw_fn(ax, t, data)
     for txt in list(ax.texts):
         if txt.get_text() == "T.H.": txt.remove()
-    fig.text(0.09, 0.02, f"{t[src_key]}{datetime.now().strftime(t['date_fmt'])}", fontsize=7.5, color="#64748B")
-    fig.text(0.93, 0.02, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
+    table_height = 0
+    if table_rows is not None:
+        table_height = add_png_data_table(
+            fig,
+            data["bip_table_labels"],
+            table_rows,
+            "Indicator" if t["sfx"] else "Indikator",
+            t["comma"],
+        )
+    footer_y = (table_height + 0.14) / fig.get_figheight()
+    fig.text(0.09, footer_y, f"{t[src_key]}{datetime.now().strftime(t['date_fmt'])}", fontsize=7.5, color="#64748B")
+    fig.text(0.93, footer_y, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
     plt.savefig(f"static/dashboard/{fname}{t['sfx']}.png", dpi=300); plt.close()
 
 def build_for_lang(lang, data, bip_only=False):
@@ -581,9 +502,13 @@ def build_for_lang(lang, data, bip_only=False):
     singles = ((draw_p1, "01_bip_entstehung", "src_destatis", 0.68), (draw_p2, "02_bip_verwendung", "src_destatis", 0.60))
     if not bip_only:
         singles += ((draw_p3, "03_auftragseingaenge", "src_destatis", 0.68), (draw_p4, "04_produktion_einzelhandel", "src_destatis", 0.68), (draw_p5, "05_leistungsbilanz", "src_bbk", 0.68), (draw_p6, "06_arbeitslosigkeit_inflation", "src_ba_destatis", 0.68))
+    png_table_rows = {
+        "01_bip_entstehung": list(zip(t["p1_l"], [data[key] for key in ("bip_r_table", "pg_table", "bau_table", "hvg_table")])),
+        "02_bip_verwendung": list(zip(t["p2_l"], [data[key] for key in ("bip_n_table", "kp_table", "kph_table", "aus_table", "binv_table", "exp_table", "imp_table")])),
+    }
     for fn, nm, sk, tp in singles:
-        save_single(fn, t, data, nm, sk, tp)
-    update_dashboard_tables(lang, data)
+        save_single(fn, t, data, nm, sk, tp, png_table_rows.get(nm))
+    update_dashboard_content(lang, data)
     now_str_p, fmt_arr = datetime.now().strftime(t["date_fmt"]), lambda seq: [fmt_num(v, use_c) for v in seq]
 
     def save_dash_plotly(fig_p, title_p, sub_p, src_key, fname_p, top_m=132, height_p=470, x_tick_labels=None, show_y_grid=True, title_y=0.955, legend_orientation="v", legend_y=1.01):
@@ -613,7 +538,6 @@ def build_for_lang(lang, data, bip_only=False):
     for lbl_s, hov_s, key_s, col_s in ((l1_1, h1_1, "pg", "#D97706"), (l1_2, h1_2, "bau", "#64748B"), (l1_3, h1_3, "hvg", "#059669")):
         ys = [None if np.isnan(v) else round(float(v), 1) for v in data[key_s]]
         fp1.add_trace(go.Scatter(x=list(data["xi"]), y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.1), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
-    add_recession_shading_plotly(fp1, data, t)
     y1_values = np.concatenate([data[key] for key in ("bip_r", "pg", "bau", "hvg")])
     y1_lo, y1_hi, _, _ = sync_ylim_like_plotly(y1_values)
     add_bar_value_annotations(fp1, data["xi"], data["bip_r"], [data[key] for key in ("pg", "bau", "hvg")], y1_hi - y1_lo, use_c)
@@ -624,7 +548,6 @@ def build_for_lang(lang, data, bip_only=False):
     for lbl_s, hov_s, key_s, col_s, d_style in ((l2_1, h2_1, "kp", "#059669", "solid"), (l2_2, h2_2, "kph", "#D97706", "dash"), (l2_3, h2_3, "aus", "#7C3AED", "solid"), (l2_4, h2_4, "binv", "#0284C7", "solid"), (l2_5, h2_5, "exp", "#DC2626", "solid"), (l2_6, h2_6, "imp", "#64748B", "solid")):
         ys = [None if np.isnan(v) else round(float(v), 1) for v in data[key_s]]
         fp2.add_trace(go.Scatter(x=list(data["xi"]), y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.0, dash=d_style), hovertemplate=f"{hov_s}: <b>%{{customdata}} %</b><extra></extra>"))
-    add_recession_shading_plotly(fp2, data, t)
     y2_values = np.concatenate([data[key] for key in ("bip_n", "kp", "kph", "aus", "binv", "exp", "imp")])
     y2_lo, y2_hi, _, _ = sync_ylim_like_plotly(y2_values)
     add_bar_value_annotations(fp2, data["xi"], data["bip_n"], [data[key] for key in ("kp", "kph", "aus", "binv", "exp", "imp")], y2_hi - y2_lo, use_c)
@@ -701,8 +624,7 @@ def main(bip_only=False):
     exp = get_bip_series(df_y2, df_q2, ["DG", "EXP001", "VGRPKM"], ["DG", "WERTORG", "EXP001", "VGRPKM"])
     imp = get_bip_series(df_y2, df_q2, ["DG", "IMP001", "VGRPKM"], ["DG", "WERTORG", "IMP001", "VGRPKM"])
 
-    bip_periods = yrs + ("",) + qtrs
-    table_indices = list(range(len(yrs))) + list(range(len(yrs) + 1, len(bip_periods)))
+    table_indices = list(range(len(yrs))) + list(range(len(yrs) + 1, len(xl_bip)))
     table_periods = yrs + qtrs
     table_labels = yrs + tuple(f"Q{quarter[-1]} {quarter[2:4]}" for quarter in qtrs)
     table_data = {
@@ -713,13 +635,8 @@ def main(bip_only=False):
             ("binv", binv), ("exp", exp), ("imp", imp),
         )
     }
-    bip_negative_periods = {
-        period for period, value in zip(bip_periods, bip_r)
-        if period and np.isfinite(value) and value < 0
-    }
     data = {
-        "xi": xi, "xl_bip": xl_bip, "bip_periods": bip_periods,
-        "bip_negative_periods": bip_negative_periods,
+        "xi": xi, "xl_bip": xl_bip,
         "bip_r": bip_r, "pg": pg, "bau": bau, "hvg": hvg,
         "bip_n": bip_n, "kp": kp, "kph": kph, "aus": aus,
         "binv": binv, "exp": exp, "imp": imp,
