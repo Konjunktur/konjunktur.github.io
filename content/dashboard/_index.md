@@ -30,7 +30,7 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 <iframe src="/dashboard/03_auftragseingaenge.html" style="width:100%; height:455px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
-- [In Vollbild anzeigen](/dashboard/03_auftragseingaenge.png)
+<p><a href="/dashboard/03_auftragseingaenge.png" target="_blank" rel="noopener">In Vollbild anzeigen</a></p>
 - *Erläuterung* - Volumenindex der Auftragseingänge in der Industrie und im Bauhauptgewerbe, Veränderung gegenüber dem Vorjahr in Prozent (Ursprungswerte).
 - *Quelle* - Statistisches Bundesamt.
 
@@ -38,7 +38,7 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 <iframe src="/dashboard/04_produktion_einzelhandel.html" style="width:100%; height:470px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
-- [In Vollbild anzeigen](/dashboard/04_produktion_einzelhandel.png)
+<p><a href="/dashboard/04_produktion_einzelhandel.png" target="_blank" rel="noopener">In Vollbild anzeigen</a></p>
 - *Erläuterung* - Real, Veränderung gegenüber dem Vorjahr in Prozent (Ursprungswerte).
 - *Quelle* - Statistisches Bundesamt.
 
@@ -46,7 +46,7 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 <iframe src="/dashboard/05_leistungsbilanz.html" style="width:100%; height:440px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
-- [In Vollbild anzeigen](/dashboard/05_leistungsbilanz.png)
+<p><a href="/dashboard/05_leistungsbilanz.png" target="_blank" rel="noopener">In Vollbild anzeigen</a></p>
 - *Erläuterung* - Monatlicher Leistungsbilanzsaldo Deutschlands in Milliarden Euro (Ursprungswerte).
 - *Quelle* - Deutsche Bundesbank.
 
@@ -54,6 +54,6 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 <iframe src="/dashboard/06_arbeitslosigkeit_inflation.html" style="width:100%; height:485px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
-- [In Vollbild anzeigen](/dashboard/06_arbeitslosigkeit_inflation.png)
+<p><a href="/dashboard/06_arbeitslosigkeit_inflation.png" target="_blank" rel="noopener">In Vollbild anzeigen</a></p>
 - *Erläuterung* - Arbeitslosenquote sowie Veränderung des Harmonisierten Verbraucherpreisindex (HVPI) gegenüber dem Vorjahr in Prozent (Ursprungswerte). Inflationsziel der EZB: 2%. Vollbeschäftigung: 3% (2% saisonal, 1% friktionell).
 - *Quelle* - Statistisches Bundesamt (Arbeitslosenquote und HVPI).

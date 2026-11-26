@@ -504,7 +504,7 @@ def build_for_lang(lang, data, bip_only=False):
     if lang == "en":
         def english_axis_period_label(label):
             match = re.fullmatch(r"Q([1-4]) (\d{2})", label)
-            return f"Q{match.group(1)} '{match.group(2)}" if match else label
+            return f"Q{match.group(1)} {match.group(2)}" if match else label
 
         def english_table_period_label(label):
             match = re.fullmatch(r"Q([1-4]) (\d{2})", label)
@@ -526,7 +526,7 @@ def build_for_lang(lang, data, bip_only=False):
         singles += ((draw_p3, "03_auftragseingaenge", "src_destatis", 0.68), (draw_p4, "04_produktion_einzelhandel", "src_destatis", 0.68), (draw_p5, "05_leistungsbilanz", "src_bbk", 0.68), (draw_p6, "06_arbeitslosigkeit_inflation", "src_ba_destatis", 0.68))
     png_table_rows = {
         "01_bip_entstehung": list(zip(
-            ("Reales BIP", "Produzierendes Gewerbe (o. Bau)", "Baugewerbe", "Handel, Verkehr, Gastgewerbe")
+            ("Reales BIP", "Produzierendes Gewerbe (o. " "Bau)", "Baugewerbe", "Handel, Verkehr, Gastgewerbe")
             if lang == "de" else
             ("Real GDP", "Industry excl. construction", "Construction", "Trade, transport, hospitality"),
             [data[key] for key in ("bip_r_table", "pg_table", "bau_table", "hvg_table")],
