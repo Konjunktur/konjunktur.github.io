@@ -13,7 +13,7 @@ BBK_BASE = "https://api.statistiken." + "bundesbank.de/rest/data"
 TEXTS = {
     "de": {
         "p1_t": "Bruttoinlandsprodukt: Entstehung", "p1_s": "Veränderung zum Vorjahr in % (preisbereinigt, Ursprungswerte)",
-        "p1_l": ("Reales BIP", "Produzierendes Gewerbe (ohne Baugewerbe)", "Baugewerbe", "Handel, Verkehr, Gastgewerbe"),
+        "p1_l": ("Reales BIP", "Produzierendes Gewerbe (o. Bau)", "Baugewerbe", "Handel, Verkehr, Gastgewerbe"),
         "p1_h": ("Reales BIP", "Prod. Gew. o. Bau", "Baugewerbe", "Handel/Verkehr/Gastg."),
         "p2_t": "Bruttoinlandsprodukt: Verwendung", "p2_s": "Veränderung zum Vorjahr in % (Komponenten preisbereinigt, nominales BIP in jeweiligen Preisen, Ursprungswerte)",
         "p2_l": ("Nominales BIP", "Konsumausgaben der privaten Haushalte", "Konsumausgaben des Staates", "Ausrüstungsinvestitionen", "Bauinvestitionen", "Exporte", "Importe"),
