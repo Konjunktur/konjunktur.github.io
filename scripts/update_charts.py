@@ -536,7 +536,7 @@ def build_for_lang(lang, data, bip_only=False):
         "02_bip_verwendung": list(zip(
             ("Nominales BIP", "Konsum privater Haushalte", "Konsum des Staates", "Ausrüstungsinvestitionen", "Bauinvestitionen", "Exporte", "Importe")
             if lang == "de" else
-            ("Nominal GDP", "Household consumption", "Government consumption", "Machinery & equipment investment", "Construction investment", "Exports", "Imports"),
+            ("Nominal GDP", "Household consumption", "Government consumption", "Machinery, equip. investment", "Construction investment", "Exports", "Imports"),
             [data[key] for key in ("bip_n_table", "kp_table", "kph_table", "aus_table", "binv_table", "exp_table", "imp_table")],
         )),
     }
