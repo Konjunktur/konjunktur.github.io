@@ -11,7 +11,7 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 <!-- BIP_ENTSTEHUNG_CHART_START -->
 <iframe src="/dashboard/01_bip_entstehung.html" style="width:100%; height:485px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
-- [In Vollbild anzeigen](/dashboard/01_bip_entstehung.png)
+<p><a href="/dashboard/01_bip_entstehung.png" target="_blank" rel="noopener">In Vollbild anzeigen</a></p>
 <!-- BIP_ENTSTEHUNG_CHART_END -->
 
 
@@ -20,7 +20,7 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 <!-- BIP_VERWENDUNG_CHART_START -->
 <iframe src="/dashboard/02_bip_verwendung.html" style="width:100%; height:540px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
-- [In Vollbild anzeigen](/dashboard/02_bip_verwendung.png)
+<p><a href="/dashboard/02_bip_verwendung.png" target="_blank" rel="noopener">In Vollbild anzeigen</a></p>
 <!-- BIP_VERWENDUNG_CHART_END -->
 
 

@@ -285,9 +285,10 @@ def build_chart_embed(lang, chart_key, height):
     stem = f"{chart_key}{suffix}"
     chart_url = f"/dashboard/{stem}.html"
     fullscreen_label = "View fullscreen" if is_english else "In Vollbild anzeigen"
+    png_url = f"/dashboard/{stem}.png"
     return "\n".join((
         f'<iframe src="{chart_url}" style="width:100%; height:{height}px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>',
-        f"- [{fullscreen_label}](/dashboard/{stem}.png)",
+        f'<p><a href="{png_url}" target="_blank" rel="noopener">{fullscreen_label}</a></p>',
     ))
 
 
@@ -407,8 +408,8 @@ def draw_p6(ax, t, d):
 def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
     row_count = len(rows) + 1
     table_height = 230 / 300 if row_count == 5 else 310 / 300
-    footer_height = 68 / 300
-    chart_gap_reduction = 60
+    footer_height = 60 / 300
+    chart_gap_reduction = 215
     original_height = fig.get_figheight()
     new_height = original_height + table_height
     axes = list(fig.axes)

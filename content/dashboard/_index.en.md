@@ -11,7 +11,7 @@ This dashboard displays current business cycle indicators for Germany. All chart
 
 <!-- BIP_ENTSTEHUNG_CHART_START -->
 <iframe src="/dashboard/01_bip_entstehung_en.html" style="width:100%; height:485px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
-- [View fullscreen](/dashboard/01_bip_entstehung_en.png)
+<p><a href="/dashboard/01_bip_entstehung_en.png" target="_blank" rel="noopener">View fullscreen</a></p>
 <!-- BIP_ENTSTEHUNG_CHART_END -->
 
 
@@ -20,7 +20,7 @@ This dashboard displays current business cycle indicators for Germany. All chart
 
 <!-- BIP_VERWENDUNG_CHART_START -->
 <iframe src="/dashboard/02_bip_verwendung_en.html" style="width:100%; height:540px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
-- [View fullscreen](/dashboard/02_bip_verwendung_en.png)
+<p><a href="/dashboard/02_bip_verwendung_en.png" target="_blank" rel="noopener">View fullscreen</a></p>
 <!-- BIP_VERWENDUNG_CHART_END -->
 
 
