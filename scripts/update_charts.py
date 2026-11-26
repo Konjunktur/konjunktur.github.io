@@ -414,16 +414,17 @@ def draw_p6(ax, t, d):
 def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
     row_count = len(rows) + 1
     table_height = 230 / 300 if row_count == 5 else 310 / 300
-    footer_height = 60 / 300
+    table_bottom_space = 70 / 300
+    table_section_height = table_height + 10 / 300
     chart_gap_reduction = 215
-    table_gap = 30 / 300
+    table_gap = 50 / 300
     original_height = fig.get_figheight()
-    new_height = original_height + table_height + table_gap
+    new_height = original_height + table_section_height + table_gap
     axes = list(fig.axes)
     fig.set_size_inches(fig.get_figwidth(), new_height)
     for ax in axes:
         x, y, width, height = ax.get_position().bounds
-        y = (y * original_height + table_height + table_gap) / new_height
+        y = (y * original_height + table_section_height + table_gap) / new_height
         height = height * original_height / new_height
         gap = chart_gap_reduction / (300 * new_height)
         ax.set_position((x, y - gap, width, height + gap))
@@ -431,20 +432,16 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
     plot_x, _, plot_width, _ = axes[0].get_position().bounds
     table_ax = fig.add_axes((
         plot_x,
-        footer_height / new_height,
+        table_bottom_space / new_height,
         plot_width,
-        (table_height - footer_height) / new_height,
+        (table_section_height - table_bottom_space) / new_height,
     ))
     table_ax.axis("off")
     cell_text = [
         [label, *(format_table_value(value, use_comma) for value in values)]
         for label, values in rows
     ]
-    header_period_labels = [
-        re.sub(r"^(20\d{2}) (Q[1-4])$", r"\1\n\2", label)
-        if not use_comma else label
-        for label in period_labels
-    ]
+    header_period_labels = list(period_labels)
     table = table_ax.table(
         cellText=cell_text,
         colLabels=[indicator_header, *header_period_labels],
@@ -505,14 +502,18 @@ def save_single(draw_fn, t, data, fname, src_key, top_adj=0.68, table_rows=None)
 def build_for_lang(lang, data, bip_only=False):
     t, use_c = TEXTS[lang], TEXTS[lang]["comma"]; plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
     if lang == "en":
-        def english_period_label(label):
+        def english_axis_period_label(label):
             match = re.fullmatch(r"Q([1-4]) (\d{2})", label)
-            return f"20{match.group(2)} Q{match.group(1)}" if match else label
+            return f"Q{match.group(1)} '{match.group(2)}" if match else label
+
+        def english_table_period_label(label):
+            match = re.fullmatch(r"Q([1-4]) (\d{2})", label)
+            return f"Q{match.group(1)} {match.group(2)}" if match else label
 
         data = {
             **data,
-            "xl_bip": tuple(english_period_label(label) for label in data["xl_bip"]),
-            "bip_table_labels": tuple(english_period_label(label) for label in data["bip_table_labels"]),
+            "xl_bip": tuple(english_axis_period_label(label) for label in data["xl_bip"]),
+            "bip_table_labels": tuple(english_table_period_label(label) for label in data["bip_table_labels"]),
         }
     if not bip_only:
         fig, axes = plt.subplots(3, 2, figsize=(12.6, 18.4), dpi=300, facecolor="white"); plt.subplots_adjust(left=0.06, right=0.95, top=0.88, bottom=0.06, hspace=0.68, wspace=0.20)
@@ -527,7 +528,7 @@ def build_for_lang(lang, data, bip_only=False):
         "01_bip_entstehung": list(zip(
             ("Reales BIP", "Produzierendes Gewerbe (o. Bau)", "Baugewerbe", "Handel, Verkehr, Gastgewerbe")
             if lang == "de" else
-            ("Real GDP", "Industry excluding construction", "Construction", "Trade, transport, hospitality"),
+            ("Real GDP", "Industry excl. construction", "Construction", "Trade, transport, hospitality"),
             [data[key] for key in ("bip_r_table", "pg_table", "bau_table", "hvg_table")],
         )),
         "02_bip_verwendung": list(zip(
