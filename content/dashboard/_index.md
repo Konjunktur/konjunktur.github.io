@@ -28,18 +28,20 @@ Dieses Dashboard zeigt aktuelle Konjunkturindikatoren für Deutschland. Alle Gra
 
 ## Auftragseingänge
 
-<iframe src="/dashboard/03_auftragseingaenge.html" style="width:100%; height:455px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
-
+<!-- AUFTRAGSEINGAENGE_CHART_START -->
+<iframe src="/dashboard/03_auftragseingaenge.html" style="width:100%; height:565px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 <p><a href="/dashboard/03_auftragseingaenge.png" target="_blank" rel="noopener">In Vollbild anzeigen</a></p>
-- *Erläuterung* - Volumenindex der Auftragseingänge in der Industrie und im Bauhauptgewerbe, Veränderung gegenüber dem Vorjahr in Prozent (Ursprungswerte).
+<!-- AUFTRAGSEINGAENGE_CHART_END -->
+- *Erläuterung* - Volumenindex, Veränderung zum Vorjahr in Prozent (kalenderbereinigte Werte).
 - *Quelle* - Statistisches Bundesamt.
 
 ## Produktion & Einzelhandelsumsätze
 
-<iframe src="/dashboard/04_produktion_einzelhandel.html" style="width:100%; height:470px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
-
+<!-- PRODUKTION_EINZELHANDEL_CHART_START -->
+<iframe src="/dashboard/04_produktion_einzelhandel.html" style="width:100%; height:490px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 <p><a href="/dashboard/04_produktion_einzelhandel.png" target="_blank" rel="noopener">In Vollbild anzeigen</a></p>
-- *Erläuterung* - Real, Veränderung gegenüber dem Vorjahr in Prozent (Ursprungswerte).
+<!-- PRODUKTION_EINZELHANDEL_CHART_END -->
+- *Erläuterung* - Real, Veränderung zum Vorjahr in Prozent (kalenderbereinigte Werte).
 - *Quelle* - Statistisches Bundesamt.
 
 ## Leistungsbilanzsaldo

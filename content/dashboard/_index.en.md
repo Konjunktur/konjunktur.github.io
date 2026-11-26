@@ -28,18 +28,20 @@ This dashboard displays current business cycle indicators for Germany. All chart
 
 ## New Orders
 
-<iframe src="/dashboard/03_auftragseingaenge_en.html" style="width:100%; height:455px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
-
-- [Open in full screen](/dashboard/03_auftragseingaenge_en.png)
-- *Explanation* - Volume index of new orders in manufacturing and main construction, year-on-year change in percent (unadjusted data).
+<!-- AUFTRAGSEINGAENGE_CHART_START -->
+<iframe src="/dashboard/03_auftragseingaenge_en.html" style="width:100%; height:565px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
+<p><a href="/dashboard/03_auftragseingaenge_en.png" target="_blank" rel="noopener">View fullscreen</a></p>
+<!-- AUFTRAGSEINGAENGE_CHART_END -->
+- *Explanation* - Volume index, year-on-year change in percent (calendar-adjusted values).
 - *Source* - Federal Statistical Office.
 
 ## Production & Retail Sales
 
-<iframe src="/dashboard/04_produktion_einzelhandel_en.html" style="width:100%; height:470px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
-
-- [Open in full screen](/dashboard/04_produktion_einzelhandel_en.png)
-- *Explanation* - Real year-on-year change in percent (unadjusted data).
+<!-- PRODUKTION_EINZELHANDEL_CHART_START -->
+<iframe src="/dashboard/04_produktion_einzelhandel_en.html" style="width:100%; height:490px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
+<p><a href="/dashboard/04_produktion_einzelhandel_en.png" target="_blank" rel="noopener">View fullscreen</a></p>
+<!-- PRODUKTION_EINZELHANDEL_CHART_END -->
+- *Explanation* - Real, year-on-year change in percent (calendar-adjusted values).
 - *Source* - Federal Statistical Office.
 
 ## Current Account Balance

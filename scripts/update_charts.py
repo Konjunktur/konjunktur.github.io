@@ -15,13 +15,15 @@ TEXTS = {
         "p1_t": "Bruttoinlandsprodukt: Entstehung", "p1_s": "Veränderung zum Vorjahr in % (preisbereinigt, Ursprungswerte)",
         "p1_l": ("Reales BIP", "Produzierendes Gewerbe (o. Bau)", "Baugewerbe", "Handel, Verkehr, Gastgewerbe"),
         "p1_h": ("Reales BIP", "Prod. Gew. o. Bau", "Baugewerbe", "Handel/Verkehr/Gastg."),
-        "p2_t": "Bruttoinlandsprodukt: Verwendung", "p2_s": "Veränderung zum Vorjahr in % (Komponenten preisbereinigt, nominales BIP in jeweiligen Preisen, Ursprungswerte)",
+        "p2_t": "Bruttoinlandsprodukt: Verwendung", "p2_s": "Veränderung zum Vorjahr in % (Komponenten preisbereinigt, nominales BIP in jeweiligen Preisen, Ursprungswerte)", "p2_overview_s": "Veränderung zum Vorjahr in % (Komponenten preisbereinigt; nominales BIP in jeweiligen Preisen)",
         "p2_l": ("Nominales BIP", "Konsumausgaben der privaten Haushalte", "Konsumausgaben des Staates", "Ausrüstungsinvestitionen", "Bauinvestitionen", "Exporte", "Importe"),
         "p2_h": ("Nom. BIP", "Konsum priv. HH", "Konsum Staat", "Ausrüstungen", "Bauten", "Exporte", "Importe"),
-        "p3_t": "Auftragseingänge", "p3_s": "Volumenindex, Veränderung zum Vorjahr in % (Ursprungswerte)",
-        "p3_l": ("Auftragseingang Industrie", "Auftragseingang Bauwirtschaft"),
-        "p4_t": "Produktion & Einzelhandelsumsätze", "p4_s": "Real, Veränderung zum Vorjahr in % (Ursprungswerte)",
-        "p4_l": ("Industrieproduktion", "Bauproduktion", "Einzelhandelsumsätze"),
+        "p3_t": "Auftragseingänge", "p3_s": "Volumenindex, Veränderung zum Vorjahr in % (kalenderbereinigte Werte)",
+        "p3_l": ("Verarbeitendes Gewerbe: Insgesamt", "Verarbeitendes Gewerbe: Inland", "Verarbeitendes Gewerbe: Ausland", "Bauhauptgewerbe: Hoch- und Tiefbau", "Bauhauptgewerbe: Hochbau", "Bauhauptgewerbe: Tiefbau"),
+        "p3_table_l": ("Verarb. Gew.: Insgesamt", "Verarb. Gew.: Inland", "Verarb. Gew.: Ausland", "Bauhauptgew.: Gesamt", "Bauhauptgew.: Hochbau", "Bauhauptgew.: Tiefbau"),
+        "p4_t": "Produktion und Einzelhandelsumsätze", "p4_s": "Real, Veränderung zum Vorjahr in % (kalenderbereinigte Werte)",
+        "p4_l": ("Produktion Gesamtwirtschaft", "Einzelhandel ohne Kfz"),
+        "p4_table_l": ("Produktion Gesamtwirtschaft", "Einzelhandel ohne Kfz"),
         "p5_t": "Leistungsbilanzsaldo", "p5_s": "Monatlicher Saldo in Mrd. Euro (Ursprungswerte)", "p5_l": "Leistungsbilanzsaldo",
         "p6_t": "Arbeitslosigkeit und Inflation", "p6_s": "Quote bzw. Veränderung zum Vorjahr in % (Ursprungswerte)",
         "p6_l": ("Arbeitslosenquote", "Vollbeschäftigung (3%)", "Inflation (HVPI)", "EZB-Inflationsziel (2%)"),
@@ -34,15 +36,17 @@ TEXTS = {
     },
     "en": {
         "p1_t": "Gross Domestic Product: Production", "p1_s": "Change on previous year in % (price-adjusted, unadjusted data)",
-        "p1_l": ("Real GDP", "Industry excluding construction", "Construction", "Trade, transport, accommodation and food services"),
-        "p1_h": ("Real GDP", "Industry excl. constr.", "Construction", "Trade/transp./hosp."),
-        "p2_t": "Gross Domestic Product: Expenditure", "p2_s": "Change on previous year in % (components price-adjusted, nominal GDP at current prices, unadjusted data)",
-        "p2_l": ("Nominal GDP", "Household final consumption expenditure", "Government final consumption expenditure", "Machinery and equipment investment", "Construction investment", "Exports", "Imports"),
+        "p1_l": ("Real GDP", "Manufacturing", "Construction", "Trade, transport, accommodation and food services"),
+        "p1_h": ("Real GDP", "Manufacturing", "Construction", "Trade/transp./hosp."),
+        "p2_t": "Gross Domestic Product: Expenditure", "p2_s": "Change on previous year in % (components price-adjusted, nominal GDP at current prices, unadjusted data)", "p2_overview_s": "Year-on-year change in % (components price-adjusted; nominal GDP at current prices)",
+        "p2_l": ("Nominal GDP", "Household final consumption expenditure", "Government final consumption expenditure", "Gross fixed capital formation in machinery and equipment", "Gross fixed capital formation in construction", "Exports", "Imports"),
         "p2_h": ("Nom. GDP", "Household consumption", "Government consumption", "Machinery/equip.", "Construction", "Exports", "Imports"),
-        "p3_t": "New Orders", "p3_s": "Volume index, change on previous year in % (unadjusted data)",
-        "p3_l": ("New orders: Manufacturing", "New orders: Construction"),
-        "p4_t": "Production & Retail Sales", "p4_s": "Real, change on previous year in % (unadjusted data)",
-        "p4_l": ("Industrial production", "Construction output", "Retail sales"),
+        "p3_t": "New Orders", "p3_s": "Volume index, year-on-year change in % (calendar-adjusted values)",
+        "p3_l": ("Manufacturing: Total", "Manufacturing: Domestic", "Manufacturing: Foreign", "Main construction industry: Total", "Main construction industry: Building construction", "Main construction industry: Civil engineering"),
+        "p3_table_l": ("Manufacturing: Total", "Manufacturing: Domestic", "Manufacturing: Foreign", "Main construction: Total", "Main construction: Building", "Main construction: Civil eng."),
+        "p4_t": "Production and Retail Sales", "p4_s": "Real, year-on-year change in % (calendar-adjusted values)",
+        "p4_l": ("Total economy production", "Retail trade (excl. motor vehicles)"),
+        "p4_table_l": ("Total economy production", "Retail trade excl. motor vehicles"),
         "p5_t": "Current Account Balance", "p5_s": "Monthly balance in billion euros (unadjusted data)", "p5_l": "Current account balance",
         "p6_t": "Unemployment and Inflation", "p6_s": "Rate / change on previous year in % (unadjusted data)",
         "p6_l": ("Unemployment rate", "Full employment (3%)", "Inflation (HICP)", "ECB inflation target (2%)"),
@@ -53,6 +57,11 @@ TEXTS = {
         "src_bbk": "Source: Deutsche Bundesbank | As of: ",
         "date_fmt": "%Y-%m-%d", "comma": False, "sfx": "_en"
     }
+}
+
+MONTH_LABELS = {
+    "de": {"01": "Jan", "02": "Feb", "03": "Mär", "04": "Apr", "05": "Mai", "06": "Jun", "07": "Jul", "08": "Aug", "09": "Sep", "10": "Okt", "11": "Nov", "12": "Dez"},
+    "en": {"01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr", "05": "May", "06": "Jun", "07": "Jul", "08": "Aug", "09": "Sep", "10": "Oct", "11": "Nov", "12": "Dec"},
 }
 
 def get_bbk(keys, n=13, scale=1.0):
@@ -127,6 +136,21 @@ def load_destatis_cache(table):
     code_cols = [c for c in df.columns if c.endswith("_code") and c not in {"statistics_code", "time_code"}]
     df["_CODES"] = df[code_cols].fillna("").astype(str).apply(lambda row: set(v.strip() for v in row if v.strip()), axis=1)
     return df
+
+
+def load_plotly_traces(path):
+    with open(path, "r", encoding="utf-8") as file:
+        html = file.read()
+    match = re.search(r"Plotly\.newPlot\(", html)
+    if not match:
+        raise RuntimeError(f"Plotly-Daten in {path} nicht gefunden")
+    decoder, position, arguments = json.JSONDecoder(), match.end(), []
+    for _ in range(2):
+        while html[position].isspace() or html[position] == ",":
+            position += 1
+        value, position = decoder.raw_decode(html, position)
+        arguments.append(value)
+    return arguments[1]
 
 
 def extract_by_codes(df, req_codes, target_times, is_rate=False):
@@ -303,6 +327,8 @@ def update_dashboard_content(lang, data):
     chart_specs = (
         ("BIP_ENTSTEHUNG", "01_bip_entstehung", 485),
         ("BIP_VERWENDUNG", "02_bip_verwendung", 540),
+        ("AUFTRAGSEINGAENGE", "03_auftragseingaenge", 565),
+        ("PRODUKTION_EINZELHANDEL", "04_produktion_einzelhandel", 490),
     )
     for name, chart_key, height in chart_specs:
         start_marker, end_marker = f"<!-- {name}_CHART_START -->", f"<!-- {name}_CHART_END -->"
@@ -357,7 +383,8 @@ def draw_p1(ax, t, d):
     xi, xl_bip = d["xi"], d["xl_bip"]
     ylo, yhi, yt, _ = sync_ylim_like_plotly(np.concatenate([d["bip_r"], d["pg"], d["bau"], d["hvg"]]))
     style_panel(ax, t["p1_t"], t["p1_s"], ylo, yhi, yt, t["comma"])
-    l1_0, l1_1, l1_2, l1_3 = t["p1_l"]
+    legend_labels = t["p1_h"] if ax.figure.get_figheight() > 10 else t["p1_l"]
+    l1_0, l1_1, l1_2, l1_3 = legend_labels
     draw_bars_with_auto_labels(ax, xi, d["bip_r"], [d["pg"], d["bau"], d["hvg"]], l1_0, t["comma"], 1.8)
     for key, col, mk, ms, lbl in (("pg", "#D97706", "o", 2.5, l1_1), ("bau", "#64748B", "s", 2.5, l1_2), ("hvg", "#059669", "^", 2.8, l1_3)):
         ax.plot(xi, d[key], color=col, lw=1.9, marker=mk, ms=ms, label=lbl, zorder=3)
@@ -366,8 +393,10 @@ def draw_p1(ax, t, d):
 def draw_p2(ax, t, d):
     xi, xl_bip = d["xi"], d["xl_bip"]
     ylo, yhi, yt, _ = sync_ylim_like_plotly(np.concatenate([d["bip_n"], d["kp"], d["kph"], d["aus"], d["binv"], d["exp"], d["imp"]]))
-    style_panel(ax, t["p2_t"], t["p2_s"], ylo, yhi, yt, t["comma"], title_y=1.52, sub_y=1.43)
-    l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = t["p2_l"]
+    is_overview = ax.figure.get_figheight() > 10
+    style_panel(ax, t["p2_t"], t["p2_overview_s"] if is_overview else t["p2_s"], ylo, yhi, yt, t["comma"], title_y=1.52, sub_y=1.43)
+    legend_labels = t["p2_h"] if is_overview else t["p2_l"]
+    l2_0, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6 = legend_labels
     draw_bars_with_auto_labels(ax, xi, d["bip_n"], [d[k] for k in ("kp", "kph", "aus", "binv", "exp", "imp")], l2_0, t["comma"], 3.2)
     for vals, col, lbl, lstyle in ((d["kp"], "#059669", l2_1, "-"), (d["kph"], "#D97706", l2_2, "--"), (d["aus"], "#7C3AED", l2_3, "-"), (d["binv"], "#0284C7", l2_4, "-"), (d["exp"], "#DC2626", l2_5, "-"), (d["imp"], "#64748B", l2_6, "-")):
         ax.plot(xi, vals, color=col, lw=1.7, ls=lstyle, label=lbl, zorder=3)
@@ -375,25 +404,32 @@ def draw_p2(ax, t, d):
     set_legend(ax, 3 if ax.figure.get_figwidth() < 10 else 2)
 
 def draw_p3(ax, t, d):
-    s_ai, s_ab = d["s_ai"], d["s_ab"]; xm = np.arange(len(s_ai))
-    ylo, yhi, yt, _ = sync_ylim_like_plotly(list(s_ai.values) + list(s_ab.values))
+    series_specs = (
+        ("s_ai", "#1B3A6B", "o"), ("s_ai_inland", "#D97706", "s"), ("s_ai_foreign", "#059669", "^"),
+        ("s_ab", "#0284C7", "D"), ("s_ab_building", "#7C3AED", "v"), ("s_ab_civil", "#64748B", "P"),
+    )
+    xm = np.arange(len(d["s_ai"]))
+    all_values = np.concatenate([d[key].to_numpy(dtype=float) for key, _, _ in series_specs])
+    ylo, yhi, yt, _ = sync_ylim_like_plotly(all_values)
     style_panel(ax, t["p3_t"], t["p3_s"], ylo, yhi, yt, t["comma"])
-    l3_0, l3_1 = t["p3_l"]
-    ax.plot(xm, s_ai.values, color="#1B3A6B", lw=2.1, marker="o", ms=3, label=l3_0, zorder=3)
-    ax.plot(xm, s_ab.values, color="#D97706", lw=2.0, marker="s", ms=3, label=l3_1, zorder=3)
-    mark_ends(ax, [(xm, s_ai.values, "#1B3A6B"), (xm, s_ab.values, "#D97706")], t["comma"], yhi - ylo)
-    ax.set_xticks(xm); ax.set_xticklabels(list(s_ai.index)); set_legend(ax, 1)
+    legend_labels = t["p3_table_l"] if ax.figure.get_figheight() > 10 else t["p3_l"]
+    end_items = []
+    for (key, color, marker), label in zip(series_specs, legend_labels):
+        values = d[key].to_numpy(dtype=float)
+        ax.plot(xm, values, color=color, lw=1.8, marker=marker, ms=3, label=label, zorder=3)
+        end_items.append((xm, values, color))
+    mark_ends(ax, end_items, t["comma"], yhi - ylo)
+    ax.set_xticks(xm); ax.set_xticklabels(d["month_labels"]); set_legend(ax, 2)
 
 def draw_p4(ax, t, d):
-    s_pi, s_pb, s_eh = d["s_pi"], d["s_pb"], d["s_eh"]; xm = np.arange(len(s_pi))
-    ylo, yhi, yt, _ = sync_ylim_like_plotly(list(s_pi.values) + list(s_pb.values) + list(s_eh.values))
+    s_pi, s_eh = d["s_pi"], d["s_eh"]; xm = np.arange(len(s_pi))
+    ylo, yhi, yt, _ = sync_ylim_like_plotly(np.concatenate([s_pi.to_numpy(dtype=float), s_eh.to_numpy(dtype=float)]))
     style_panel(ax, t["p4_t"], t["p4_s"], ylo, yhi, yt, t["comma"])
-    l4_0, l4_1, l4_2 = t["p4_l"]
-    ax.plot(xm, s_pi.values, color="#1B3A6B", lw=2.1, marker="o", ms=3, label=l4_0, zorder=3)
-    ax.plot(xm, s_pb.values, color="#D97706", lw=2.0, marker="s", ms=3, label=l4_1, zorder=3)
-    ax.plot(xm, s_eh.values, color="#059669", lw=2.0, marker="^", ms=3.5, label=l4_2, zorder=3)
-    mark_ends(ax, [(xm, s_pi.values, "#1B3A6B"), (xm, s_pb.values, "#D97706"), (xm, s_eh.values, "#059669")], t["comma"], yhi - ylo)
-    ax.set_xticks(xm); ax.set_xticklabels(list(s_pi.index)); set_legend(ax, 2)
+    legend_labels = t["p4_table_l"] if ax.figure.get_figheight() > 10 else t["p4_l"]
+    ax.plot(xm, s_pi.values, color="#1B3A6B", lw=2.1, marker="o", ms=3, label=legend_labels[0], zorder=3)
+    ax.plot(xm, s_eh.values, color="#059669", lw=2.0, marker="^", ms=3.5, label=legend_labels[1], zorder=3)
+    mark_ends(ax, [(xm, s_pi.values, "#1B3A6B"), (xm, s_eh.values, "#059669")], t["comma"], yhi - ylo)
+    ax.set_xticks(xm); ax.set_xticklabels(d["month_labels"]); set_legend(ax, 2)
 
 def draw_p5(ax, t, d):
     s_lb = d["s_lb"]; xm = np.arange(len(s_lb))
@@ -411,7 +447,7 @@ def draw_p6(ax, t, d):
     mark_ends(ax, [(xm, s_al.values, "#1B3A6B"), (xm, s_hv.values, "#D97706")], t["comma"], yhi - ylo)
     ax.set_xticks(xm); ax.set_xticklabels(list(s_al.index)); set_legend(ax, 2)
 
-def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
+def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma, plain=False):
     row_count = len(rows) + 1
     table_height = 230 / 300 if row_count == 5 else 310 / 300
     table_bottom_space = 70 / 300
@@ -438,7 +474,7 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
     ))
     table_ax.axis("off")
     cell_text = [
-        [label[:32], *(format_table_value(value, use_comma) for value in values)]
+        [label, *(format_table_value(value, use_comma) for value in values)]
         for label, values in rows
     ]
     header_period_labels = list(period_labels)
@@ -453,7 +489,7 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
         bbox=(0, 0, 1, 1),
     )
     table.auto_set_font_size(False)
-    table.set_fontsize(6.5)
+    table.set_fontsize(5.8 if plain else 6.5)
     base_row_height = table[0, 0].get_height()
     header_row_height = base_row_height * 1.4
     body_row_height = (base_row_height * row_count - header_row_height) / (row_count - 1)
@@ -461,21 +497,26 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
         cell.set_height(header_row_height if row == 0 else body_row_height)
         cell.set_edgecolor("#E2E8F0")
         cell.set_linewidth(0.35)
-        if column == 0:
-            cell.get_text().set_fontsize(6.8)
-        if row == 0:
-            cell.set_facecolor("#E2E8F0")
-            cell.set_text_props(weight="bold", color="#0F172A", ha="left" if column == 0 else "center")
-            cell.get_text().set_fontsize(6.0)
-        elif row == 1:
-            cell.set_facecolor("#F8FAFC" if column == 0 else "white")
-            cell.set_text_props(weight="bold", color="#1E293B" if column == 0 else "#334155", ha="left" if column == 0 else "center")
-        elif column == 0:
-            cell.set_facecolor("#F8FAFC")
-            cell.set_text_props(weight="bold", color="#1E293B", ha="left")
-        else:
+        if plain:
             cell.set_facecolor("white")
-            cell.set_text_props(color="#334155")
+            cell.set_text_props(weight="bold" if row == 0 or column == 0 else "normal", color="#1E293B" if row == 0 or column == 0 else "#334155", ha="left" if column == 0 else "center")
+            cell.get_text().set_fontsize(6.0 if row == 0 or column == 0 else 5.8)
+        else:
+            if column == 0:
+                cell.get_text().set_fontsize(6.8)
+            if row == 0:
+                cell.set_facecolor("#E2E8F0")
+                cell.set_text_props(weight="bold", color="#0F172A", ha="left" if column == 0 else "center")
+                cell.get_text().set_fontsize(6.0)
+            elif row == 1:
+                cell.set_facecolor("#F8FAFC" if column == 0 else "white")
+                cell.set_text_props(weight="bold", color="#1E293B" if column == 0 else "#334155", ha="left" if column == 0 else "center")
+            elif column == 0:
+                cell.set_facecolor("#F8FAFC")
+                cell.set_text_props(weight="bold", color="#1E293B", ha="left")
+            else:
+                cell.set_facecolor("white")
+                cell.set_text_props(color="#334155")
     separator_x = indicator_width + period_column_width * 7
     table_ax.plot(
         (separator_x, separator_x), (0, 1),
@@ -484,25 +525,29 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
     )
 
 
-def save_single(draw_fn, t, data, fname, src_key, top_adj=0.68, table_rows=None):
-    fig, ax = plt.subplots(figsize=(7.4, 4.9), dpi=300, facecolor="white"); plt.subplots_adjust(left=0.09, right=0.93, top=top_adj, bottom=0.24); draw_fn(ax, t, data)
+def save_single(draw_fn, t, data, fname, src_key, top_adj=0.68, table_rows=None, table_period_labels=None, plain_table=False):
+    fig_width = 9.0 if plain_table else 7.4
+    fig, ax = plt.subplots(figsize=(fig_width, 4.9), dpi=300, facecolor="white"); plt.subplots_adjust(left=0.09, right=0.93, top=top_adj, bottom=0.24); draw_fn(ax, t, data)
     for txt in list(ax.texts):
         if txt.get_text() == "T.H.": txt.remove()
     if table_rows is not None:
         add_png_data_table(
             fig,
-            data["bip_table_labels"],
+            table_period_labels or data["bip_table_labels"],
             table_rows,
             "Indicator" if t["sfx"] else "Indikator",
             t["comma"],
+            plain=plain_table,
         )
     footer_y = 0.004
     fig.text(0.09, footer_y, f"{t[src_key]}{datetime.now().strftime(t['date_fmt'])}", fontsize=7.5, color="#64748B")
     fig.text(0.93, footer_y, "T.H.", fontsize=8.0, color="#94A3B8", ha="right")
     plt.savefig(f"static/dashboard/{fname}{t['sfx']}.png", dpi=300); plt.close()
 
-def build_for_lang(lang, data, bip_only=False):
+def build_for_lang(lang, data, bip_only=False, cache=False):
     t, use_c = TEXTS[lang], TEXTS[lang]["comma"]; plt.rcParams.update({"font.sans-serif": "DejaVu Sans"})
+    month_labels = [f"{MONTH_LABELS[lang][period[5:7]]} {period[2:4]}" for period in data.get("month_periods", [])]
+    data = {**data, "month_labels": month_labels, "month_table_labels": month_labels}
     if lang == "en":
         def english_axis_period_label(label):
             match = re.fullmatch(r"Q([1-4]) (\d{2})", label)
@@ -526,6 +571,8 @@ def build_for_lang(lang, data, bip_only=False):
     singles = ((draw_p1, "01_bip_entstehung", "src_destatis", 0.68), (draw_p2, "02_bip_verwendung", "src_destatis", 0.60))
     if not bip_only:
         singles += ((draw_p3, "03_auftragseingaenge", "src_destatis", 0.68), (draw_p4, "04_produktion_einzelhandel", "src_destatis", 0.68), (draw_p5, "05_leistungsbilanz", "src_bbk", 0.68), (draw_p6, "06_arbeitslosigkeit_inflation", "src_ba_destatis", 0.68))
+    if cache:
+        singles = singles[:4]
     png_table_rows = {
         "01_bip_entstehung": list(zip(
             ("Reales BIP", "Produzierendes Gewerbe (o. Bau)", "Baugewerbe", "Handel, Verkehr, Gastgewerbe")
@@ -540,8 +587,21 @@ def build_for_lang(lang, data, bip_only=False):
             [data[key] for key in ("bip_n_table", "kp_table", "kph_table", "aus_table", "binv_table", "exp_table", "imp_table")],
         )),
     }
+    if not bip_only:
+        png_table_rows.update({
+            "03_auftragseingaenge": list(zip(
+                t["p3_table_l"],
+                [data[key].values for key in ("s_ai", "s_ai_inland", "s_ai_foreign", "s_ab", "s_ab_building", "s_ab_civil")],
+            )),
+            "04_produktion_einzelhandel": list(zip(
+                t["p4_table_l"],
+                [data[key].values for key in ("s_pi", "s_eh")],
+            )),
+        })
     for fn, nm, sk, tp in singles:
-        save_single(fn, t, data, nm, sk, tp, png_table_rows.get(nm))
+        monthly_table = nm in ("03_auftragseingaenge", "04_produktion_einzelhandel")
+        table_labels = data["month_table_labels"] if monthly_table else data["bip_table_labels"]
+        save_single(fn, t, data, nm, sk, tp, png_table_rows.get(nm), table_labels, monthly_table)
     update_dashboard_content(lang, data)
     now_str_p, fmt_arr = datetime.now().strftime(t["date_fmt"]), lambda seq: [fmt_num(v, use_c) for v in seq]
 
@@ -612,16 +672,25 @@ def build_for_lang(lang, data, bip_only=False):
     if bip_only:
         return
 
-    fp3 = go.Figure(); l3_0, l3_1 = t["p3_l"]; s_ai, s_ab = data["s_ai"], data["s_ab"]; y3_0, y3_1 = [None if np.isnan(v) else round(float(v), 1) for v in s_ai.values], [None if np.isnan(v) else round(float(v), 1) for v in s_ab.values]
-    fp3.add_trace(go.Scatter(x=list(s_ai.index), y=y3_0, customdata=fmt_arr(y3_0), name=l3_0, mode="lines+markers", marker=dict(size=5), line=dict(color="#1B3A6B", width=2.3), hovertemplate=f"{l3_0}: <b>%{{customdata}} %</b><extra></extra>"))
-    fp3.add_trace(go.Scatter(x=list(s_ab.index), y=y3_1, customdata=fmt_arr(y3_1), name=l3_1, mode="lines+markers", marker=dict(size=5), line=dict(color="#D97706", width=2.2), hovertemplate=f"{l3_1}: <b>%{{customdata}} %</b><extra></extra>"))
-    save_dash_plotly(fp3, t["p3_t"], t["p3_s"], "src_destatis", "03_auftragseingaenge", 112, 450)
+    fp3 = go.Figure()
+    p3_specs = (
+        ("s_ai", "#1B3A6B", "circle"), ("s_ai_inland", "#D97706", "square"), ("s_ai_foreign", "#059669", "triangle-up"),
+        ("s_ab", "#0284C7", "diamond"), ("s_ab_building", "#7C3AED", "triangle-down"), ("s_ab_civil", "#64748B", "pentagon"),
+    )
+    for (key_s, color_s, symbol_s), label_s in zip(p3_specs, t["p3_l"]):
+        series_p = data[key_s]
+        ys = [None if pd.isna(value) else round(float(value), 1) for value in series_p.values]
+        fp3.add_trace(go.Scatter(x=list(range(len(ys))), y=ys, customdata=fmt_arr(ys), name=label_s, mode="lines+markers", marker=dict(size=5, symbol=symbol_s), line=dict(color=color_s, width=2.0), hovertemplate=f"{label_s}: <b>%{{customdata}} %</b><extra></extra>"))
+    save_dash_plotly(fp3, t["p3_t"], t["p3_s"], "src_destatis", "03_auftragseingaenge", 145, 545, data["month_labels"], False, legend_orientation="v", legend_y=1.02)
 
-    fp4 = go.Figure(); l4_0, l4_1, l4_2 = t["p4_l"]
-    for lbl_s, key_s, col_s in ((l4_0, "s_pi", "#1B3A6B"), (l4_1, "s_pb", "#D97706"), (l4_2, "s_eh", "#059669")):
-        ser_p = data[key_s]; ys = [None if np.isnan(v) else round(float(v), 1) for v in ser_p.values]
-        fp4.add_trace(go.Scatter(x=list(ser_p.index), y=ys, customdata=fmt_arr(ys), name=lbl_s, mode="lines+markers", marker=dict(size=5), line=dict(color=col_s, width=2.2), hovertemplate=f"{lbl_s}: <b>%{{customdata}} %</b><extra></extra>"))
-    save_dash_plotly(fp4, t["p4_t"], t["p4_s"], "src_destatis", "04_produktion_einzelhandel", 127, 465)
+    fp4 = go.Figure()
+    for key_s, color_s, symbol_s, label_s in (("s_pi", "#1B3A6B", "circle", t["p4_l"][0]), ("s_eh", "#059669", "triangle-up", t["p4_l"][1])):
+        series_p = data[key_s]
+        ys = [None if pd.isna(value) else round(float(value), 1) for value in series_p.values]
+        fp4.add_trace(go.Scatter(x=list(range(len(ys))), y=ys, customdata=fmt_arr(ys), name=label_s, mode="lines+markers", marker=dict(size=5, symbol=symbol_s), line=dict(color=color_s, width=2.2), hovertemplate=f"{label_s}: <b>%{{customdata}} %</b><extra></extra>"))
+    save_dash_plotly(fp4, t["p4_t"], t["p4_s"], "src_destatis", "04_produktion_einzelhandel", 127, 470, data["month_labels"], False, legend_orientation="h", legend_y=1.02)
+    if cache:
+        return
 
     fp5 = go.Figure(); s_lb = data["s_lb"]; y5 = [None if np.isnan(v) else round(float(v), 1) for v in s_lb.values]
     fp5.add_trace(go.Bar(x=list(s_lb.index), y=y5, customdata=fmt_arr(y5), name=t["p5_l"], marker_color="#1B3A6B", hovertemplate=f"<b>%{{customdata}} {t['unit_lb']}</b><extra></extra>"))
@@ -647,9 +716,14 @@ def valid_times(df, req_codes, pattern):
     sub = sub.dropna(subset=["V"])
     return sorted([z for z in sub["ZEIT"].astype(str).str.strip().unique() if re.match(pattern, z)])
 
-def main(bip_only=False):
+def main(bip_only=False, cache=False):
+    def fetch_destatis_table(table, startyear):
+        if cache or bip_only:
+            return load_destatis_cache(table)
+        return get_destatis(table, startyear)
+
     def fetch_bip_table(table):
-        return load_destatis_cache(table) if bip_only else get_destatis(table, "2018")
+        return fetch_destatis_table(table, "2018")
 
     df_y1, df_q1 = fetch_bip_table("81000-0001"), fetch_bip_table("81000-0002")
     df_y1_br, df_q1_br = fetch_bip_table("81000-0013"), fetch_bip_table("81000-0014")
@@ -704,52 +778,70 @@ def main(bip_only=False):
         build_for_lang("en", data, bip_only=True)
         return
 
-    df_ind_ae = get_destatis("42151-0004", "2023")
-    df_bau_ae = pd.DataFrame()
-    for bau_tbl in ("44111-0009", "44111-0010", "44111-0011"):
-        try:
-            cand = get_destatis(bau_tbl, "2023")
-            if any("AUF102" in s for s in cand["_CODES"]) and any(re.match(r"^\d{4}-\d{2}$", str(z)) for z in cand["ZEIT"].unique()):
-                df_bau_ae = cand; break
-        except Exception:
-            pass
-    m_ae = sorted(set(
-        valid_times(df_ind_ae, ["DG", "WERTORG", "INSGESAMT", "WZ08-C", "AUF102"], r"^\d{4}-\d{2}$") +
-        valid_times(df_bau_ae, ["DG", "WERTORG", "BTR-20UMTP", "BAUART", "AUF102"], r"^\d{4}-\d{2}$")
-    ))[-13:]
-    s_ai = pd.Series(extract_by_codes(df_ind_ae, ["DG", "WERTORG", "INSGESAMT", "WZ08-C", "AUF102"], m_ae), index=m_ae)
-    s_ab = pd.Series(extract_by_codes(df_bau_ae, ["DG", "WERTORG", "BTR-20UMTP", "BAUART", "AUF102"], m_ae), index=m_ae)
-    s_ai, s_ab = align_series([s_ai, s_ab])
+    df_ind_ae = fetch_destatis_table("42151-0004", "2024")
+    df_bau_ae = fetch_destatis_table("44111-0009", "2024")
+    ae_codes = {
+        "s_ai": ["DG", "X13JDKB", "INSGESAMT", "WZ08-C", "AUF102"],
+        "s_ai_inland": ["DG", "X13JDKB", "INLAND", "WZ08-C", "AUF102"],
+        "s_ai_foreign": ["DG", "X13JDKB", "AUSLAND", "WZ08-C", "AUF102"],
+        "s_ab": ["DG", "BTR-20UMTP", "BAUART", "X13JDKB", "AUF102"],
+        "s_ab_building": ["DG", "BTR-20UMTP", "BAUART1", "X13JDKB", "AUF102"],
+        "s_ab_civil": ["DG", "BTR-20UMTP", "BAUART2", "X13JDKB", "AUF102"],
+    }
+    ae_sources = {key: df_ind_ae if key.startswith("s_ai") else df_bau_ae for key in ae_codes}
+    ae_periods = {
+        period for key, codes in ae_codes.items()
+        for period in valid_times(ae_sources[key], codes, r"^\d{4}-\d{2}$")
+    }
+    m_ae = sorted(ae_periods)[-13:]
+    if len(m_ae) != 13:
+        raise RuntimeError(f"Auftragseingänge: 13 Monatswerte erwartet, gefunden: {len(m_ae)}")
+    monthly_series = {
+        key: pd.Series(extract_by_codes(ae_sources[key], codes, m_ae), index=m_ae, dtype=float)
+        for key, codes in ae_codes.items()
+    }
 
-    df_prod = get_destatis("42153-0001", "2023")
-    df_eh = get_destatis("45212-0004", "2023")
-    m_pe = sorted(set(
-        valid_times(df_prod, ["DG", "WERTORG", "WZ08-B-20", "PRO101"], r"^\d{4}-\d{2}$") +
-        valid_times(df_prod, ["DG", "WERTORG", "WZ08-F", "PRO101"], r"^\d{4}-\d{2}$") +
-        valid_times(df_eh, ["DG", "REAL", "WZ08-47", "UMS103"], r"^\d{4}-\d{2}$")
-    ))[-13:]
-    s_pi = pd.Series(extract_by_codes(df_prod, ["DG", "WERTORG", "WZ08-B-20", "PRO101"], m_pe), index=m_pe)
-    s_pb = pd.Series(extract_by_codes(df_prod, ["DG", "WERTORG", "WZ08-F", "PRO101"], m_pe), index=m_pe)
-    s_eh = pd.Series(extract_by_codes(df_eh, ["DG", "REAL", "WZ08-47", "UMS103"], m_pe), index=m_pe)
-    s_pi, s_pb, s_eh = align_series([s_pi, s_pb, s_eh])
+    df_prod = fetch_destatis_table("48311-0001", "2024")
+    df_eh = fetch_destatis_table("45212-0005", "2024")
+    prod_codes = ["DG", "X13JDKB", "PRO103"]
+    retail_codes = ["DG", "REAL", "X13JDKB", "WZ08-47", "UMS103"]
+    pe_periods = set(valid_times(df_prod, prod_codes, r"^\d{4}-\d{2}$"))
+    pe_periods.update(valid_times(df_eh, retail_codes, r"^\d{4}-\d{2}$"))
+    m_pe = sorted(pe_periods)[-13:]
+    if len(m_pe) != 13:
+        raise RuntimeError(f"Produktion/Einzelhandel: 13 Monatswerte erwartet, gefunden: {len(m_pe)}")
+    s_pi = pd.Series(extract_by_codes(df_prod, prod_codes, m_pe), index=m_pe, dtype=float)
+    s_eh = pd.Series(extract_by_codes(df_eh, retail_codes, m_pe), index=m_pe, dtype=float)
+    if m_pe != m_ae:
+        raise RuntimeError(f"Monatszeiträume der Grafiken 3/4 unterscheiden sich: {m_ae} / {m_pe}")
 
-    s_lb = get_bbk(["BBFBOPV.M.N.DE.W1.S1.S1.T.B.CA._Z._Z._Z.EUR._T._X.N.ALL"], 13, 0.001)
+    if cache:
+        balance_traces = load_plotly_traces("static/dashboard/05_leistungsbilanz.html")
+        labor_traces = load_plotly_traces("static/dashboard/06_arbeitslosigkeit_inflation.html")
+        balance, unemployment, inflation = balance_traces[0], labor_traces[0], labor_traces[2]
+        s_lb = pd.Series(balance["y"], index=balance["x"], dtype=float)
+        s_al = pd.Series(unemployment["y"], index=unemployment["x"], dtype=float)
+        s_hv = pd.Series(inflation["y"], index=inflation["x"], dtype=float)
+    else:
+        s_lb = get_bbk(["BBFBOPV.M.N.DE.W1.S1.S1.T.B.CA._Z._Z._Z.EUR._T._X.N.ALL"], 13, 0.001)
 
-    df_al = get_destatis("13211-0002", "2023")
-    if "2_variable_attribute_label" in df_al.columns:
-        df_al = df_al[df_al["2_variable_attribute_label"].astype(str).str.strip() == "Insgesamt"].copy()
-    df_hv = get_destatis("61121-0002", "2023")
-    m_al_hv = sorted(set(
-        valid_times(df_al, ["ERW112"], r"^\d{4}-\d{2}$") +
-        valid_times(df_hv, ["DG", "VRM002"], r"^\d{4}-\d{2}$")
-    ))[-13:]
-    s_al = pd.Series(extract_by_codes(df_al, ["ERW112"], m_al_hv, is_rate=True), index=m_al_hv)
-    s_hv = pd.Series(extract_by_codes(df_hv, ["DG", "VRM002"], m_al_hv, is_rate=True), index=m_al_hv)
+        df_al = fetch_destatis_table("13211-0002", "2018")
+        if "2_variable_attribute_label" in df_al.columns:
+            df_al = df_al[df_al["2_variable_attribute_label"].astype(str).str.strip() == "Insgesamt"].copy()
+        df_hv = fetch_destatis_table("61121-0002", "2018")
+        m_al_hv = sorted(set(
+            valid_times(df_al, ["ERW112"], r"^\d{4}-\d{2}$") +
+            valid_times(df_hv, ["DG", "VRM002"], r"^\d{4}-\d{2}$")
+        ))[-13:]
+        s_al = pd.Series(extract_by_codes(df_al, ["ERW112"], m_al_hv, is_rate=True), index=m_al_hv)
+        s_hv = pd.Series(extract_by_codes(df_hv, ["DG", "VRM002"], m_al_hv, is_rate=True), index=m_al_hv)
 
-    data.update({"s_ai": s_ai, "s_ab": s_ab, "s_pi": s_pi, "s_pb": s_pb, "s_eh": s_eh, "s_lb": s_lb, "s_al": s_al, "s_hv": s_hv})
-    build_for_lang("de", data); build_for_lang("en", data)
+    data.update({**monthly_series, "s_pi": s_pi, "s_eh": s_eh, "s_lb": s_lb, "s_al": s_al, "s_hv": s_hv, "month_periods": m_ae})
+    build_for_lang("de", data, cache=cache); build_for_lang("en", data, cache=cache)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--bip-only", action="store_true", help="Render GDP charts from local Destatis caches only")
-    main(bip_only=parser.parse_args().bip_only)
+    parser.add_argument("--cache", action="store_true", help="Use local CSV caches and existing Plotly data for charts 5 and 6")
+    args = parser.parse_args()
+    main(bip_only=args.bip_only, cache=args.cache)
