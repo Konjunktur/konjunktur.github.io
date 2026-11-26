@@ -442,10 +442,12 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
         for label, values in rows
     ]
     header_period_labels = list(period_labels)
+    indicator_width = 0.30 + 30 / (plot_width * fig.get_figwidth() * fig.dpi)
+    period_column_width = (1 - indicator_width) / len(period_labels)
     table = table_ax.table(
         cellText=cell_text,
         colLabels=[indicator_header, *header_period_labels],
-        colWidths=[0.30] + [0.70 / len(period_labels)] * len(period_labels),
+        colWidths=[indicator_width] + [period_column_width] * len(period_labels),
         cellLoc="center",
         colLoc="center",
         bbox=(0, 0, 1, 1),
@@ -474,7 +476,7 @@ def add_png_data_table(fig, period_labels, rows, indicator_header, use_comma):
         else:
             cell.set_facecolor("white")
             cell.set_text_props(color="#334155")
-    separator_x = 0.30 + 0.70 * 7 / len(period_labels)
+    separator_x = indicator_width + period_column_width * 7
     table_ax.plot(
         (separator_x, separator_x), (0, 1),
         color="#94A3B8", linewidth=0.7,
@@ -534,7 +536,7 @@ def build_for_lang(lang, data, bip_only=False):
         "02_bip_verwendung": list(zip(
             ("Nominales BIP", "Konsum privater Haushalte", "Konsum des Staates", "Ausrüstungsinvestitionen", "Bauinvestitionen", "Exporte", "Importe")
             if lang == "de" else
-            ("Nominal GDP", "Household consumption", "Government consumption", "Machinery & equipment", "Construction investment", "Exports", "Imports"),
+            ("Nominal GDP", "Household consumption", "Government consumption", "Machinery & equipment investment", "Construction investment", "Exports", "Imports"),
             [data[key] for key in ("bip_n_table", "kp_table", "kph_table", "aus_table", "binv_table", "exp_table", "imp_table")],
         )),
     }
