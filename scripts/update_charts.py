@@ -19,8 +19,8 @@ TEXTS = {
         "p2_l": ("Nominales BIP", "Konsumausgaben der privaten Haushalte", "Konsumausgaben des Staates", "Ausrüstungsinvestitionen", "Bauinvestitionen", "Exporte", "Importe"),
         "p2_h": ("Nom. BIP", "Konsum priv. HH", "Konsum Staat", "Ausrüstungen", "Bauten", "Exporte", "Importe"),
         "p3_t": "Auftragseingänge", "p3_s": "Volumenindex, Veränderung zum Vorjahr in % (kalenderbereinigte Werte)",
-        "p3_l": ("Verarbeitendes Gewerbe: Insgesamt", "Verarbeitendes Gewerbe: Inland", "Verarbeitendes Gewerbe: Ausland", "Bauhauptgewerbe: Hoch- und Tiefbau", "Bauhauptgewerbe: Hochbau", "Bauhauptgewerbe: Tiefbau"),
-        "p3_table_l": ("Verarb. Gew.: Insgesamt", "Verarb. Gew.: Inland", "Verarb. Gew.: Ausland", "Bauhauptgew.: Gesamt", "Bauhauptgew.: Hochbau", "Bauhauptgew.: Tiefbau"),
+        "p3_l": ("Verarbeitendes Gewerbe: Insgesamt", "Verarbeitendes Gewerbe: Inland", "Verarbeitendes Gewerbe: Ausland", "Bauhauptgewerbe: Hoch- und Tiefbau"),
+        "p3_table_l": ("Verarbeitendes Gewerbe: Insgesamt", "Verarbeitendes Gewerbe: Inland", "Verarbeitendes Gewerbe: Ausland", "Bauhauptgewerbe: Hoch- und Tiefbau"),
         "p4_t": "Produktion und Einzelhandelsumsätze", "p4_s": "Real, Veränderung zum Vorjahr in % (kalenderbereinigte Werte)",
         "p4_l": ("Produktion Gesamtwirtschaft", "Einzelhandel ohne Kfz"),
         "p4_table_l": ("Produktion Gesamtwirtschaft", "Einzelhandel ohne Kfz"),
@@ -42,8 +42,8 @@ TEXTS = {
         "p2_l": ("Nominal GDP", "Household final consumption expenditure", "Government final consumption expenditure", "Gross fixed capital formation in machinery and equipment", "Gross fixed capital formation in construction", "Exports", "Imports"),
         "p2_h": ("Nom. GDP", "Household consumption", "Government consumption", "Machinery/equip.", "Construction", "Exports", "Imports"),
         "p3_t": "New Orders", "p3_s": "Volume index, year-on-year change in % (calendar-adjusted values)",
-        "p3_l": ("Manufacturing: Total", "Manufacturing: Domestic", "Manufacturing: Foreign", "Main construction industry: Total", "Main construction industry: Building construction", "Main construction industry: Civil engineering"),
-        "p3_table_l": ("Manufacturing: Total", "Manufacturing: Domestic", "Manufacturing: Foreign", "Main construction: Total", "Main construction: Building", "Main construction: Civil eng."),
+        "p3_l": ("Manufacturing: Total", "Manufacturing: Domestic", "Manufacturing: Foreign", "Main construction industry: Total"),
+        "p3_table_l": ("Manufacturing: Total", "Manufacturing: Domestic", "Manufacturing: Foreign", "Main construction industry: Total"),
         "p4_t": "Production and Retail Sales", "p4_s": "Real, year-on-year change in % (calendar-adjusted values)",
         "p4_l": ("Total economy production", "Retail trade (excl. motor vehicles)"),
         "p4_table_l": ("Total economy production", "Retail trade excl. motor vehicles"),
@@ -338,6 +338,8 @@ def update_dashboard_content(lang, data):
         replacement = f"{start_marker}\n{build_chart_embed(lang, chart_key, height)}\n{end_marker}"
         content = pattern.sub(lambda _: replacement, content, count=1)
 
+    content = re.sub(r"(?m)^- \*(?:Erläuterung|Quelle|Explanation|Source)\* - .*\n?", "", content)
+
     for name in ("BIP_ENTSTEHUNG", "BIP_VERWENDUNG"):
         start_marker, end_marker = f"<!-- TABLE_{name}_START -->", f"<!-- TABLE_{name}_END -->"
         pattern = re.compile(re.escape(start_marker) + r".*?" + re.escape(end_marker), re.DOTALL)
@@ -406,19 +408,16 @@ def draw_p2(ax, t, d):
 def draw_p3(ax, t, d):
     series_specs = (
         ("s_ai", "#1B3A6B", "o"), ("s_ai_inland", "#D97706", "s"), ("s_ai_foreign", "#059669", "^"),
-        ("s_ab", "#0284C7", "D"), ("s_ab_building", "#7C3AED", "v"), ("s_ab_civil", "#64748B", "P"),
+        ("s_ab", "#0284C7", "D"),
     )
     xm = np.arange(len(d["s_ai"]))
     all_values = np.concatenate([d[key].to_numpy(dtype=float) for key, _, _ in series_specs])
     ylo, yhi, yt, _ = sync_ylim_like_plotly(all_values)
     style_panel(ax, t["p3_t"], t["p3_s"], ylo, yhi, yt, t["comma"])
     legend_labels = t["p3_table_l"] if ax.figure.get_figheight() > 10 else t["p3_l"]
-    end_items = []
     for (key, color, marker), label in zip(series_specs, legend_labels):
         values = d[key].to_numpy(dtype=float)
         ax.plot(xm, values, color=color, lw=1.8, marker=marker, ms=3, label=label, zorder=3)
-        end_items.append((xm, values, color))
-    mark_ends(ax, end_items, t["comma"], yhi - ylo)
     ax.set_xticks(xm); ax.set_xticklabels(d["month_labels"]); set_legend(ax, 2)
 
 def draw_p4(ax, t, d):
@@ -428,7 +427,6 @@ def draw_p4(ax, t, d):
     legend_labels = t["p4_table_l"] if ax.figure.get_figheight() > 10 else t["p4_l"]
     ax.plot(xm, s_pi.values, color="#1B3A6B", lw=2.1, marker="o", ms=3, label=legend_labels[0], zorder=3)
     ax.plot(xm, s_eh.values, color="#059669", lw=2.0, marker="^", ms=3.5, label=legend_labels[1], zorder=3)
-    mark_ends(ax, [(xm, s_pi.values, "#1B3A6B"), (xm, s_eh.values, "#059669")], t["comma"], yhi - ylo)
     ax.set_xticks(xm); ax.set_xticklabels(d["month_labels"]); set_legend(ax, 2)
 
 def draw_p5(ax, t, d):
@@ -571,8 +569,6 @@ def build_for_lang(lang, data, bip_only=False, cache=False):
     singles = ((draw_p1, "01_bip_entstehung", "src_destatis", 0.68), (draw_p2, "02_bip_verwendung", "src_destatis", 0.60))
     if not bip_only:
         singles += ((draw_p3, "03_auftragseingaenge", "src_destatis", 0.68), (draw_p4, "04_produktion_einzelhandel", "src_destatis", 0.68), (draw_p5, "05_leistungsbilanz", "src_bbk", 0.68), (draw_p6, "06_arbeitslosigkeit_inflation", "src_ba_destatis", 0.68))
-    if cache:
-        singles = singles[:4]
     png_table_rows = {
         "01_bip_entstehung": list(zip(
             ("Reales BIP", "Produzierendes Gewerbe (o. Bau)", "Baugewerbe", "Handel, Verkehr, Gastgewerbe")
@@ -591,16 +587,30 @@ def build_for_lang(lang, data, bip_only=False, cache=False):
         png_table_rows.update({
             "03_auftragseingaenge": list(zip(
                 t["p3_table_l"],
-                [data[key].values for key in ("s_ai", "s_ai_inland", "s_ai_foreign", "s_ab", "s_ab_building", "s_ab_civil")],
+                [data[key].values for key in ("s_ai", "s_ai_inland", "s_ai_foreign", "s_ab")],
             )),
             "04_produktion_einzelhandel": list(zip(
                 t["p4_table_l"],
                 [data[key].values for key in ("s_pi", "s_eh")],
             )),
+            "05_leistungsbilanz": [(t["p5_l"], data["s_lb"].values)],
+            "06_arbeitslosigkeit_inflation": [
+                (t["p6_l"][0], data["s_al"].values),
+                (t["p6_l"][1], np.full(len(data["s_al"]), 3.0)),
+                (t["p6_l"][2], data["s_hv"].values),
+                (t["p6_l"][3], np.full(len(data["s_al"]), 2.0)),
+            ],
         })
     for fn, nm, sk, tp in singles:
-        monthly_table = nm in ("03_auftragseingaenge", "04_produktion_einzelhandel")
-        table_labels = data["month_table_labels"] if monthly_table else data["bip_table_labels"]
+        monthly_table = nm in ("03_auftragseingaenge", "04_produktion_einzelhandel", "05_leistungsbilanz", "06_arbeitslosigkeit_inflation")
+        if nm in ("03_auftragseingaenge", "04_produktion_einzelhandel"):
+            table_labels = data["month_table_labels"]
+        elif nm == "05_leistungsbilanz":
+            table_labels = [f"{MONTH_LABELS[lang][period[5:7]]} {period[2:4]}" for period in data["s_lb"].index]
+        elif nm == "06_arbeitslosigkeit_inflation":
+            table_labels = [f"{MONTH_LABELS[lang][period[5:7]]} {period[2:4]}" for period in data["s_al"].index]
+        else:
+            table_labels = data["bip_table_labels"]
         save_single(fn, t, data, nm, sk, tp, png_table_rows.get(nm), table_labels, monthly_table)
     update_dashboard_content(lang, data)
     now_str_p, fmt_arr = datetime.now().strftime(t["date_fmt"]), lambda seq: [fmt_num(v, use_c) for v in seq]
@@ -675,20 +685,20 @@ def build_for_lang(lang, data, bip_only=False, cache=False):
     fp3 = go.Figure()
     p3_specs = (
         ("s_ai", "#1B3A6B", "circle"), ("s_ai_inland", "#D97706", "square"), ("s_ai_foreign", "#059669", "triangle-up"),
-        ("s_ab", "#0284C7", "diamond"), ("s_ab_building", "#7C3AED", "triangle-down"), ("s_ab_civil", "#64748B", "pentagon"),
+        ("s_ab", "#0284C7", "diamond"),
     )
     for (key_s, color_s, symbol_s), label_s in zip(p3_specs, t["p3_l"]):
         series_p = data[key_s]
         ys = [None if pd.isna(value) else round(float(value), 1) for value in series_p.values]
         fp3.add_trace(go.Scatter(x=list(range(len(ys))), y=ys, customdata=fmt_arr(ys), name=label_s, mode="lines+markers", marker=dict(size=5, symbol=symbol_s), line=dict(color=color_s, width=2.0), hovertemplate=f"{label_s}: <b>%{{customdata}} %</b><extra></extra>"))
-    save_dash_plotly(fp3, t["p3_t"], t["p3_s"], "src_destatis", "03_auftragseingaenge", 145, 545, data["month_labels"], False, legend_orientation="v", legend_y=1.02)
+    save_dash_plotly(fp3, t["p3_t"], t["p3_s"], "src_destatis", "03_auftragseingaenge", 150, 545, data["month_labels"], False, title_y=0.96, legend_orientation="v", legend_y=1.01)
 
     fp4 = go.Figure()
     for key_s, color_s, symbol_s, label_s in (("s_pi", "#1B3A6B", "circle", t["p4_l"][0]), ("s_eh", "#059669", "triangle-up", t["p4_l"][1])):
         series_p = data[key_s]
         ys = [None if pd.isna(value) else round(float(value), 1) for value in series_p.values]
         fp4.add_trace(go.Scatter(x=list(range(len(ys))), y=ys, customdata=fmt_arr(ys), name=label_s, mode="lines+markers", marker=dict(size=5, symbol=symbol_s), line=dict(color=color_s, width=2.2), hovertemplate=f"{label_s}: <b>%{{customdata}} %</b><extra></extra>"))
-    save_dash_plotly(fp4, t["p4_t"], t["p4_s"], "src_destatis", "04_produktion_einzelhandel", 127, 470, data["month_labels"], False, legend_orientation="h", legend_y=1.02)
+    save_dash_plotly(fp4, t["p4_t"], t["p4_s"], "src_destatis", "04_produktion_einzelhandel", 150, 470, data["month_labels"], False, title_y=0.96, legend_orientation="h", legend_y=1.01)
     if cache:
         return
 

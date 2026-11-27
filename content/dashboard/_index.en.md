@@ -32,8 +32,6 @@ This dashboard displays current business cycle indicators for Germany. All chart
 <iframe src="/dashboard/03_auftragseingaenge_en.html" style="width:100%; height:565px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 <p><a href="/dashboard/03_auftragseingaenge_en.png" target="_blank" rel="noopener">View fullscreen</a></p>
 <!-- AUFTRAGSEINGAENGE_CHART_END -->
-- *Explanation* - Volume index, year-on-year change in percent (calendar-adjusted values).
-- *Source* - Federal Statistical Office.
 
 ## Production & Retail Sales
 
@@ -41,21 +39,15 @@ This dashboard displays current business cycle indicators for Germany. All chart
 <iframe src="/dashboard/04_produktion_einzelhandel_en.html" style="width:100%; height:490px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 <p><a href="/dashboard/04_produktion_einzelhandel_en.png" target="_blank" rel="noopener">View fullscreen</a></p>
 <!-- PRODUKTION_EINZELHANDEL_CHART_END -->
-- *Explanation* - Real, year-on-year change in percent (calendar-adjusted values).
-- *Source* - Federal Statistical Office.
 
 ## Current Account Balance
 
 <iframe src="/dashboard/05_leistungsbilanz_en.html" style="width:100%; height:440px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
 - [Open in full screen](/dashboard/05_leistungsbilanz_en.png)
-- *Explanation* - Germany's monthly current account balance in billion euros (unadjusted data).
-- *Source* - Deutsche Bundesbank.
 
 ## Unemployment and Inflation
 
 <iframe src="/dashboard/06_arbeitslosigkeit_inflation_en.html" style="width:100%; height:485px; border:none; overflow:hidden;" scrolling="no" loading="lazy"></iframe>
 
 - [Open in full screen](/dashboard/06_arbeitslosigkeit_inflation_en.png)
-- *Explanation* - Unemployment rate and year-on-year change in the Harmonised Index of Consumer Prices (HICP) in percent (unadjusted data). ECB inflation target: 2%. Full employment: 3% (2% seasonal, 1% frictional).
-- *Source* - Federal Statistical Office (unemployment rate and HICP).
